@@ -21,13 +21,13 @@
 - **Base (Manifest):** Android 12.1 (S)
 
 ### Features that DO work:
-* [x] ADB / Sideload
 * [x] Touchscreen
 * [x] Brightness
 * [x] Vibration
 * [x] Backup (unprotected partitions)
 
 ### Features that DO NOT work / Currently in development:
+* [ ] **ADB / Sideload** — *current priority*
 * [ ] **Partitions mounting (System, Vendor, Product)** — *current priority*
 * [ ] **Data decryption (FBEv1)** — *current priority*
 * [ ] MTP
