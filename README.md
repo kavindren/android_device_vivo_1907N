@@ -39,7 +39,7 @@ To build the image, use Arch Linux (recommended) or Ubuntu.
 
 1. Initialize the manifest repo:
 ```bash
-repo init --depth=1 -u [https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git](repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git) -b twrp-12.1
+repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1
 ```
 
 2. Clone this device tree to `device/vivo/1907N`
