@@ -25,15 +25,18 @@
 * [x] Brightness
 * [x] Vibration
 * [x] Backup (unprotected partitions)
+* [x] ADB / Sideload
+* [x] Partitions mounting (System, Vendor, Product)
 
 ### Features that DO NOT work / Currently in development:
-* [ ] **ADB / Sideload** — *current priority*
-* [ ] **Partitions mounting (System, Vendor, Product)** — *current priority*
-* [ ] **Data decryption (FBEv1)** — *current priority*
+
+* [ ] **Data decryption (FBEv1)** - *current priority*
 * [ ] MTP
 * [ ] fastbootD
 
 ## Build Instructions
+
+# WARNING! I am NOT responsible for any damage to your device. Use this TWRP at your own risk!
 
 To build the image, use Arch Linux (recommended) or Ubuntu.
 
@@ -51,3 +54,22 @@ export ALLOW_MISSING_DEPENDENCIES=true
 lunch twrp_1907N-eng
 mka recoveryimage -j$(nproc)
 ```
+
+## How to flash the image?
+Flashing recovery on Vivo devices can be challenging due to bootloader restrictions. Below are the tested methods:
+1. Use SP Flash Tool with the MT6768 scatter
+2. Unlock the bootloader
+
+The first option is the easiest one, but there's high chance of bricking it. The `MT6768_Android_Scatter.txt` for V17 Neo / S1 is included in the repository
+
+The second option is the most interesting one. You actually CAN unlock the bootloader, and there are three ways to do that:
+1. [Rollback to Android 10 firmware, where the `fastboot flashing unlock` command isn't blocked](https://4pda.to/forum/index.php?showtopic=963689&st=440#entry100106035)
+2. [Use special custom fastboot for vivo devices](https://4pda.to/forum/index.php?showtopic=1047450#entry114868014)
+3. [Unlock the bootloader via testpoint and mtkclient](https://4pda.to/forum/index.php?showtopic=1047450&st=1100#entry139919639)
+
+I have successfully unlocked the bootloader with the third method. IMHO it has the highest chance of being actually unlocked
+
+## Credits
+* [TeamWin](https://github.com/TeamWin/Team-Win-Recovery-Project) - For the Recovery Project (TWRP)
+* [Minimal Manifest TWRP](https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp) - For the building environment
+* [4PDA Community](https://4pda.to/forum/index.php?showtopic=1047450) - For bootloader unlock methods and testing
