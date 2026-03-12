@@ -16,3 +16,15 @@ PRODUCT_BOARD := k68v1_64
 PRODUCT_PACKAGES += \
     android.hardware.health@2.1-impl \
     android.hardware.health@2.1-service \
+    libresetprop \
+    libminijail \
+    tombstoned \
+    ibtombstoned_client \
+    ashmemd \
+    ashmemd_aidl_interface-cpp \
+    libashmemd_client \
+    liblog
+
+PRODUCT_PACKAGES += \
+    android.system.keystore2-service \
+    plat_keystore2_key_contexts
