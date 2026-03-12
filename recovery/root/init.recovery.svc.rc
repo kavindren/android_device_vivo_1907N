@@ -9,6 +9,9 @@ on early-init
     mkdir /system/etc/selinux
     symlink /plat_keystore2_key_contexts /system/etc/selinux/plat_keystore2_key_contexts
 
+    mkdir /dev/tombstones 0777 root root
+    mount tmpfs tmpfs /dev/tombstones
+
 on init
     start servicemanager
     start hwservicemanager
@@ -83,18 +86,15 @@ service logd-reinit /system/bin/logd --reinit
     seclabel u:r:recovery:s0
 
 service ashmemd /system/bin/ashmemd
-    disabled
     user root
     group root
     seclabel u:r:recovery:s0
 
 service servicemanager /system/bin/servicemanager
-    disabled
     user root
     seclabel u:r:recovery:s0
 
 service hwservicemanager /system/bin/hwservicemanager
-    disabled
     user root
     onrestart setprop hwservicemanager.ready false
     writepid /dev/cpuset/system-background/tasks
