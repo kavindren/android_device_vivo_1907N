@@ -7,17 +7,17 @@ ro.com.google.gmsversion=12_202110
 ro.vivo.product.model=PD1913F_EX
 ro.debuggable=1
 
-vendor.usb.vid=0x0E8D
+vendor.usb.vid=0x2D95
 ro.product.manufacturer=vivo
 ro.product.model=vivo 1907
 
-ro.vendor.usb.vid=0x0E8D
-ro.vendor.usb.pid.adb=0xD001
-ro.vendor.usb.pid.mtp=0x2008
-ro.vendor.usb.pid.mtp_adb=0x201D
+ro.vendor.usb.vid=0x2D95
+ro.vendor.usb.pid.adb=0x6001
+ro.vendor.usb.pid.mtp=0x6012
+ro.vendor.usb.pid.mtp_adb=0x6013
 
 sys.usb.controller=musb-hdrc
-sys.usb.configfs=0
+sys.usb.configfs=1
 
 persist.sys.usb.config=adb
 sys.usb.config=adb
