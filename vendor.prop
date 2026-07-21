@@ -1,0 +1,14 @@
+ro.surface_flinger.primary_display_orientation=ORIENTATION_0
+ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
+ro.surface_flinger.max_frame_buffer_acquired_buffers=3
+ro.sf.lcd_density=480
+
+ro.crypto.volume.filenames_mode=aes-256-cts
+ro.vendor.mtk_f2fs_enable=1
+
+ro.com.google.clientidbase=android-vivo
+ro.setupwizard.suppress_d2d=true
+
+persist.log.tag.PowerHalMgrImpl=I
+persist.log.tag.PowerHalMgrServiceImpl=I
+persist.log.tag.PowerHalWifiMonitor=I

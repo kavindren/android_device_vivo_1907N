@@ -1,0 +1,2 @@
+android.IRemosaicDaemon u:object_r:remosaic_daemon_service:s0
+goodix.fp               u:object_r:gx_vnd_service:s0
