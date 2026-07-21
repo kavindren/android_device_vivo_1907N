@@ -1,6 +1,6 @@
 # OrangeFox Device Tree for Vivo V17 Neo (PD1913F)
 
-![OF Version](https://img.shields.io/badge/R-12.0-orange.svg)
+![OF Version](https://img.shields.io/badge/OrangeFox-R12.1-orange.svg)
 ![Android Version](https://img.shields.io/badge/Android-12%20(S)-green.svg)
 
 ## Device Specifications
@@ -17,7 +17,7 @@
 ## Build Status
 
 - **Working status:** Beta (in development)
-- **OF version:** R-12.0
+- **OF version:** R-12.1
 - **Base (Manifest):** Android 12.1 (S)
 
 ### Features that DO work:
@@ -56,7 +56,7 @@ cd ~/OrangeFox_sync/sync/
 4. Launch the build:
 ```bash
 export ALLOW_MISSING_DEPENDENCIES=true
-. build/envsetup.sh
+source build/envsetup.sh
 lunch fox_1907N-eng
 mka recoveryimage -j$(nproc)
 ```
@@ -76,7 +76,7 @@ The second option is the most interesting one. You actually CAN unlock the bootl
 I have successfully unlocked the bootloader with the third method. IMHO it has the highest chance of being actually unlocked
 
 ## Credits
-* [OrangeFox](https://orangefox.tech) - For the Recovery Project (OrangeFox)
+* [OrangeFox](https://gitlab.com/OrangeFox) - For the Recovery Project (OrangeFox)
 * [TeamWin](https://github.com/TeamWin/Team-Win-Recovery-Project) - For the Recovery Project (TWRP)
 * [Minimal Manifest TWRP](https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp) - For the building environment
 * [4PDA Community](https://4pda.to/forum/index.php?showtopic=1047450) - For bootloader unlock methods and testing
