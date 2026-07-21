@@ -32,7 +32,6 @@
 
 * [ ] **Data decryption (FBEv1)** - *current priority*
 * [ ] MTP
-* [ ] fastbootD
 
 ## Build Instructions
 
