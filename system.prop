@@ -1,21 +1,27 @@
-persist.device_config.runtime_native.usap_pool_enabled=false
-ro.opa.eligible_device=true
-ro.com.google.gmsversion=12_202110
-ro.vivo.product.model=PD1913F_EX
-ro.debuggable=1
-keymaster_ver=4.0
-
-vendor.usb.vid=0x2D95
+# Device Identification
 ro.product.manufacturer=vivo
+ro.product.brand=vivo
 ro.product.model=vivo 1907
+ro.product.device=1907N
+# ro.product.name=1907N_RU
 
+# Vivo / BBK Asserts
+ro.vivo.product.model=PD1913F_EX
+ro.vivo.hardware.version=PD1913F_EXMA
+ro.hardware.bbk=PD1913F_EXMA
+
+# Debugging
+ro.debuggable=1
+
+# USB ConfigFS & MediaTek Controller
+sys.usb.controller=musb-hdrc
+sys.usb.configfs=1
+vendor.usb.vid=0x2D95
 ro.vendor.usb.vid=0x2D95
 ro.vendor.usb.pid.adb=0x6001
 ro.vendor.usb.pid.mtp=0x6012
 ro.vendor.usb.pid.mtp_adb=0x6013
 
-sys.usb.controller=musb-hdrc
-sys.usb.configfs=1
-
+# Default USB State
 persist.sys.usb.config=adb
 sys.usb.config=adb
