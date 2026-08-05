@@ -27,10 +27,9 @@
 * [x] Backup (unprotected partitions)
 * [x] ADB / Sideload
 * [x] Partitions mounting (System, Vendor, Product)
+* [x] Data decryption (FBEv1)
 
 ### Features that DO NOT work / Currently in development:
-
-* [ ] **Data decryption (FBEv1)** - *current priority*
 * [ ] MTP
 
 ## Build Instructions
