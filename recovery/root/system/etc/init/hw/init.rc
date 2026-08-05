@@ -64,6 +64,14 @@ on init
     chmod 0666 /dev/binderfs/vndbinder
     # miaoqiang add for kernel-5.4 use binderfs end
 
+    # On a normal boot this is created by init's mount_all/fs_mgr handling
+    # of FS_MGR_MNTALL_DEV_FILE_ENCRYPTED. Recovery mounts /data itself in
+    # C++ instead of going through mount_all, so that path never runs here.
+    # Without this, vold's installProvisioningKey()/fscryptKeyring() can't
+    # find the "fscrypt" session keyring and fails even after the actual
+    # FS_IOC_ADD_ENCRYPTION_KEY key install succeeded.
+    install_keyring
+
 on boot
     ifup lo
     hostname localhost

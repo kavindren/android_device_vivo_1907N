@@ -13,14 +13,14 @@ FOX_RECOVERY_VENDOR_PARTITION := /dev/block/by-name/vendor
 # Base Architecture
 ALLOW_MISSING_DEPENDENCIES := true
 TARGET_ARCH := arm64
-TARGET_ARCH_VARIANT := armv8-a
+TARGET_ARCH_VARIANT := armv8-2a
 TARGET_CPU_ABI := arm64-v8a
-TARGET_CPU_VARIANT := cortex-a53
+TARGET_CPU_VARIANT := cortex-a75
 
 TARGET_2ND_ARCH := arm
-TARGET_2ND_ARCH_VARIANT := armv8-a
+TARGET_2ND_ARCH_VARIANT := armv8-2a
 TARGET_2ND_CPU_ABI := armeabi-v7a
-TARGET_2ND_CPU_VARIANT := cortex-a53
+TARGET_2ND_CPU_VARIANT := cortex-a55
 
 TARGET_BOARD_SUFFIX := _64
 TARGET_USES_64_BIT_BINDER := true
@@ -41,7 +41,7 @@ MTK_HARDWARE := true
 TARGET_OTA_ASSERT_DEVICE := 1907N,vivo 1907,PD1913F_EX
 
 # Kernel Parameters
-BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 product.version=PD1913F_EX_A_9.9.39 fingerprint.abbr=12/SP1A.210812.003 region_ver=W20 product.solution=MTK androidboot.selinux=permissive
+BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 product.version=PD1913F_EX_A_9.10.0 fingerprint.abbr=12/SP1A.210812.003 region_ver=W20 product.solution=MTK androidboot.selinux=permissive
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_PAGE_SIZE := 2048
 BOARD_HASH_TYPE := sha1
