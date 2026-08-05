@@ -27,4 +27,9 @@ PRODUCT_PACKAGES += \
 
 PRODUCT_PACKAGES += \
     android.system.keystore2-service \
-    plat_keystore2_key_contexts
+    plat_keystore2_key_contexts \
+    libperfmgr
+
+PRODUCT_PACKAGES += \
+    crash_dump \
+    crash_dump.recovery

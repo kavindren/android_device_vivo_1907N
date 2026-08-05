@@ -2,7 +2,6 @@ import /init.recovery.${ro.hardware}.rc
 import /init.recovery.svc.rc
 import /init.recovery.platform.rc
 import /init.recovery.touch.rc
-import /init.recovery.wifi.rc
 
 on early-init
     # Set init and its forked children's oom_adj.
@@ -64,6 +63,14 @@ on init
     chmod 0666 /dev/binderfs/binder
     chmod 0666 /dev/binderfs/vndbinder
     # miaoqiang add for kernel-5.4 use binderfs end
+
+    # On a normal boot this is created by init's mount_all/fs_mgr handling
+    # of FS_MGR_MNTALL_DEV_FILE_ENCRYPTED. Recovery mounts /data itself in
+    # C++ instead of going through mount_all, so that path never runs here.
+    # Without this, vold's installProvisioningKey()/fscryptKeyring() can't
+    # find the "fscrypt" session keyring and fails even after the actual
+    # FS_IOC_ADD_ENCRYPTION_KEY key install succeeded.
+    install_keyring
 
 on boot
     ifup lo
@@ -156,6 +163,9 @@ on property:sys.usb.config=adb
 on property:sys.usb.config=fastboot
     start fastbootd
 
+on property:sys.usb.config=mtp,adb && property:sys.usb.configfs=1
+    start adbd
+
 on property:sys.usb.config=none && property:sys.usb.configfs=0
     stop adbd
     stop fastbootd
@@ -207,5 +217,26 @@ on property:sys.usb.config=fastboot && property:sys.usb.ffs.ready=1 && property:
     write /config/usb_gadget/g1/idProduct 0x4EE0
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "fastboot"
     symlink /config/usb_gadget/g1/functions/ffs.fastboot /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp,adb && property:sys.usb.ffs.ready=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/idVendor 0x2D95
+    write /config/usb_gadget/g1/idProduct 0x0005
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/idVendor 0x2D95
+    write /config/usb_gadget/g1/idProduct 0x0001
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
     write /config/usb_gadget/g1/UDC ${sys.usb.controller}
     setprop sys.usb.state ${sys.usb.config}

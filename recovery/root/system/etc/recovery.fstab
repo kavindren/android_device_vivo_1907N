@@ -1,21 +1,7 @@
-# mount point       fstype    device                                     flags
-/system_root        ext4      /dev/block/by-name/system        wait,ro
-/vendor             ext4      /dev/block/by-name/vendor        wait,ro
-/data               ext4      /dev/block/by-name/userdata      wait,check,formattable,fileencryption=aes-256-xts:aes-256-cts:v1
-/cache              ext4      /dev/block/by-name/cache         wait,check,formattable
-/metadata           ext4      /dev/block/by-name/metadata      wait,check,formattable
-/cust               ext4      /dev/block/by-name/cust          wait,ro
-
-/mnt/vendor/protect_f  ext4   /dev/block/by-name/protect1      wait,check,formattable
-/mnt/vendor/protect_s  ext4   /dev/block/by-name/protect2      wait,check,formattable
-/mnt/vendor/nvdata     ext4   /dev/block/by-name/nvdata        wait,check,formattable
-/mnt/vendor/nvcfg      ext4   /dev/block/by-name/nvcfg         wait,check,formattable
-/mnt/vendor/persist    ext4   /dev/block/by-name/persist       wait,check,formattable
-
-/boot               emmc      /dev/block/by-name/boot          wait
-/recovery           emmc      /dev/block/by-name/recovery      wait
-/misc               emmc      /dev/block/by-name/misc          wait
-/vbmeta             emmc      /dev/block/by-name/vbmeta        wait
-
-/external_sd        vfat      /dev/block/mmcblk1p1             flags=display="MicroSD";storage;wipeingui;removable
-/usb_otg            vfat      /dev/block/sda1                  flags=display="USB-OTG";storage;wipeingui;removable
+# device                                          mount_point         fstype  mount_flags                              fs_mgr_flags
+/dev/block/platform/bootdevice/by-name/system     /system_root        ext4    ro                                       wait
+/dev/block/platform/bootdevice/by-name/vendor     /vendor             ext4    ro                                       wait
+/dev/block/platform/bootdevice/by-name/userdata   /data               ext4    noatime,nosuid,nodev,discard,inlinecrypt wait,check,formattable,quota,fileencryption=aes-256-xts:aes-256-cts:v1
+/dev/block/platform/bootdevice/by-name/cache      /cache              ext4    noatime,nosuid,nodev,discard             wait,check,formattable
+/dev/block/platform/bootdevice/by-name/cust       /oem                ext4    ro                                       wait
+/dev/block/platform/bootdevice/by-name/persist    /mnt/vendor/persist ext4    noatime,nosuid,nodev                     wait,check,formattable
