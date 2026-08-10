@@ -11,3 +11,21 @@ ro.crypto.volume.filenames_mode=aes-256-cts
 ro.crypto.uses_fs_ioc_add_encryption_key=true
 ro.hardware.gatekeeper=trustonic
 ro.vendor.mtk_f2fs_enable=1
+
+# vivo/BBK identity properties (from stock vendor/build.prop) - vts_app (touchscreen firmware
+# updater) reads ro.vendor.vivo.product.model directly to build the firmware filename it looks
+# up under /vendor/firmware/ (e.g. "TP-FW-PD1913F_EX-LCMID33-...bin" - confirmed via strings on
+# the binary: "no firmware for product:%s, pannel id = %s, type = %d"). This property was never
+# carried over into this device tree's vendor.prop (only the wrong-name, wrong-partition
+# ro.vivo.product.model made it into system.prop), so vts_app was looking up an empty-product
+# filename that never matches any of the extracted firmware blobs, silently failing to flash
+# touch firmware - the input device it's supposed to create never gets built. The rest of this
+# block wasn't confirmed as a hard requirement by any single binary the way product.model was,
+# but they're free (static identity strings, zero functional risk) and match stock exactly, so
+# included in case other vivo HALs (bbkts, biometrics, etc.) read them too.
+ro.vendor.vivo.product.model=PD1913F_EX
+ro.vendor.vivo.hardware.version=PD1913F_EXMA
+ro.vendor.vivo.product.overseas=yes
+ro.vendor.vivo.product.platform=MTK6768
+ro.vendor.vivo.product.solution=MTK
+ro.vendor.vivo.product.version=PD1913F_EX_A_9.9.39

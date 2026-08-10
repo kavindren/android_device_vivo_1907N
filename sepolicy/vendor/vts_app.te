@@ -1,0 +1,15 @@
+# vendor/etc/init/vts_app.rc's touchupdate/touchaddpanel/touchtest/touchrecord services all
+# explicitly set `seclabel u:r:vts_app:s0` (rather than relying on an exec-label-driven
+# type_transition), but sepolicy/vendor/vivo_custom_hal_stubs.te only ever declared
+# vts_app_exec (the FILE label for /vendor/bin/vts_app) - the vts_app DOMAIN itself was never
+# declared anywhere in this tree or in device/mediatek/sepolicy_vndr (confirmed via `strings` on
+# the compiled precompiled_sepolicy: only "vts_app_exec" appears, never bare "vts_app"). An
+# explicit seclabel naming an undeclared type is an invalid security context - the kernel rejects
+# it as unknown at the context-validity level, independent of permissive/enforcing mode (that
+# distinction only governs allow/deny decisions for VALID contexts). The services almost
+# certainly fail to even start as a result, which would fully explain touch firmware never
+# getting flashed automatically during a real boot despite `vts_app --update` working fine when
+# run manually from TWRP under a real context (u:r:su:s0) - see the manual vts_app testing
+# session that led here.
+type vts_app, domain;
+init_daemon_domain(vts_app)

@@ -9,6 +9,11 @@ ro.product.device=1907N
 ro.vivo.product.model=PD1913F_EX
 ro.vivo.hardware.version=PD1913F_EXMA
 ro.hardware.bbk=PD1913F_EXMA
+# vts_app (touchscreen firmware updater) also references this directly (confirmed via strings on
+# the binary) alongside ro.vendor.vivo.product.model/ro.vivo.product.model - likely a project-id
+# gate checked before it proceeds with firmware lookup at all. Missing entirely from this tree
+# before now (stock has it in system/build.prop, not vendor).
+ro.build.oem.projects=PD1913F_EX
 
 # Debugging
 ro.debuggable=1
