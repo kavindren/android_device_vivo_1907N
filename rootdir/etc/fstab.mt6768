@@ -9,6 +9,17 @@
 /dev/block/platform/bootdevice/by-name/cust                /oem                 ext4    ro                                                                           wait,avb,first_stage_mount
 /dev/block/platform/bootdevice/by-name/system               /system              ext4    ro                                                                           wait,avb=vbmeta,first_stage_mount,avb_keys=/avb/q-gsi.avbpubkey:/avb/r-gsi.avbpubkey:/avb/s-gsi.avbpubkey
 /dev/block/platform/bootdevice/by-name/vendor               /vendor              ext4    ro                                                                           wait,avb,first_stage_mount
+# fileencryption= restored to match stock exactly (see android_mount/vendor/etc/fstab.mt6768).
+# It was previously stripped to keep /data opaque-free for TWRP debugging during early bring-up,
+# but that also meant ro.crypto.state never resolved to "unencrypted"/"encrypted" - it came out
+# as "unsupported" instead (no encryptable= flag at all == fs_mgr treats /data as not even
+# crypto-capable), which several vivo vendor rc files never anticipated: mtkrild.rc's real RIL
+# daemon (mtkfusionrild) and tee.rc's mcRegistry setup both have explicit handling for
+# unencrypted/encrypted states but none for "unsupported", so they silently never ran - matching
+# the observed missing IMEI/baseband and TEE trustlet load failures exactly. Restoring real FBE
+# is the actual fix, now that TWRP write access isn't needed anymore. Requires a full /data wipe
+# to take effect - an already-unencrypted /data doesn't retroactively encrypt just because this
+# flag is added back here.
 /dev/block/platform/bootdevice/by-name/userdata              /data                ext4    noatime,nosuid,nodev,noauto_da_alloc,discard,errors=panic,inlinecrypt      wait,check,formattable,quota,latemount,resize,reservedsize=128m,fileencryption=aes-256-xts:aes-256-cts:v1
 /dev/block/platform/bootdevice/by-name/cache                /cache               ext4    noatime,nosuid,nodev,noauto_da_alloc,discard                               wait,check,formattable
 

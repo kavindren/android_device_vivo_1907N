@@ -1,10 +1,19 @@
 LOCAL_PATH := device/vivo/1907N
 PRODUCT_USE_DYNAMIC_PARTITIONS := false
 
+# Navigation bar fix (see overlay/frameworks/base/core/res/res/values/config.xml) - this
+# device has no hardware nav keys, so config_showNavigationBar must be true or Settings
+# hides the entire system-navigation switcher (3-button/2-button/gestures), not just the
+# gestures option.
+DEVICE_PACKAGE_OVERLAYS += \
+    $(LOCAL_PATH)/overlay
+
 # VNDK
-# lineage-19.1 tracks Android 12.1/12L (API 32), not plain Android 12 (API 31) - the minimal
-# TWRP-only manifest this value was originally set for was pure Android 12; the full tree
-# computes BOARD_VNDK_VERSION=current -> 32 and hard-fails if this doesn't match.
+# lineage-19.1 tracks Android 12.1/12L (API 32), not plain Android 12 (API 31, which is what
+# stock's extracted vendor blobs actually are). Pinning this to 31 to match was tried and
+# reverted - see BoardConfig.mk's BOARD_VNDK_VERSION comment for why (needs real
+# vendor_snapshot infrastructure we don't have). Stays 32 so the tree builds at all; the
+# resulting VNDK mismatch against stock's closed vendor blobs is real and unresolved.
 PRODUCT_TARGET_VNDK_VERSION := 32
 
 # API
@@ -60,10 +69,16 @@ PRODUCT_SOONG_NAMESPACES += \
 # on stock this only gets set to include "adb" once the user manually enables USB debugging
 # via Developer Options in Settings. Since first boot never reaches usable UI, that toggle is
 # unreachable, and USB never enumerates at all (not even as an unauthorized device) - default
-# it to mtp,adb here so adb is available from the very first boot, before /data/property has
-# any persisted override.
+# it here so adb is available from the very first boot, before /data/property has any
+# persisted override.
+#
+# ADB-only for now, not "mtp,adb" - keeping the first real test of the no-custom-HAL approach
+# below to the simplest possible case. Now that the custom HAL is out of the build entirely,
+# MTP goes through vivo's own init.mt6768.usb.rc handlers directly (which correctly use
+# functions/ffs.mtp, unlike our old HAL's buggy vendored copy) - worth trying again once adb
+# alone is confirmed working.
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
-    persist.sys.usb.config=mtp,adb
+    persist.sys.usb.config=adb
 
 # vendor/etc/init/hw/init.mt6768.usb.rc sets vendor.usb.controller="musb-hdrc" (its own gadget
 # functions are gated behind vendor-only properties like vendor.usb.acm_cnt/ro.vendor.vivo.support
@@ -95,6 +110,29 @@ PRODUCT_PACKAGES += \
 # USB fix (see rootdir/etc/init.usbfix.rc) - overrides the apex-only "adbd" service.
 PRODUCT_PACKAGES += \
     init.usbfix.rc
+
+# USB fix, part 2 - attempts #1 through #4 (see usb/, kept in the tree but no longer built into
+# any product package) all tried to provide a custom IUsbGadget HAL, on the premise that
+# frameworks/base's UsbDeviceManager.IUsbGadget.getService(true) hangs forever at system_server
+# construction time if nothing implements the interface. Checked directly against the real stock
+# vendor.img (mounted read-write at ~/android_mount) instead of assuming: stock's own
+# vendor/etc/vintf/manifest has zero android.hardware.usb.gadget entries, and stock Funtouch
+# obviously still boots - so that premise doesn't hold when the interface isn't declared in any
+# manifest at all (HIDL's getService(true) only actually blocks/retries for a lazy service that
+# IS declared but not yet registered, not for one nobody claims to provide - it should throw
+# NoSuchElementException promptly and fall back to UsbHandlerLegacy instead).
+#
+# UsbHandlerLegacy's actual function-setting path (UsbDeviceManager.java, UsbHandlerLegacy.
+# setUsbConfig()) turns out to just do setSystemProperty("sys.usb.config", config) - it does NOT
+# depend on the old /sys/class/android_usb/android0 sysfs attributes being writable (those are
+# only read from, for status). That's exactly the property vendor/etc/init/hw/init.mt6768.usb.rc's
+# entire state machine reacts to and already handles correctly end to end (same mechanism TWRP's
+# own working ADB goes through). So: no custom HAL needed at all - just let UsbDeviceManager fall
+# back to Legacy and hand off to vivo's own already-proven init.mt6768.usb.rc.
+#
+# If this turns out to be wrong and getService(true) really does hang here, the fix is trivial:
+# reinstate `PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service.1907N` (source untouched
+# in usb/) and reflash - recoverable via TWRP either way, this doesn't touch anything TWRP needs.
 
 # Audio - standard AOSP-source effects/HAL passthrough modules, hardware-agnostic
 PRODUCT_PACKAGES += \

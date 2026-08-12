@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This device (vivo 1907N / PD1913F_EX) has no hardware navigation keys - it's an
+     all-screen phone that relies entirely on the on-screen/gesture nav bar, same as
+     stock Funtouch. AOSP's own framework default for config_showNavigationBar is
+     false (assumes hardware nav keys unless a device overlay says otherwise), which
+     wasn't carried over into this device tree. With it false, WindowManagerService.
+     hasNavigationBar() returns false, which makes Settings' SystemNavigationPreference
+     Controller.isGestureAvailable() short-circuit to false too - the entire "System
+     navigation" preference (the 3-button/2-button/gestures switcher) gets removed
+     from Settings > System > Gestures, not just disabled. Confirmed no such override
+     exists anywhere in this tree via grep across device/vivo/1907N and vendor/lineage. -->
+<resources>
+    <bool name="config_showNavigationBar">true</bool>
+</resources>
