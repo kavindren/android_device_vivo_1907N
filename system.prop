@@ -30,3 +30,14 @@ ro.vendor.usb.pid.mtp_adb=0x6013
 # Default USB State
 persist.sys.usb.config=adb
 sys.usb.config=adb
+
+# IMS / VoLTE / WFC
+# Stock has this in system/build.prop (not vendor/build.prop, where all the other
+# persist.vendor.*volte*/*ims*/*wfc* flags live and which we never touch). Without it,
+# libmtkproperty.so's "feature utils" check fails for WFC specifically - confirmed via
+# `RILC: setVendorSetting: serial: X, setting 16` (SET_WFC_ENABLE) immediately followed by
+# `MTK_PROPERTY: invalid operation, please use feature utils` in the radio logcat buffer
+# (`adb logcat -b radio`, not the default main buffer - Rlog-based telephony/IMS logging is
+# invisible without it). The VoLTE-only path (setting 11) never hit this error, matching
+# that all its persist.vendor.*volte* flags already live in vendor/build.prop untouched.
+persist.vendor.wfc.sys_wfc_support=1

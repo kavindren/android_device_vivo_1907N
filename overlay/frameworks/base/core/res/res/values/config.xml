@@ -11,4 +11,17 @@
      exists anywhere in this tree via grep across device/vivo/1907N and vendor/lineage. -->
 <resources>
     <bool name="config_showNavigationBar">true</bool>
+
+    <!-- This device has a real MTK IMS/VoLTE/VoWiFi/ViLTE stack (see the vivo-vgcclient/
+         mediatek-ims-* bootclasspath jars and the ImsService priv-app in vendor/vivo/1907N).
+         AOSP defaults all three of these to false (frameworks/base/core/res/res/values/
+         config.xml), on the assumption that most devices need an explicit device-tree
+         opt-in for IMS hardware capability. Without this, com.android.ims.ImsManager.
+         isVolteEnabledByPlatform()/isWfcEnabledByPlatform()/isVtEnabledByPlatform() always
+         return false regardless of carrier config (see device.mk's carrier_volte_available_bool
+         etc. in packages/apps/CarrierConfig assets), which is why the VoLTE/VoWiFi toggles
+         never appeared in Settings even after ImsService started registering successfully. -->
+    <bool name="config_device_volte_available">true</bool>
+    <bool name="config_device_wfc_ims_available">true</bool>
+    <bool name="config_device_vt_available">true</bool>
 </resources>
