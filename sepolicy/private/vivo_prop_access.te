@@ -1,0 +1,8 @@
+get_prop(crash_dump, mtk_atci_sys_prop)
+
+get_prop(hal_cameralog_default, hwservicemanager_prop)
+get_prop(hal_nativecamera_default, hwservicemanager_prop)
+get_prop(hal_osccamera_default, hwservicemanager_prop)
+get_prop(vivocameraserver, hwservicemanager_prop)
+
+dontaudit gmscore_app { adbd_prop system_adbd_prop }:file r_file_perms;

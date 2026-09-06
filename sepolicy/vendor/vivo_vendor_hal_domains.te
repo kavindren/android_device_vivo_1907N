@@ -1,0 +1,114 @@
+type atcid_vendor_exec, exec_type, vendor_file_type, file_type;
+type atcid_vendor, domain;
+init_daemon_domain(atcid_vendor)
+hal_client_domain(atcid_vendor, hal_atci)
+
+type bsc_exec, exec_type, vendor_file_type, file_type;
+type bsc, domain;
+init_daemon_domain(bsc)
+
+type fingerprint_analysis_exec, exec_type, vendor_file_type, file_type;
+type fingerprint_analysis, domain;
+init_daemon_domain(fingerprint_analysis)
+
+type getgameserver_exec, exec_type, vendor_file_type, file_type;
+type getgameserver, domain;
+init_daemon_domain(getgameserver)
+
+type hal_bbkts_default_exec, exec_type, vendor_file_type, file_type;
+type hal_bbkts_default, domain;
+init_daemon_domain(hal_bbkts_default)
+
+type hal_bspservice_default_exec, exec_type, vendor_file_type, file_type;
+type hal_bspservice_default, domain;
+init_daemon_domain(hal_bspservice_default)
+
+type hal_camera3rd_default_exec, exec_type, vendor_file_type, file_type;
+type hal_camera3rd_default, domain;
+init_daemon_domain(hal_camera3rd_default)
+
+type hal_capacitykey_default_exec, exec_type, vendor_file_type, file_type;
+type hal_capacitykey_default, domain;
+init_daemon_domain(hal_capacitykey_default)
+
+type hal_dualleds_default_exec, exec_type, vendor_file_type, file_type;
+type hal_dualleds_default, domain;
+init_daemon_domain(hal_dualleds_default)
+
+type hal_eid_default_exec, exec_type, vendor_file_type, file_type;
+type hal_eid_default, domain;
+init_daemon_domain(hal_eid_default)
+
+type hal_faceunlock_native_exec, exec_type, vendor_file_type, file_type;
+type hal_faceunlock_native, domain;
+init_daemon_domain(hal_faceunlock_native)
+hal_server_domain(hal_faceunlock_native, hal_face)
+hal_client_domain(hal_faceunlock_native, hal_face)
+
+type hal_lcmctl_default_exec, exec_type, vendor_file_type, file_type;
+type hal_lcmctl_default, domain;
+init_daemon_domain(hal_lcmctl_default)
+
+type hal_omnipotentservice_default_exec, exec_type, vendor_file_type, file_type;
+type hal_omnipotentservice_default, domain;
+init_daemon_domain(hal_omnipotentservice_default)
+
+type hal_sectee_default_exec, exec_type, vendor_file_type, file_type;
+type hal_sectee_default, domain;
+init_daemon_domain(hal_sectee_default)
+
+type hal_sensorfactory_default_exec, exec_type, vendor_file_type, file_type;
+type hal_sensorfactory_default, domain;
+init_daemon_domain(hal_sensorfactory_default)
+
+type hal_vcode_default_exec, exec_type, vendor_file_type, file_type;
+type hal_vcode_default, domain;
+init_daemon_domain(hal_vcode_default)
+
+type hal_vcustom_default_exec, exec_type, vendor_file_type, file_type;
+type hal_vcustom_default, domain;
+init_daemon_domain(hal_vcustom_default)
+
+type hal_vdtf_default_exec, exec_type, vendor_file_type, file_type;
+type hal_vdtf_default, domain;
+init_daemon_domain(hal_vdtf_default)
+
+type hal_vgnss_default_exec, exec_type, vendor_file_type, file_type;
+type hal_vgnss_default, domain;
+init_daemon_domain(hal_vgnss_default)
+
+type hal_vivoconfigstore_default_exec, exec_type, vendor_file_type, file_type;
+type hal_vivoconfigstore_default, domain;
+init_daemon_domain(hal_vivoconfigstore_default)
+
+type hal_vivoem_default_exec, exec_type, vendor_file_type, file_type;
+type hal_vivoem_default, domain;
+init_daemon_domain(hal_vivoem_default)
+
+type hal_vperf_default_exec, exec_type, vendor_file_type, file_type;
+type hal_vperf_default, domain;
+init_daemon_domain(hal_vperf_default)
+
+type mtk_hal_c2_exec, exec_type, vendor_file_type, file_type;
+type mtk_hal_c2, domain;
+init_daemon_domain(mtk_hal_c2)
+hal_server_domain(mtk_hal_c2, hal_codec2)
+hal_client_domain(mtk_hal_c2, hal_codec2)
+
+allow mtk_hal_camera hal_nativecamera_hwservice:hwservice_manager find;
+allow mtk_hal_camera hal_cameralog_hwservice:hwservice_manager find;
+binder_call(vivocameraserver, mtk_hal_camera)
+
+type vivo_hal_fingerprint_exec, exec_type, vendor_file_type, file_type;
+type vivo_hal_fingerprint, domain;
+init_daemon_domain(vivo_hal_fingerprint)
+hal_server_domain(vivo_hal_fingerprint, hal_fingerprint)
+hal_client_domain(vivo_hal_fingerprint, hal_fingerprint)
+
+type vivo_em_svr_vendor_exec, exec_type, vendor_file_type, file_type;
+type vivo_em_svr_vendor, domain;
+init_daemon_domain(vivo_em_svr_vendor)
+
+type chipinfo_exec, exec_type, vendor_file_type, file_type;
+type chipinfo, domain;
+init_daemon_domain(chipinfo)

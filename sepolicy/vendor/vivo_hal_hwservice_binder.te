@@ -1,0 +1,320 @@
+allow vivo_hal_fingerprint hidl_base_hwservice:hwservice_manager add;
+binder_call(vivo_hal_fingerprint, hwservicemanager)
+allow vivo_hal_fingerprint system_server:binder call;
+allow vivo_hal_fingerprint hal_vivofingerprintext_hwservice:hwservice_manager { add find };
+allow vivo_hal_fingerprint self:netlink_socket { bind create read write };
+allow vivo_hal_fingerprint mobicore_user_device:chr_file { ioctl open read write };
+allow vivo_hal_fingerprint vivo_fp_device:chr_file { ioctl open read write };
+allow vivo_hal_fingerprint fingerprint_vendor_data_file:dir write;
+
+allow mtk_hal_c2 hidl_base_hwservice:hwservice_manager add;
+binder_call(mtk_hal_c2, hwservicemanager)
+allow mtk_hal_c2 mediaserver:binder transfer;
+allow mtk_hal_c2 mediaswcodec:binder transfer;
+allow mtk_hal_c2 platform_app:binder transfer;
+allow mtk_hal_c2 system_server:binder transfer;
+allow mtk_hal_c2 video_device:chr_file { ioctl open read write };
+allow mtk_hal_c2 vndbinder_device:chr_file { ioctl map open read write };
+allow mtk_hal_c2 ion_device:chr_file { open read };
+
+binder_call(hal_bspservice_default, servicemanager)
+binder_call(hal_bspservice_default, hwservicemanager)
+allow hal_bspservice_default cache_file:dir search;
+allow hal_bspservice_default hal_bspservice_service:service_manager add;
+allow hal_bspservice_default proc:file { getattr open read };
+allow hal_bspservice_default proc_cmdline:file { open read };
+allow hal_bspservice_default mobicore_user_device:chr_file { ioctl open read write };
+
+allow ueventd gz_block_device:blk_file { create getattr setattr };
+allow ueventd rpmb_device:chr_file { create setattr };
+allow ueventd vivo_blk_device:blk_file { create getattr setattr };
+allow ueventd vivo_fp_device:chr_file { create setattr };
+allow ueventd board_version_sys:file relabelto;
+
+allow hal_faceunlock_native hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_faceunlock_native, hwservicemanager)
+allow hal_faceunlock_native vndbinder_device:chr_file { ioctl map open read write };
+allow system_server hal_face_hwservice:hwservice_manager find;
+binder_call(system_server, hal_faceunlock_native)
+allow hal_faceunlock_native system_server:binder call;
+allow hal_faceunlock_native mobicore_user_device:chr_file { ioctl map open read write };
+allow hal_faceunlock_native self:process execmem;
+
+# --- fingerprint_analysis ---
+allow fingerprint_analysis hal_biometrics_analysis_hwservice:hwservice_manager { add find };
+allow fingerprint_analysis hidl_base_hwservice:hwservice_manager add;
+binder_call(fingerprint_analysis, hwservicemanager)
+allow fingerprint_analysis vndbinder_device:chr_file { ioctl map open read write };
+
+# --- hal_vgnss_default ---
+allow hal_vgnss_default hal_vgnss_hwservice:hwservice_manager { add find };
+allow hal_vgnss_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_vgnss_default, hwservicemanager)
+allow hal_vgnss_default gps_data_file:file { getattr open read };
+allow hal_vgnss_default gps_data_file:lnk_file read;
+
+# --- hal_sectee_default ---
+allow hal_sectee_default hal_sectee_hwservice:hwservice_manager { add find };
+allow hal_sectee_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_sectee_default, hwservicemanager)
+allow hal_sectee_default mobicore_user_device:chr_file { ioctl map open read write };
+
+allow mtk_hal_audio mtk_hal_bluetooth_audio_hwservice:hwservice_manager { add find };
+allow mtk_hal_audio ccci_aud_device:chr_file { ioctl map open read write };
+allow mtk_hal_audio sysfs:file { open read };
+
+# --- hal_omnipotentservice_default ---
+allow hal_omnipotentservice_default hal_omnipotentservice_hwservice:hwservice_manager { add find };
+allow hal_omnipotentservice_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_omnipotentservice_default, hwservicemanager)
+allow hal_omnipotentservice_default sysfs:file { getattr open read };
+allow hal_omnipotentservice_default sysfs_mmcblk:dir search;
+
+allow getgameserver self:capability net_raw;
+allow getgameserver self:packet_socket { bind create getopt ioctl map read write setopt };
+
+binder_call(vivo_em_svr_vendor, hwservicemanager)
+allow vivo_em_svr_vendor hal_vivoem_hwservice:hwservice_manager find;
+allow vivo_em_svr_vendor hal_vivoatcmd_hwservice:hwservice_manager find;
+allow vivo_em_svr_vendor vendor_shell_exec:file execute_no_trans;
+allow vivo_em_svr_vendor block_device:dir search;
+
+# --- hal_vperf_default ---
+allow hal_vperf_default hal_vperf_hwservice:hwservice_manager { add find };
+allow hal_vperf_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_vperf_default, hwservicemanager)
+allow hal_vperf_default mtk_hal_power:binder call;
+allow hal_vperf_default mtk_hal_power_hwservice:hwservice_manager find;
+
+# --- hal_vivoconfigstore_default ---
+allow hal_vivoconfigstore_default hal_vivoconfigstore_hwservice:hwservice_manager { add find };
+allow hal_vivoconfigstore_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_vivoconfigstore_default, hwservicemanager)
+allow hal_vivoconfigstore_default oemfs:dir search;
+
+allow hal_health_default sysfs:file { getattr open read };
+allow hal_health_default persist_data_file:file { open read };
+allow hal_health_default persist_data_file:dir search;
+allow hal_health_default debugfs_fuelsummary:dir search;
+allow hal_health_default debugfs_fuelsummary:file read;
+allow hal_health_default mnt_vendor_file:dir search;
+allow hal_health_default debugfs_fuelsummary:file { open getattr };
+
+allow hal_camera3rd_default hal_camera3rd_hwservice:hwservice_manager { add find };
+allow hal_camera3rd_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_camera3rd_default, hwservicemanager)
+allow hal_camera3rd_default hal_nativecamera_hwservice:hwservice_manager find;
+
+allow hal_vivoem_default hal_vivoem_hwservice:hwservice_manager { add find };
+allow hal_vivoem_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_vivoem_default, hwservicemanager)
+
+allow hal_vdtf_default hal_vdtf_hwservice:hwservice_manager { add find };
+allow hal_vdtf_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_vdtf_default, hwservicemanager)
+
+allow hal_vcustom_default hal_vcustom_hwservice:hwservice_manager { add find };
+allow hal_vcustom_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_vcustom_default, hwservicemanager)
+
+allow hal_vcode_default hal_vcode_hwservice:hwservice_manager { add find };
+allow hal_vcode_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_vcode_default, hwservicemanager)
+
+allow hal_lcmctl_default hal_lcmctl_hwservice:hwservice_manager { add find };
+allow hal_lcmctl_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_lcmctl_default, hwservicemanager)
+
+allow hal_dualleds_default hal_dualleds_hwservice:hwservice_manager { add find };
+allow hal_dualleds_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_dualleds_default, hwservicemanager)
+
+allow hal_eid_default hal_eid_hwservice:hwservice_manager { add find };
+allow hal_eid_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_eid_default, hwservicemanager)
+
+allow hal_bbkts_default vivo_tpfs:dir search;
+allow hal_bbkts_default hal_bbkts_hwservice:hwservice_manager { add find };
+allow hal_bbkts_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_bbkts_default, hwservicemanager)
+
+allow hal_capacitykey_default hal_capacitykey_hwservice:hwservice_manager { add find };
+allow hal_capacitykey_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_capacitykey_default, hwservicemanager)
+
+binder_call(bsc, servicemanager)
+allow bsc hal_bspservice_default:binder call;
+allow bsc hal_bspservice_service:service_manager find;
+allow bsc kmsg_device:chr_file { open write };
+
+binder_call(atcid_vendor, hwservicemanager)
+allow atcid_vendor vendor_shell_exec:file execute_no_trans;
+
+# --- vendor_shell ---
+allow vendor_shell vendor_file:file execute_no_trans;
+allow vendor_shell sysfs:file { getattr open read };
+
+allow mtk_hal_power proc_perfmgr:file ioctl;
+allow mtk_hal_power cpu_dma_latency_device:chr_file { open write };
+allow mtk_hal_power proc:file read;
+
+# --- hal_sensorfactory_default (missed last round) ---
+allow hal_sensorfactory_default hal_sensorfactory_hwservice:hwservice_manager { add find };
+allow hal_sensorfactory_default hidl_base_hwservice:hwservice_manager add;
+binder_call(hal_sensorfactory_default, hwservicemanager)
+
+allow hal_graphics_composer_default hal_composer_ext_hwservice:hwservice_manager find;
+allow hal_graphics_composer_default hal_composer_ext_hwservice:hwservice_manager add;
+
+allow radio hal_vivoem_default:binder call;
+allow radio sysfs_otg:file rw_file_perms;
+allow radio hal_vivoem_hwservice:hwservice_manager find;
+
+binder_call(mediaserver, mtk_hal_c2)
+binder_call(mediaswcodec, mtk_hal_c2)
+binder_call(platform_app, mtk_hal_c2)
+binder_call(system_server, mtk_hal_c2)
+
+binder_call(system_server, vivo_hal_fingerprint)
+
+allow hal_bspservice_default proc_cmdline:file getattr;
+
+allow hal_vgnss_default gps_data_file:dir search;
+
+allow mtk_agpsd gps_data_file:lnk_file read;
+
+allow ueventd ccci_mdmonitor_device:chr_file { create setattr };
+allow ueventd gtp_tools_device:chr_file { create setattr };
+allow ueventd vibrator_io_device:chr_file { create setattr };
+allow ueventd vivo_sar_sensor:chr_file { create setattr };
+
+allow vivo_em_svr_vendor system_suspend_hwservice:hwservice_manager find;
+
+# --- hal_memtrack_default ---
+allow hal_memtrack_default proc_memory_usage:file r_file_perms;
+
+allow ccci_rpcd md_block_device:blk_file { open read };
+
+# --- mtk_hal_sensors ---
+allow mtk_hal_sensors sysfs:file { open read };
+
+allow volte_imsm_93 volte_imsa_socket:sock_file write;
+
+allow vts_app vts_fs:file write;
+
+allow mtk_hal_gnss self:capability2 wake_alarm;
+
+allow gsm0710muxd mtk_radio_device:dir { add_name write };
+allow gsm0710muxd mtk_radio_device:lnk_file create;
+allow volte_imcb mtk_radio_device:dir { add_name write };
+allow volte_imcb mtk_radio_device:lnk_file create;
+
+allow gsm0710muxd mtk_radio_device:dir      { search read open add_name remove_name write };
+allow gsm0710muxd mtk_radio_device:chr_file rw_file_perms;
+allow gsm0710muxd mtk_radio_device:lnk_file { create read getattr unlink };
+allow volte_imcb  mtk_radio_device:dir      { search read open add_name remove_name write };
+allow volte_imcb  mtk_radio_device:chr_file rw_file_perms;
+allow volte_imcb  mtk_radio_device:lnk_file { create read getattr unlink };
+
+allow rild mtk_radio_device:dir      { search read open add_name remove_name write };
+allow rild mtk_radio_device:chr_file rw_file_perms;
+allow rild mtk_radio_device:lnk_file { create read getattr unlink };
+
+allow vivo_em_svr_vendor hal_vivoem_default:binder call;
+
+binder_call(untrusted_app, mtk_hal_c2)
+
+allowxperm mtk_hal_power proc_perfmgr:file ioctl 0x6711;
+
+unix_socket_connect(atcid_vendor, gsmrild, rild)
+
+allow ueventd ccci_aud_device:chr_file { create setattr };
+allow ueventd ccci_ccb_device:chr_file { create setattr };
+allow ueventd ccci_mdl_device:chr_file { create setattr };
+
+allow ueventd sysfs_otg:file relabelto;
+allow mnld gps_data_file:dir { open read };
+allow atcid_vendor block_device:dir search;
+allow system_server proc_last_kmsg:file { getattr open read };
+
+set_prop(chipinfo, vendor_mtk_soc_prop)
+allow chipinfo vendor_file:file execute_no_trans;
+allow chipinfo sysfs:file { open read };
+
+allow ueventd vts_fs:dir relabelto;
+
+get_prop(atcid_vendor, vendor_mtk_radio_prop)
+
+allow system_app proc_pagetypeinfo:file { getattr open read };
+
+allow ueventd sarpowersys:file relabelto;
+allow ueventd vivo_tpfs:dir relabelto;
+allow ueventd vivo_tpfs:file relabelto;
+allow ueventd sysfs_cpu_type:file relabelto;
+allow ueventd vivo_lcmfs:dir relabelto;
+
+set_prop(atcid_vendor, persist_service_atci_prop)
+
+# --- gallery3d (untrusted_app_29) ---
+get_prop(untrusted_app_29, qemu_hw_prop)
+
+get_prop(platform_app, vendor_camera_mtk_prop)
+
+set_prop(mtk_hal_power, vendor_mtk_vm_prop)
+
+allow mediaserver package_native_service:service_manager find;
+get_prop(mediaserver, debug_mtk_gpud_prop)
+
+allow mtk_hal_c2 ion_device:chr_file getattr;
+allow mtk_hal_c2 mediaserver:binder call;
+allow mtk_hal_c2 hal_graphics_allocator_default:fd use;
+get_prop(mtk_hal_c2, debug_mtk_gpud_prop)
+get_prop(mtk_hal_c2, codec2_config_prop)
+
+get_prop(radio, mtk_mobile_management_prop)
+
+get_prop(crash_dump, packagemanager_config_prop)
+get_prop(crash_dump, media_variant_prop)
+
+allow hal_wifi_hostapd_default hal_vivohostapd_hwservice:hwservice_manager { add find };
+
+get_prop(hal_wifi_default, mtk_wifi_hotspot_prop)
+allow hal_wifi_default self:capability sys_module;
+
+allow webview_zygote proc_uptime:file r_file_perms;
+allow webview_zygote zygote_exec:file { read open };
+
+allow ueventd sysfs_colour_gamut:file relabelto;
+allow ueventd sysfs_udfpdimming:file relabelto;
+allow ueventd sysfs_oled_hbm:file relabelto;
+allow ueventd sysfs_gsensor_data:file relabelto;
+
+get_prop(mtk_hal_camera, vendor_mtk_mdp_debug_log_prop)
+get_prop(mtk_hal_camera, mtk_pq_ro_prop)
+
+allow mtk_hal_c2 ion_device:chr_file ioctl;
+
+get_prop(mediaswcodec, debug_mtk_gpud_prop)
+
+allow ueventd sysfs_mrdump_file:file relabelto;
+allow ueventd sysfs_fp:file relabelto;
+allow ueventd sysfs_fp:dir relabelto;
+
+allow hal_nfc_default nfc_vendor_data_file:dir  rw_dir_perms;
+allow hal_nfc_default nfc_vendor_data_file:file create_file_perms;
+
+allow atcid_vendor           hal_vivoatcmd_hwservice:hwservice_manager find;
+allow hal_bspservice_default hal_vivoatcmd_hwservice:hwservice_manager find;
+
+allow mtk_hal_camera hal_vivocameraprovider_hwservice:hwservice_manager { add find };
+
+allow vivo_em_svr_vendor mnt_vendor_file:dir search;
+allow vivo_em_svr_vendor vivo_tpfs:dir search;
+
+allow vendor_shell sysfs_fp:dir search;
+allow vendor_shell sysfs_fp:file r_file_perms;
+
+get_prop(system_server, vivo_vold_primary_physical_prop)
+
+allow kernel self:capability dac_read_search;
+

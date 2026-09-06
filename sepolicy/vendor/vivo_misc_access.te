@@ -1,0 +1,91 @@
+allow init thermal_hal_socket:sock_file { create setattr };
+allow init vendor_bip_socket:sock_file { create setattr };
+allow init volte_imsa_socket:sock_file { create setattr };
+allow init volte_imsvt1_socket:sock_file { create setattr };
+allow init volte_ut_socket:sock_file { create setattr };
+allow init wod_action_socket:sock_file { create setattr };
+allow init wod_sim_socket:sock_file { create setattr };
+
+allow init debugfs_dmlog_debug:file getattr;
+allow init debugfs_fb:file getattr;
+allow init debugfs_ion_mm_heap:file getattr;
+allow init debugfs_smi_mon:file getattr;
+allow init debugfs_wakeup_sources:file getattr;
+allow init debugfs:file getattr;
+allow init debugfs:lnk_file getattr;
+allow init debugfs_mmc:file { getattr open read setattr };
+allow init debugfs:dir relabelfrom;
+allow init debugfs:file relabelfrom;
+allow init debugfs_atcid:file relabelto;
+allow init debugfs_fuelsummary:dir relabelto;
+allow init debugfs_fuelsummary:file relabelto;
+
+allow init data_vendor_flash_file:dir setattr;
+allow init data_vendor_flicker_file:dir setattr;
+allow init data_vendor_hmp_file:dir setattr;
+allow init data_vendor_nn_file:dir setattr;
+allow init vendor_em_data_file:dir setattr;
+allow init wod_apn_conf_file:dir setattr;
+allow init wod_ipsec_conf_file:dir setattr;
+
+allow vendor_init mtk_radio_device:dir create;
+allow vendor_init mtk_radio_device:dir setattr;
+allow vendor_init mvts_device:dir { create setattr };
+allow vendor_init data_vendor_flash_file:dir setattr;
+allow vendor_init data_vendor_flicker_file:dir setattr;
+allow vendor_init gtp_tools_device:chr_file setattr;
+allow vendor_init vivo_sar_sensor:chr_file setattr;
+allow vendor_init vivo_fp_device:chr_file setattr;
+allow vendor_init sysfs_fp:file setattr;
+allow vendor_init sysfs_otg:file setattr;
+allow vendor_init sysfs_otg:file { write open getattr };
+allow vendor_init sysfs_android_usb:dir r_dir_perms;
+allow vendor_init sysfs_android_usb:file rw_file_perms;
+allow vendor_init vivo_tpfs:file setattr;
+allow vendor_init vts_fs:file setattr;
+allow vendor_init proc_pl_lk:file write;
+allow vendor_init vendor_em_data_file:dir setattr;
+
+allow ccci_mdinit sysfs_mmcblk:file { getattr open read };
+allow ccci_mdinit sysfs_mmcblk:dir search;
+allow ccci_mdinit ccci_ccb_device:chr_file { ioctl map open read write };
+allow ccci_mdinit proc_version:file { open read };
+allow ccci_mdinit proc:file { open write };
+allow ccci_mdinit sysfs_boot_type:file { open read };
+
+allow atcid_vendor proc:file { getattr open read };
+allow atcid_vendor proc_cmdline:file { open read };
+allow atcid_vendor vivo_blk_device:blk_file { getattr open read };
+allow atcid_vendor vendor_file:file execute_no_trans;
+allow atcid_vendor mobicore_user_device:chr_file { ioctl open read write };
+
+allow vivo_em_svr_vendor vendor_em_data_file:dir { add_name search write };
+allow vivo_em_svr_vendor vendor_em_data_file:file { create getattr open setattr write };
+allow vivo_em_svr_vendor proc:file { getattr open read };
+allow vivo_em_svr_vendor als_ps_device:chr_file { ioctl open read };
+allow vivo_em_svr_vendor proc_cmdline:file { open read };
+allow vivo_em_svr_vendor persist_data_file:dir search;
+allow vivo_em_svr_vendor vivo_blk_device:blk_file { getattr open read write };
+allow vivo_em_svr_vendor vendor_file:file execute_no_trans;
+
+allow hal_usb_gadget_default configfs:lnk_file getattr;
+
+allow vendor_init data_vendor_de_md_file:dir { create setattr };
+
+allow hal_vgnss_default gps_data_file:dir rw_dir_perms;
+allow hal_vgnss_default gps_data_file:file create_file_perms;
+
+allow hal_health_default persist_data_file:dir { search write add_name };
+allow hal_health_default persist_data_file:file { getattr open read write create };
+
+allow epdg_wod wod_ipsec_conf_file:dir rw_dir_perms;
+allow epdg_wod wod_ipsec_conf_file:file create_file_perms;
+allow epdg_wod wod_ipsec_conf_file:sock_file create_file_perms;
+allow wo_ipsec wod_ipsec_conf_file:dir rw_dir_perms;
+allow wo_ipsec wod_ipsec_conf_file:file create_file_perms;
+allow wo_ipsec wod_ipsec_conf_file:sock_file { create write unlink };
+
+allow epdg_wod wod_apn_conf_file:dir rw_dir_perms;
+allow epdg_wod wod_apn_conf_file:file create_file_perms;
+allow wo_ipsec wod_apn_conf_file:dir r_dir_perms;
+allow wo_ipsec wod_apn_conf_file:file r_file_perms;

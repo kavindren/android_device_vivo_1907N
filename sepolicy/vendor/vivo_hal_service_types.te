@@ -1,0 +1,25 @@
+type hal_bbkts_hwservice, hwservice_manager_type;
+type hal_biometrics_analysis_hwservice, hwservice_manager_type;
+type hal_camera3rd_hwservice, hwservice_manager_type;
+type hal_capacitykey_hwservice, hwservice_manager_type;
+type hal_dualleds_hwservice, hwservice_manager_type;
+type hal_eid_hwservice, hwservice_manager_type;
+type hal_lcmctl_hwservice, hwservice_manager_type;
+type hal_omnipotentservice_hwservice, hwservice_manager_type;
+type hal_sectee_hwservice, hwservice_manager_type;
+type hal_sensorfactory_hwservice, hwservice_manager_type;
+type hal_vcode_hwservice, hwservice_manager_type;
+type hal_vcustom_hwservice, hwservice_manager_type;
+type hal_vdtf_hwservice, hwservice_manager_type;
+type hal_vgnss_hwservice, hwservice_manager_type;
+type hal_vivoconfigstore_hwservice, hwservice_manager_type;
+type hal_vivoem_hwservice, hwservice_manager_type;
+type hal_vperf_hwservice, hwservice_manager_type;
+type hal_vivohostapd_hwservice, hwservice_manager_type;
+
+type hal_bspservice_service, service_manager_type, vendor_service;
+
+type hal_composer_ext_hwservice, hwservice_manager_type;
+type hal_vivoatcmd_hwservice, hwservice_manager_type;
+
+type hal_vivofingerprintext_hwservice, hwservice_manager_type;

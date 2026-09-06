@@ -1,0 +1,7 @@
+type vendor_udfps_hbm_prop, property_type;
+
+allow vendor_init sysfs_oled_hbm:file rw_file_perms;
+
+set_prop(system_server, vendor_udfps_hbm_prop)
+
+set_prop(platform_app, vendor_udfps_hbm_prop)

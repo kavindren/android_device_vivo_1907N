@@ -1,0 +1,27 @@
+type hal_nativecamera_default, domain, coredomain;
+init_daemon_domain(hal_nativecamera_default)
+
+type hal_cameralog_default, domain, coredomain;
+init_daemon_domain(hal_cameralog_default)
+
+binder_call(hal_nativecamera_default, hwservicemanager)
+allow hal_nativecamera_default hal_nativecamera_hwservice:hwservice_manager find;
+binder_call(hal_cameralog_default, hwservicemanager)
+allow hal_cameralog_default hal_cameralog_hwservice:hwservice_manager find;
+
+type hal_osccamera_default_exec, exec_type, file_type, system_file_type;
+type hal_osccamera_default, domain, coredomain;
+init_daemon_domain(hal_osccamera_default)
+binder_call(hal_osccamera_default, hwservicemanager)
+type hal_osccamera_hwservice, hwservice_manager_type;
+allow hal_osccamera_default hal_osccamera_hwservice:hwservice_manager find;
+
+allow vivocameraserver hal_vivocameraprovider_hwservice:hwservice_manager find;
+
+type vivocameraserver_exec, exec_type, file_type, system_file_type;
+init_daemon_domain(vivocameraserver)
+binder_call(vivocameraserver, servicemanager)
+binder_call(vivocameraserver, hwservicemanager)
+type vivocameraserver_service, service_manager_type;
+allow vivocameraserver vivocameraserver_service:service_manager add;
+allow hwservicemanager vivocameraserver:binder call;
