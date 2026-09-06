@@ -8,25 +8,34 @@
 # out.json          default: <builds-dir>/1907N.json
 #
 # Needs: unzip, sha256sum, stat, jq.  Run it after every `mka bacon`.
-set -euo pipefail
+#
+# NOTE: no `set -o pipefail` here on purpose - `unzip -p <big.zip> file | head` makes unzip
+# take SIGPIPE and exit non-zero, which pipefail+`set -e` would turn into a silent abort.
+set -eu
 
 DIR="${1:?builds dir}"; BASE="${2:?public base url}"; OUT="${3:-$DIR/1907N.json}"
 BASE="${BASE%/}"
 
+command -v jq        >/dev/null || { echo "need: jq" >&2; exit 1; }
+command -v unzip     >/dev/null || { echo "need: unzip" >&2; exit 1; }
+command -v sha256sum >/dev/null || { echo "need: sha256sum" >&2; exit 1; }
+mkdir -p "$(dirname "$OUT")"
+
 entries='[]'
 shopt -s nullglob
-for zip in "$DIR"/lineage-19.1-*-1907N*.zip; do
+zips=("$DIR"/lineage-19.1-*-1907N*.zip)
+[ "${#zips[@]}" -gt 0 ] || echo "warn: no lineage-19.1-*-1907N*.zip in $DIR (writing empty manifest)" >&2
+
+for zip in "${zips[@]}"; do
     name="$(basename "$zip")"
     meta="$(unzip -p "$zip" META-INF/com/android/metadata 2>/dev/null || true)"
-    ts="$(sed -n 's/^post-timestamp=//p' <<<"$meta")"
+    ts="$(printf '%s\n' "$meta" | sed -n 's/^post-timestamp=//p' | head -1)"
     [ -n "$ts" ] || { echo "skip $name: no post-timestamp in metadata" >&2; continue; }
 
-    # romtype must equal ro.lineage.releasetype of the running build (case-insensitive)
-    romtype="$(unzip -p "$zip" system/build.prop 2>/dev/null \
-                | sed -n 's/^ro\.lineage\.releasetype=//p' | head -1)"
+    bp="$(unzip -p "$zip" system/build.prop 2>/dev/null || true)"
+    romtype="$(printf '%s\n' "$bp" | sed -n 's/^ro\.lineage\.releasetype=//p' | head -1)"
     romtype="${romtype:-unofficial}"
-    ver="$(unzip -p "$zip" system/build.prop 2>/dev/null \
-            | sed -n 's/^ro\.lineage\.build\.version=//p' | head -1)"
+    ver="$(printf '%s\n' "$bp" | sed -n 's/^ro\.lineage\.build\.version=//p' | head -1)"
     ver="${ver:-19.1}"
 
     id="$(sha256sum "$zip" | cut -d' ' -f1)"
@@ -43,3 +52,4 @@ done
 
 jq -n --argjson r "$(jq -c 'sort_by(.datetime)' <<<"$entries")" '{response:$r}' > "$OUT"
 echo "wrote $OUT" >&2
+jq . "$OUT" >&2 || true

@@ -54,7 +54,8 @@ persist.mtk_epdg_support=1
 
 ro.vendor.md_auto_setup_ims=1
 
-# Self-hosted OTA (LineageOS Updater). Overrides updater_server_url. Placeholders:
+# Self-hosted OTA (LineageOS Updater). Overrides the built-in updater_server_url. Placeholders:
 # {device}=ro.lineage.device, {type}=ro.lineage.releasetype (lowercased), {incr}=ro.build.version.incremental.
+# The 19.1 Updater reads "lineage.updater.uri" (Constants.PROP_UPDATER_URI), NOT "ro.updater.uri".
 # Set to your own host before building; see tools/ota/.
-ro.updater.uri=https://CHANGE-ME.example/api/v1/{device}/{type}/{incr}
+lineage.updater.uri=https://95.165.95.207.sslip.io/api/v1/{device}/{type}/{incr}
