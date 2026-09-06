@@ -164,7 +164,9 @@ RECOVERY_BINARY_SOURCE_FILES += \
     $(PRODUCT_OUT)/system/bin/tombstoned
 
 TARGET_RECOVERY_PIXEL_FORMAT := BGRA_8888
-TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6768
+# Dedicated recovery fstab (not the vendor first-stage one) — the latter's first_stage_mount /
+# check / errors=panic flags and ~30 emmc pseudo-partitions stalled recovery startup by minutes.
+TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 TARGET_RECOVERY_LCD_BACKLIGHT_PATH := \"/sys/class/leds/lcd-backlight/brightness\"
 TARGET_SCREEN_WIDTH := 1080
 TARGET_SCREEN_HEIGHT := 2340
