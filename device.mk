@@ -1,29 +1,31 @@
 LOCAL_PATH := device/vivo/1907N
 PRODUCT_USE_DYNAMIC_PARTITIONS := false
 
-# Navigation bar fix (see overlay/frameworks/base/core/res/res/values/config.xml) - this
-# device has no hardware nav keys, so config_showNavigationBar must be true or Settings
-# hides the entire system-navigation switcher (3-button/2-button/gestures), not just the
-# gestures option.
+PRODUCT_SYSTEM_SERVER_COMPILER_FILTER := verify
+
 DEVICE_PACKAGE_OVERLAYS += \
     $(LOCAL_PATH)/overlay
 
-# VNDK
-# lineage-19.1 tracks Android 12.1/12L (API 32), not plain Android 12 (API 31, which is what
-# stock's extracted vendor blobs actually are). Pinning this to 31 to match was tried and
-# reverted - see BoardConfig.mk's BOARD_VNDK_VERSION comment for why (needs real
-# vendor_snapshot infrastructure we don't have). Stays 32 so the tree builds at all; the
-# resulting VNDK mismatch against stock's closed vendor blobs is real and unresolved.
 PRODUCT_TARGET_VNDK_VERSION := 32
 
-# API
-PRODUCT_SHIPPING_API_LEVEL := 31
+PRODUCT_SHIPPING_API_LEVEL := 28
+
+PRODUCT_SET_DEBUGFS_RESTRICTIONS := false
+
+# Device-specific signing keys (keys/, git-ignored). Falls back to AOSP test-keys when a
+# fresh checkout has no keys/ — see patches/../README. Generate your own with
+# development/tools/make_key for a real build.
+ifneq ($(wildcard $(LOCAL_PATH)/keys/releasekey.pk8),)
+PRODUCT_DEFAULT_DEV_CERTIFICATE := $(LOCAL_PATH)/keys/releasekey
+endif
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/prebuilt/dtb.img:$(PRODUCT_OUT)/dtb.img
 
 PRODUCT_PLATFORM := mt6768
 PRODUCT_BOARD := k68v1_64
+
+$(call inherit-product, frameworks/native/build/phone-xhdpi-6144-dalvik-heap.mk)
 
 PRODUCT_PACKAGES += \
     android.hardware.health@2.1-impl \
@@ -46,96 +48,35 @@ PRODUCT_PACKAGES += \
     crash_dump \
     crash_dump.recovery
 
-# ---------------------------------------------------------------------------
-# Below this point: additions for the full lineage_1907N ROM build. Package
-# selection is grounded in what's actually present in the stock vendor.img
-# dump (vendor/bin/hw, vendor/etc/init) rather than transplanted wholesale
-# from the mt6768-common reference trees, since this vivo/BBK firmware ships
-# its own vendor.vivo.hardware.* HIDL stack (fingerprint, face, camera3rd,
-# configstore, etc.) instead of the generic AOSP/MTK default HALs those
-# trees assume. Vendor blobs themselves (HAL service binaries, firmware,
-# vendor.vivo.hardware.*, audio/wifi/media XML configs) are intentionally
-# NOT hand-listed here — extract-files.sh (vendor/vivo/1907N) generates
-# 1907N-vendor.mk with PRODUCT_PACKAGES/PRODUCT_COPY_FILES for every
-# extracted proprietary file automatically. What's listed here is only
-# source-built AOSP-side code that has to be requested explicitly.
-# ---------------------------------------------------------------------------
-
 PRODUCT_SOONG_NAMESPACES += \
     $(LOCAL_PATH)
 
-# Stock's own vendor/etc/init/hw/init.mt6768.usb.rc implements a large vivo/MTK-specific USB
-# gadget state machine driven entirely by the persistent property persist.sys.usb.config -
-# on stock this only gets set to include "adb" once the user manually enables USB debugging
-# via Developer Options in Settings. Since first boot never reaches usable UI, that toggle is
-# unreachable, and USB never enumerates at all (not even as an unauthorized device) - default
-# it here so adb is available from the very first boot, before /data/property has any
-# persisted override.
-#
-# ADB-only for now, not "mtp,adb" - keeping the first real test of the no-custom-HAL approach
-# below to the simplest possible case. Now that the custom HAL is out of the build entirely,
-# MTP goes through vivo's own init.mt6768.usb.rc handlers directly (which correctly use
-# functions/ffs.mtp, unlike our old HAL's buggy vendored copy) - worth trying again once adb
-# alone is confirmed working.
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
-    persist.sys.usb.config=adb
-
-# vendor/etc/init/hw/init.mt6768.usb.rc sets vendor.usb.controller="musb-hdrc" (its own gadget
-# functions are gated behind vendor-only properties like vendor.usb.acm_cnt/ro.vendor.vivo.support
-# .cdrom that only vivo's own modem/diag stack sets). Platform's own system/core/rootdir/
-# init.usb.configfs.rc - the code path that actually does `write .../UDC ${sys.usb.controller}` to
-# bind the gadget - reads the *unprefixed* sys.usb.controller, which nothing in this vendor tree
-# ever sets. Without it the UDC write is always empty and the gadget genuinely never binds, so USB
-# doesn't enumerate on the host at all (not a property-trigger-gating issue, a literal missing UDC
-# bind). Hardcode the same value here so platform's own gadget-binding code path actually works.
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
     sys.usb.controller=musb-hdrc
 
-# Main-system fstab (see rootdir/). First-stage init needs its own copy in the root
-# ramdisk to know how to mount /vendor and /system before /vendor/etc is available;
-# fstab.mt6768 is also installed as a regular vendor/etc/ module (matches stock layout
-# and is what recovery-mode fastboot/tools expect to find).
 PRODUCT_PACKAGES += \
     fstab.mt6768
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/fstab.mt6768:$(TARGET_COPY_OUT_RAMDISK)/fstab.mt6768
 
-# vendor/etc/gnss/agps_profiles_conf2.xml - stock ships this as a symlink to a runtime-populated
-# /data path, not a static file (see rootdir/Android.mk for the LOCAL_POST_INSTALL_CMD that
-# actually creates the symlink; this just makes sure the module gets built).
 PRODUCT_PACKAGES += \
     vendor_etc_gnss_agps_profiles_conf2_symlink
 
-# USB fix (see rootdir/etc/init.usbfix.rc) - overrides the apex-only "adbd" service.
 PRODUCT_PACKAGES += \
     init.usbfix.rc
 
-# USB fix, part 2 - attempts #1 through #4 (see usb/, kept in the tree but no longer built into
-# any product package) all tried to provide a custom IUsbGadget HAL, on the premise that
-# frameworks/base's UsbDeviceManager.IUsbGadget.getService(true) hangs forever at system_server
-# construction time if nothing implements the interface. Checked directly against the real stock
-# vendor.img (mounted read-write at ~/android_mount) instead of assuming: stock's own
-# vendor/etc/vintf/manifest has zero android.hardware.usb.gadget entries, and stock Funtouch
-# obviously still boots - so that premise doesn't hold when the interface isn't declared in any
-# manifest at all (HIDL's getService(true) only actually blocks/retries for a lazy service that
-# IS declared but not yet registered, not for one nobody claims to provide - it should throw
-# NoSuchElementException promptly and fall back to UsbHandlerLegacy instead).
-#
-# UsbHandlerLegacy's actual function-setting path (UsbDeviceManager.java, UsbHandlerLegacy.
-# setUsbConfig()) turns out to just do setSystemProperty("sys.usb.config", config) - it does NOT
-# depend on the old /sys/class/android_usb/android0 sysfs attributes being writable (those are
-# only read from, for status). That's exactly the property vendor/etc/init/hw/init.mt6768.usb.rc's
-# entire state machine reacts to and already handles correctly end to end (same mechanism TWRP's
-# own working ADB goes through). So: no custom HAL needed at all - just let UsbDeviceManager fall
-# back to Legacy and hand off to vivo's own already-proven init.mt6768.usb.rc.
-#
-# If this turns out to be wrong and getService(true) really does hang here, the fix is trivial:
-# reinstate `PRODUCT_PACKAGES += android.hardware.usb.gadget@1.1-service.1907N` (source untouched
-# in usb/) and reflash - recoverable via TWRP either way, this doesn't touch anything TWRP needs.
-
-# Audio - standard AOSP-source effects/HAL passthrough modules, hardware-agnostic
 PRODUCT_PACKAGES += \
+    init.no-serial-console.rc
+
+PRODUCT_PACKAGES += \
+    init.udfps-hbm.rc
+
+PRODUCT_PACKAGES += \
+    android.hardware.usb.gadget@1.1-service.1907N
+
+PRODUCT_PACKAGES += \
+    android.hardware.bluetooth.audio@2.1-impl \
     audio.r_submix.default \
     audio.usb.default \
     audio.bluetooth.default \
@@ -148,7 +89,6 @@ PRODUCT_PACKAGES += \
     libreverbwrapper \
     libvisualizer
 
-# Media - software Codec2 fallback (AOSP source, hardware-agnostic)
 PRODUCT_PACKAGES += \
     com.android.media.swcodec \
     libsfplugin_ccodec
@@ -157,18 +97,12 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     libvulkan
 
-# Prebuilt vivo/MTK bootclasspath jars (see vendor/vivo/1907N/proprietary/system/framework/
-# Android.bp - dex_import modules, extracted straight from stock's /system/framework since
-# these are proprietary and never built from source anywhere in this tree). Needed for
-# IMS/VoLTE: mediatek-ims-base.jar and mediatek-ims-common.jar are what ImsService.apk (see
-# below) actually links against, but stock's own bootclasspath.pb records ALL of these as
-# one ordered list - the MTK/vivo jars appear to reference each other's classes directly
-# (mediatek-framework depends on mediatek-common, vivo-telephony-common on vivo-framework,
-# etc.), so this is the full set stock ships, in the exact order recorded in stock's
-# /system/etc/classpaths/bootclasspath.pb, not just the two IMS ones.
 PRODUCT_BOOT_JARS += \
     vivo-framework-vgc \
     vivo-framework \
+    vivo-vslog \
+    vivo-ftbuild \
+    vivo-ftfeature \
     vivo-media \
     framework-adapter \
     soc-framework \
@@ -185,6 +119,9 @@ PRODUCT_BOOT_JARS += \
 PRODUCT_PACKAGES += \
     vivo-framework-vgc \
     vivo-framework \
+    vivo-vslog \
+    vivo-ftbuild \
+    vivo-ftfeature \
     vivo-media \
     framework-adapter \
     soc-framework \
@@ -198,10 +135,15 @@ PRODUCT_PACKAGES += \
     mediatek-ims-base \
     mediatek-telecom-common
 
-# IMS: the actual ImsService priv-app (see vendor/vivo/1907N/proprietary/system/priv-app/
-# ImsService/) that Settings/ImsManager bind to - without it there's no IMS provider
-# registered at all, which is why VoLTE/VoWiFi/ViLTE toggles don't show up in Settings to
-# begin with, not just fail to connect. libimsma* are its native support libraries.
+PRODUCT_COPY_FILES += \
+    vendor/vivo/1907N/proprietary/system/framework/mediatek-ims-extension-plugin.jar:$(TARGET_COPY_OUT_SYSTEM)/framework/mediatek-ims-extension-plugin.jar \
+    vendor/vivo/1907N/proprietary/system/framework/mediatek-ims-legacy.jar:$(TARGET_COPY_OUT_SYSTEM)/framework/mediatek-ims-legacy.jar \
+    vendor/vivo/1907N/proprietary/system/framework/mediatek-wfo-legacy.jar:$(TARGET_COPY_OUT_SYSTEM)/framework/mediatek-wfo-legacy.jar \
+    vendor/vivo/1907N/proprietary/system/etc/permissions/com.mediatek.wfo.legacy.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/com.mediatek.wfo.legacy.xml
+
+PRODUCT_PACKAGES += \
+    VivoCarrierConfig
+
 PRODUCT_PACKAGES += \
     ImsService \
     libimsma \
@@ -212,6 +154,149 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     vendor/vivo/1907N/proprietary/system/etc/permissions/privapp-permissions-mediatek-ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-mediatek-ims.xml
 
-# Inherit the extracted vendor blobs once vendor/vivo/1907N/1907N-vendor.mk exists
-# (generated by vendor/vivo/1907N/extract-files.sh - see that tree's README)
+PRODUCT_COPY_FILES += \
+    vendor/vivo/1907N/proprietary/system/lib/libmtk_vt_wrapper.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libmtk_vt_wrapper.so \
+    vendor/vivo/1907N/proprietary/system/lib64/libmtk_vt_wrapper.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libmtk_vt_wrapper.so \
+    vendor/vivo/1907N/proprietary/system/lib/libvcodec_cap.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodec_cap.so \
+    vendor/vivo/1907N/proprietary/system/lib64/libvcodec_cap.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodec_cap.so \
+    vendor/vivo/1907N/proprietary/system/lib/libvcodec_capenc.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodec_capenc.so \
+    vendor/vivo/1907N/proprietary/system/lib64/libvcodec_capenc.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodec_capenc.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.mediatek.hardware.videotelephony@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.mediatek.hardware.videotelephony@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.mediatek.hardware.videotelephony@1.0.so
+
+PRODUCT_PACKAGES += \
+    android.hardware.lights-service.1907N
+
+PRODUCT_PACKAGES += \
+    libhwbinder \
+    libhidltransport \
+    libprocessinfoservice_aidl
+
+PRODUCT_PACKAGES += \
+    vivocameraserver \
+    vendor.vivo.hardware.osccamera.provider@1.0-service \
+    vendor.vivo.hardware.nativecamera.provider@1.0-service \
+    vendor.vivo.hardware.camera.cameralog@1.0-service \
+    libvivocameraservice \
+    vendor.vivo.hardware.camera.vop@1.0 \
+    vendor.vivo.hardware.osccamera.provider@1.0 \
+    vendor.vivo.hardware.osccamera.vivodevice@1.0 \
+    vendor.vivo.hardware.osccamera.vivodevice@1.0-impl \
+    libvif3ainfoutils
+
+PRODUCT_COPY_FILES += \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.camera.cameralog@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.camera.cameralog@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.camera.provider@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.camera.provider@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.cameralog@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.cameralog@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.provider@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.provider@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.nativecamera.provider@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.nativecamera.provider@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.nativecamera.provider@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.nativecamera.provider@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.camera.vivodevice@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.camera.vivodevice@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.vivodevice@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.vivodevice@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.camera.vif@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.camera.vif@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.vif@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.vif@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.camera.vivoreprocess@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.camera.vivoreprocess@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.vivoreprocess@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.vivoreprocess@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.nativecamera.vivodevice@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.nativecamera.vivodevice@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.nativecamera.vivodevice@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.nativecamera.vivodevice@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.camera.jpegencoder@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.camera.jpegencoder@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.jpegencoder@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.jpegencoder@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.camera.vif3ainfotransmitter@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.camera.vif3ainfotransmitter@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.vif3ainfotransmitter@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.vif3ainfotransmitter@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib/vendor.vivo.hardware.camera.vivopostproc@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.vivo.hardware.camera.vivopostproc@1.0.so \
+    vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.vivopostproc@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.vivopostproc@1.0.so
+
+PRODUCT_COPY_FILES += \
+    vendor/vivo/1907N/proprietary/system/etc/init/vivocameraserver.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vivocameraserver.rc \
+    vendor/vivo/1907N/proprietary/system/etc/init/vendor.vivo.hardware.osccamera.provider@1.0-service.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vendor.vivo.hardware.osccamera.provider@1.0-service.rc \
+    vendor/vivo/1907N/proprietary/system/etc/init/vendor.vivo.hardware.nativecamera.provider@1.0-service.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vendor.vivo.hardware.nativecamera.provider@1.0-service.rc \
+    vendor/vivo/1907N/proprietary/system/etc/init/vendor.vivo.hardware.camera.cameralog@1.0-service.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vendor.vivo.hardware.camera.cameralog@1.0-service.rc
+
+PRODUCT_PACKAGES += \
+    VivoCamera
+
+PRODUCT_COPY_FILES += \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libalgo_rithm_jni.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libalgo_rithm_jni.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libalgo_youtu_jni.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libalgo_youtu_jni.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libalLDC.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libalLDC.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libarcsoft_noteengine.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libarcsoft_noteengine.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libarcsoft_panorama_burstcapture.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libarcsoft_panorama_burstcapture.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libarcsoft_wideselfie.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libarcsoft_wideselfie.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libBaiduSpeechSDK.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libBaiduSpeechSDK.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libbdEASRAndroid_e2e.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libbdEASRAndroid_e2e.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libbd_easr_s1_merge_english.dat.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libbd_easr_s1_merge_english.dat.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libbitmaps.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libbitmaps.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libCameraShowYUV.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libCameraShowYUV.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libComposition.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libComposition.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libc++_shared.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libc++_shared.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libdoc_detect.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libdoc_detect.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libFaceDistortion.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libFaceDistortion.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libformat_convert.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libformat_convert.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libGestureDetectJni.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libGestureDetectJni.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libgifimage.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libgifimage.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libgnustl_shared.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libgnustl_shared.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libHistogram.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libHistogram.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libijkffmpeg.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libijkffmpeg.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libimage_filter_common.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libimage_filter_common.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libimage_filter_gpu.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libimage_filter_gpu.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libimagepipeline.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libimagepipeline.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libjni_camgraphic.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libjni_camgraphic.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libjni_jpegutil.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libjni_jpegutil.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libjni_scaleyuv.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libjni_scaleyuv.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libjni_yuvutil.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libjni_yuvutil.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/liblicense_baidu_duersdk_camera.data.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/liblicense_baidu_duersdk_camera.data.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libmegface_portrait.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libmegface_portrait.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libMegviiHum-jni-1.0.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libMegviiHum-jni-1.0.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libMegviiHum.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libMegviiHum.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libmemchunk.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libmemchunk.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libmp4v2.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libmp4v2.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libmpbase.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libmpbase.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libneuropilot_jni.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libneuropilot_jni.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libnnpack.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libnnpack.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libnti_cv.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libnti_cv.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libnti_picopo.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libnti_picopo.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libNvEffectSdkCore.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libNvEffectSdkCore.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libNvStreamingSdkCore.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libNvStreamingSdkCore.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libParticleSystem.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libParticleSystem.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libpitu_tools.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libpitu_tools.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libPPTProcess.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libPPTProcess.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libringlightdecoder.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libringlightdecoder.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libSceneChangedNative.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libSceneChangedNative.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libscene-detect.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libscene-detect.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libsdk_skeletal_animation.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libsdk_skeletal_animation.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libsegmentern.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libsegmentern.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libsegmentero.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libsegmentero.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libsnpe-android.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libsnpe-android.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libSNPE.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libSNPE.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libsoft_decoder.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libsoft_decoder.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libSThandDtNative.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libSThandDtNative.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libstmobile_hand.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libstmobile_hand.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libst_render.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libst_render.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libsymphony-cpu.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libsymphony-cpu.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libsymphonypower.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libsymphonypower.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libThreeDeminsBeauty.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libThreeDeminsBeauty.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libvcap.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libvcap.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libVivo3rdJNI.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libVivo3rdJNI.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libvivoDataDiffDetect.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libvivoDataDiffDetect.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libVivoDocRectifyProc.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libVivoDocRectifyProc.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libvivoFlashTest.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libvivoFlashTest.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libvivoIvw36.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libvivoIvw36.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libVivo_meiyan_resource.dat.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libVivo_meiyan_resource.dat.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libvivosgmain.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libvivosgmain.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libwebpimage.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libwebpimage.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libwebp.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libwebp.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libYTCommon.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libYTCommon.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libYTFaceTrackPro.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libYTFaceTrackPro.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libYTHandDetector.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libYTHandDetector.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libYTIllumination.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libYTIllumination.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libyuv_camera.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libyuv_camera.so \
+    vendor/vivo/1907N/proprietary/system/app/VivoCamera/lib/arm/libYUVSpliterJNI.so:$(TARGET_COPY_OUT_SYSTEM)/app/VivoCamera/lib/arm/libYUVSpliterJNI.so
+
 $(call inherit-product-if-exists, vendor/vivo/1907N/1907N-vendor.mk)
+
+PRODUCT_PACKAGES += \
+    TetheringWifiRegexOverlay
+
+PRODUCT_PACKAGES += \
+    FaceCaptureService \
+    default-permissions-facecapture.xml
