@@ -170,6 +170,11 @@ TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 TARGET_RECOVERY_LCD_BACKLIGHT_PATH := \"/sys/class/leds/lcd-backlight/brightness\"
 TARGET_SCREEN_WIDTH := 1080
 TARGET_SCREEN_HEIGHT := 2340
+# 1080x2340 panel. Without this build/make falls back to mdpi (12x22 font, res-mdpi) and the
+# recovery UI renders tiny in the top-left. 480dpi -> xxhdpi bucket + 18x32 font.
+TARGET_RECOVERY_DENSITY := 480dpi
+# MTK panel needs a blank/unblank cycle at UI init or the first frame doesn't scan out.
+TARGET_RECOVERY_UI_BLANK_UNBLANK_ON_INIT := true
 BOARD_HAS_NO_SELECT_BUTTON := true
 RECOVERY_SDCARD_ON_DATA := true
 TARGET_USES_MKE2FS := true

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Apply the vivo/1907N out-of-tree source patches (UDFPS HBM, Face Unlock, dual-Wi-Fi
-# SoftAP, tethering regex, USB gadget bind, BT audio HAL).
+# SoftAP, tethering regex, USB gadget bind, recovery backlight).
 #
 # Run once after `repo sync`, from anywhere:
 #     device/vivo/1907N/patches/apply-patches.sh
@@ -15,9 +15,9 @@ ROOT="$(cd "$HERE/../../../.." && pwd)"      # .../device/vivo/1907N/patches -> 
 BASE_FILE="$HERE/BASE"
 
 names=(frameworks_base packages_apps_Settings packages_modules_Connectivity \
-       packages_modules_Wifi system_core)
+       packages_modules_Wifi system_core bootable_recovery)
 paths=(frameworks/base packages/apps/Settings packages/modules/Connectivity \
-       packages/modules/Wifi system/core)
+       packages/modules/Wifi system/core bootable/recovery)
 
 fail=0
 for i in "${!names[@]}"; do

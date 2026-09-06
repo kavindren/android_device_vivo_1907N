@@ -1,0 +1,57 @@
+diff --git a/recovery_ui/include/recovery_ui/ui.h b/recovery_ui/include/recovery_ui/ui.h
+index d73e3225..0c8cdb8e 100644
+--- a/recovery_ui/include/recovery_ui/ui.h
++++ b/recovery_ui/include/recovery_ui/ui.h
+@@ -301,6 +301,12 @@ class RecoveryUI {
+   void EnqueueKey(int key_code);
+   void EnqueueTouch(const Point& pos);
+ 
++  // Re-asserts the normal screen brightness. Call after an init-time framebuffer blank/unblank
++  // that can leave the panel backlight powered down (seen on MTK DSI command-mode panels, where
++  // FB_BLANK_UNBLANK does not restore the backlight and nothing else does until the screensaver
++  // timeout).
++  void RestoreBrightness();
++
+   // The normal and dimmed brightness percentages (default: 50 and 25, which means 50% and 25% of
+   // the max_brightness). Because the absolute values may vary across devices. These two values can
+   // be configured via subclassing. Setting brightness_normal_ to 0 to disable screensaver.
+diff --git a/recovery_ui/screen_ui.cpp b/recovery_ui/screen_ui.cpp
+index 668d47a4..b00b968e 100644
+--- a/recovery_ui/screen_ui.cpp
++++ b/recovery_ui/screen_ui.cpp
+@@ -1026,6 +1026,12 @@ bool ScreenRecoveryUI::Init(const std::string& locale) {
+     gr_fb_blank(false);
+   }
+ 
++  // gr_init() (and the blank_unblank_on_init_ cycle above) drive the panel through
++  // FB_BLANK_POWERDOWN. On an MTK DSI command-mode panel that latches the backlight off and
++  // nothing restores it until the screensaver's UI_WAIT_KEY_TIMEOUT_SEC timeout, so the first
++  // recovery frame is composed but invisible. Re-assert the brightness now.
++  RestoreBrightness();
++
+   // Are we portrait or landscape?
+   layout_ = (gr_fb_width() > gr_fb_height()) ? LANDSCAPE : PORTRAIT;
+   // Are we the large variant of our base layout?
+diff --git a/recovery_ui/ui.cpp b/recovery_ui/ui.cpp
+index ea992593..407a80ef 100644
+--- a/recovery_ui/ui.cpp
++++ b/recovery_ui/ui.cpp
+@@ -546,6 +546,18 @@ void RecoveryUI::SetScreensaverState(ScreensaverState state) {
+   }
+ }
+ 
++void RecoveryUI::RestoreBrightness() {
++  if (screensaver_state_ == ScreensaverState::DISABLED) {
++    return;
++  }
++  // gr_init()'s FB_BLANK cycle powers the panel backlight down through the display path, behind
++  // the LED class driver's back. The driver still caches the pre-blank level and no-ops a write
++  // of that same value ("no level change, do nothing"), so re-writing the normal level alone
++  // does nothing. Force a real update by poking a different level first.
++  android::base::WriteStringToFile("0", brightness_file_);
++  SetScreensaverState(ScreensaverState::NORMAL);
++}
++
+ RecoveryUI::InputEvent RecoveryUI::WaitInputEvent() {
+   std::unique_lock<std::mutex> lk(event_queue_mutex);
+ 
