@@ -9,8 +9,6 @@
 | Shipped Android | 9 → 12 (Funtouch `SP1A.210812.003`) |
 | LineageOS base | 19.1 (Android 12.1 / API 32) |
 
-Also builds TWRP (`twrp_1907N-eng`) from the same tree.
-
 ## Feature status
 
 | Works | Broken / partial |
@@ -95,4 +93,3 @@ fastboot reboot
 - LineageOS team
 - 4PDA community — bootloader unlock research and testing
   (<https://4pda.to/forum/index.php?showtopic=1047450>)
-- TeamWin — for the TWRP side of this tree

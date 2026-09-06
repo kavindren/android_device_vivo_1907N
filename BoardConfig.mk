@@ -134,12 +134,6 @@ BOARD_AVB_RECOVERY_ADD_HASH_FOOTER_ARGS += \
     --prop com.android.build.vendor.security_patch:2021-11-05
 
 # Storage & Encryption
-TW_INCLUDE_CRYPTO := true
-TW_INCLUDE_CRYPTO_FBE := true
-TW_INCLUDE_FBE_METADATA_DECRYPT := false # the metadata partition on the device exists, but it is empty
-TW_USE_FSCRYPT_POLICY := 1
-TW_PREPARE_DATA_MEDIA_EARLY := true
-TW_FORCE_KEYMASTER_VER := true
 BOARD_USES_METADATA_PARTITION := true
 
 # SELinux
@@ -153,8 +147,7 @@ include device/mediatek/sepolicy_vndr/SEPolicy.mk
 DEVICE_MANIFEST_FILE := device/vivo/1907N/manifest.xml
 DEVICE_MATRIX_FILE := device/vivo/1907N/compatibility_matrix.xml
 
-# Modules & Binaries
-
+# Recovery
 TARGET_RECOVERY_DEVICE_MODULES += \
     ashmemd_aidl_interface-cpp \
     libashmemd_client \
@@ -170,80 +163,24 @@ RECOVERY_BINARY_SOURCE_FILES += \
     $(PRODUCT_OUT)/system/bin/ashmemd \
     $(PRODUCT_OUT)/system/bin/tombstoned
 
-TW_INCLUDE_RESETPROP := true
-
-TARGET_RECOVERY_DEVICE_MODULES += \
-    libresetprop \
-    libminijail \
-    libminijail_vendor
-
-TW_RECOVERY_ADDITIONAL_RELINK_LIBRARY_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libresetprop.so
-TW_RECOVERY_ADDITIONAL_RELINK_LIBRARY_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libminijail.so
-
-TARGET_RECOVERY_PIXEL_FORMAT := "BGRA_8888"
-ifeq ($(TARGET_PRODUCT),twrp_1907N)
-TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
-else
+TARGET_RECOVERY_PIXEL_FORMAT := BGRA_8888
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6768
-endif
+TARGET_RECOVERY_LCD_BACKLIGHT_PATH := \"/sys/class/leds/lcd-backlight/brightness\"
+TARGET_SCREEN_WIDTH := 1080
+TARGET_SCREEN_HEIGHT := 2340
 BOARD_HAS_NO_SELECT_BUTTON := true
 RECOVERY_SDCARD_ON_DATA := true
-TW_HAS_MTP := true
-TW_INTERNAL_STORAGE_PATH := "/data/media/0"
-TW_INTERNAL_STORAGE_MOUNT_POINT := "data"
-TW_EXTERNAL_STORAGE_PATH := "/external_sd"
-TW_EXTERNAL_STORAGE_MOUNT_POINT := "external_sd"
-BOARD_HAS_NO_REAL_SDCARD := true
+TARGET_USES_MKE2FS := true
+TARGET_USE_CONFIGFS := true
+TARGET_RECOVERY_USB_ID_VENDOR := 0x2D95
+TARGET_RECOVERY_USB_ID_PRODUCT := 0x6012
+TARGET_USES_LOGD := true
 
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
 TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
-TARGET_RECOVERY_INITRC := $(DEVICE_PATH)/recovery/root/init.recovery.mt6768.rc
 
 BOARD_VNDK_VERSION := current
 
 -include vendor/vivo/1907N/BoardConfigVendor.mk
 
 BOARD_ROOT_EXTRA_FOLDERS := system_root
-
-TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
-TARGET_RECOVERY_LCD_BACKLIGHT_PATH := \"/sys/class/leds/lcd-backlight/brightness\"
-TW_CUSTOM_CPU_TEMP_PATH := /sys/devices/virtual/thermal/thermal_zone1/temp
-TW_MAX_BRIGHTNESS := 2047
-TW_DEFAULT_BRIGHTNESS := 2000
-TW_NO_SCREEN_BLANK := true
-TW_SCREEN_BLANK_ON_BOOT := true
-TW_INPUT_BLACKLIST := "hbtp_vm,vivo_ts_fp,gf-keys,ACCDET"
-
-TW_THEME := portrait_hdpi
-DEVICE_SCREEN_WIDTH := 1080
-DEVICE_SCREEN_HEIGHT := 2340
-TW_STATUS_BAR_STACKING_OFFSET := 70
-TW_STATUS_BAR_PADDING_LEFT := 40
-TW_STATUS_BAR_PADDING_RIGHT := 40
-TW_CLOCK_OFFSET := 100
-
-TARGET_SCREEN_WIDTH := 1080
-TARGET_SCREEN_HEIGHT := 2340
-
-TW_USE_MODEL_HARDWARE_ID_FOR_DEVICE_ID := true
-TW_USE_TOOLBOX := true
-TW_EXTRA_LANGUAGES := false
-TW_DEFAULT_LANGUAGE := en
-TW_INCLUDE_NTFS_3G := true
-TARGET_USES_MKE2FS := true
-
-TARGET_USE_CONFIGFS := true
-TW_USB_CONFIGFS_STRINGS := true
-TW_EXCLUDE_LUN_0 := true
-TW_EXCLUDE_DEFAULT_USB_INIT := false
-TARGET_RECOVERY_USB_ID_VENDOR := 0x2D95
-TARGET_RECOVERY_USB_ID_PRODUCT := 0x6012
-
-TWRP_INCLUDE_LOGCAT := true
-TW_INCLUDE_FASTBOOTD := false
-TARGET_USES_LOGD := true
-TW_EXCLUDE_TWRPAPP := true
-TW_EXCLUDE_APEX := true
-
-TW_DEFAULT_DEVICE_NAME := vivo_V17_Neo
-TW_DEVICE_VERSION := vivo 1907 - kavindren
