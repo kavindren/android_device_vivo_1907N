@@ -1,1 +1,11 @@
 type gx_vnd_service, vndservice_manager_type;
+
+type vivocameraserver, domain, coredomain;
+
+type hal_nativecamera_hwservice, hwservice_manager_type;
+type hal_cameralog_hwservice, hwservice_manager_type;
+type hal_vivocameraprovider_hwservice, hwservice_manager_type;
+
+type sysfs_otg, fs_type, sysfs_type;
+
+type touchscreen_private_file, file_type, data_file_type;

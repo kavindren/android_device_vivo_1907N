@@ -1,9 +1,3 @@
-# Minimal type stubs for sepolicy/private/file_contexts entries not declared anywhere in
-# AOSP base sepolicy, device/mediatek/sepolicy_vndr, or this tree's own .te files. Same
-# rationale as sepolicy/vendor/vivo_custom_*_stubs.te, but for platform-side (private, not
-# vendor) paths - mostly vivo/BBK system-partition tools, data-partition dirs, and a couple
-# of vendor.vivo.hardware.* HAL exec labels referenced from /system rather than /vendor.
-
 type atcid_common_exec, exec_type, file_type;
 type atcmd_cache_file, file_type, data_file_type;
 type atcmd_enforce_file, file_type, data_file_type;
@@ -26,8 +20,8 @@ type faceunlock_private_file, file_type, data_file_type;
 type fingerprint_private_file, file_type, data_file_type;
 type forcetouch_private_file, file_type, data_file_type;
 type gallery_res_data_file, file_type, data_file_type;
-type hal_cameralog_default_exec, exec_type, file_type;
-type hal_nativecamera_default_exec, exec_type, file_type;
+type hal_cameralog_default_exec, exec_type, file_type, system_file_type;
+type hal_nativecamera_default_exec, exec_type, file_type, system_file_type;
 type hal_vivoatcmd_default_exec, exec_type, file_type;
 type logdata_data_file, file_type, data_file_type;
 type log_device, dev_type, file_type;
@@ -44,21 +38,18 @@ type sflog_data_file, file_type, data_file_type;
 type sla_data_file, file_type, data_file_type;
 type slad_socket, file_type;
 type superreolutionserver_exec, exec_type, file_type;
-type sysfs_alpmmode, fs_type, sysfs_type, file_type;
-type sysfs_alpmmode_secondary, fs_type, sysfs_type, file_type;
-type sysfs_user_cpu_freq, fs_type, sysfs_type, file_type;
+type sysfs_alpmmode, fs_type, sysfs_type;
+type sysfs_alpmmode_secondary, fs_type, sysfs_type;
+type sysfs_user_cpu_freq, fs_type, sysfs_type;
 type system_data_abe, file_type, data_file_type;
 type system_data_pem, file_type, data_file_type;
 type system_data_perfdata_boottime, file_type, data_file_type;
 type tll_device, dev_type, file_type;
-type touchscreen_private_file, file_type, data_file_type;
 type vdtf_exec, exec_type, file_type;
 type vdtf_socket, file_type;
 type vendor_audio_hw_log_file, file_type, data_file_type;
 type vendor_cryptfs_data_file, file_type, data_file_type;
-type vendor_em_data_file, file_type, data_file_type;
 type vfont_data_file, file_type, data_file_type;
-type vivocameraserver_exec, exec_type, file_type;
 type vivo_cust_file, file_type, data_file_type;
 type vivo_customcenter_exec, exec_type, file_type;
 type vivo_daemon_exec, exec_type, file_type;
@@ -69,7 +60,6 @@ type vivo_fsck_exec, exec_type, file_type;
 type vivo_log_file, file_type, data_file_type;
 type vivoperfservice_exec, exec_type, file_type;
 type vivo_sarsecondary_sensor, file_type, data_file_type;
-type vivo_sar_sensor, file_type, data_file_type;
 type vrp_exec, exec_type, file_type;
 type vusbd_data_file, file_type, data_file_type;
 type xlog_data_file, file_type, data_file_type;

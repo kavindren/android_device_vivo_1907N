@@ -1,34 +1,6 @@
-# USB fix: adbd only ships on this device as the flattened com.android.adbd APEX
-# (/system/apex/com.android.adbd/bin/adbd) - there is no plain /system/bin/adbd fallback in the
-# system build (confirmed absent from target-files; the platform's own service definition in
-# system/core/rootdir/init.usb.rc is "disabled"+"updatable" and only gets a real backing binary
-# if apexd successfully activates that APEX during early boot and injects an override from
-# /apex/com.android.adbd/etc/init.rc). Every USB config trigger in init.usb(.configfs).rc that
-# does "start adbd" silently no-ops if that activation never happened, sys.usb.ffs.ready never
-# becomes 1, and the UDC (see init.usb.configfs.rc) is never written - the host sees literally
-# nothing, matching the observed symptom exactly. Remove the apexd dependency from the chain
-# entirely: redefine the "adbd" service (same name, so every existing "start adbd" trigger
-# elsewhere picks this up automatically - no other file needs to change) to exec the flattened
-# binary directly, a plain file guaranteed available as soon as /system is mounted. `override`
-# is the standard init mechanism for a later-parsed vendor/device file replacing an
-# earlier-parsed platform service definition (vendor's init directory is parsed after /system's).
-#
-# Confirmed via logcat: this got adbd actually launching, but it was immediately dying with
-# "CANNOT LINK EXECUTABLE ... library libadb_protos.so not found: needed by main executable"
-# on every single start attempt (repeating every ~5s as init.usb.configfs.rc/init.mt6768.usb.rc
-# kept retrying it, which is also what was tearing down the mtp gadget bind in the process -
-# UsbDeviceManager's failsafe kept flipping sys.usb.config none->mtp->adb->none while adbd never
-# came up, leaving the UDC unbound and the device invisible on the host). libadb_protos.so and
-# the other adb*-specific libs (libadbconnection_client.so, libadb_pairing_*.so) only exist under
-# this APEX's own lib/lib64 dirs, never in plain /system/lib64 - normally apexd+linkerconfig set
-# up a private linker namespace rooted at /apex/com.android.adbd/ that resolves them, but since
-# this service execs the binary straight from its flattened path under /system/apex/... instead
-# of going through the real /apex mount, it gets the generic system namespace instead, which
-# never searches this APEX's own lib dirs. Point the linker at them directly.
-service adbd /system/apex/com.android.adbd/bin/adbd --root_seclabel=u:r:su:s0
+service adbd /apex/com.android.adbd/bin/adbd --root_seclabel=u:r:su:s0
     class core
     socket adbd seqpacket 660 system system
     disabled
     seclabel u:r:adbd:s0
-    setenv LD_LIBRARY_PATH /system/apex/com.android.adbd/lib64:/system/apex/com.android.adbd/lib
     override

@@ -26,17 +26,15 @@ namespace gadget {
 int unlinkFunctions(const char* path) {
     DIR* config = opendir(path);
     struct dirent* function;
+    struct stat entryStat;
     char filepath[kMaxFilePathLength];
     int ret = 0;
 
     if (config == NULL) return -1;
 
-    // d_type does not seems to be supported in /config
-    // so filtering by name.
     while (((function = readdir(config)) != NULL)) {
-        if ((strstr(function->d_name, FUNCTION_NAME) == NULL)) continue;
-        // build the path for each file in the folder.
         sprintf(filepath, "%s/%s", path, function->d_name);
+        if (lstat(filepath, &entryStat) != 0 || !S_ISLNK(entryStat.st_mode)) continue;
         ret = remove(filepath);
         if (ret) {
             ALOGE("Unable  remove file %s errno:%d", filepath, errno);
@@ -170,7 +168,7 @@ Status addGenericAndroidFunctions(MonitorFfs* monitorFfs, uint64_t functions, bo
 
     if ((functions & GadgetFunction::RNDIS) != 0) {
         ALOGI("setCurrentUsbFunctions rndis");
-        if (linkFunction("gsi.rndis", (*functionCount)++)) return Status::ERROR;
+        if (linkFunction("rndis.gs4", (*functionCount)++)) return Status::ERROR;
     }
 
     return Status::SUCCESS;

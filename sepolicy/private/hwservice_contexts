@@ -1,0 +1,4 @@
+vendor.vivo.hardware.osccamera.provider::IOscCameraProvider     u:object_r:hal_osccamera_hwservice:s0
+vendor.vivo.hardware.camera.cameralog::ICameraLogSystem          u:object_r:hal_cameralog_hwservice:s0
+vendor.vivo.hardware.nativecamera.provider::INativeCameraProvider u:object_r:hal_nativecamera_hwservice:s0
+vendor.vivo.hardware.camera.provider::IVivoCameraProvider        u:object_r:hal_vivocameraprovider_hwservice:s0

@@ -1,62 +1,28 @@
-# Minimal exec_type stubs for vendor binaries labeled in file_contexts that aren't
-# declared anywhere in AOSP base sepolicy or device/mediatek/sepolicy_vndr - mostly
-# vivo/BBK-custom HAL services (vendor.vivo.hardware.*) and a handful of MTK-internal
-# tools not covered by the common MTK policy. Declared here just enough to let the
-# sepolicy compile (file_contexts referencing an undeclared type is a hard build
-# error, independent of the androidboot.selinux=permissive runtime mode already set
-# in BOARD_KERNEL_CMDLINE). Proper domains (hal_attribute_hwservice, init_daemon_domain,
-# specific allow rules) should replace these stubs once real avc denials from an
-# actual boot are available to drive them - see sepolicy/README-todo.md.
-
 type vivo-fingerprint-sh_exec, exec_type, vendor_file_type, file_type;
 type atcid_factory_exec, exec_type, vendor_file_type, file_type;
-type atcid_vendor_exec, exec_type, vendor_file_type, file_type;
 type bip_ap_exec, exec_type, vendor_file_type, file_type;
-type bsc_exec, exec_type, vendor_file_type, file_type;
 type bsptool_exec, exec_type, vendor_file_type, file_type;
 type bt_dump_exec, exec_type, vendor_file_type, file_type;
 type charon_exec, exec_type, vendor_file_type, file_type;
-type chipinfo_exec, exec_type, vendor_file_type, file_type;
 type conninfra_loader_exec, exec_type, vendor_file_type, file_type;
 type DcxoSetCap_exec, exec_type, vendor_file_type, file_type;
 type eara_io_exec, exec_type, vendor_file_type, file_type;
-type fingerprint_analysis_exec, exec_type, vendor_file_type, file_type;
 type fpsgo_native_exec, exec_type, vendor_file_type, file_type;
-type getgameserver_exec, exec_type, vendor_file_type, file_type;
-type hal_bbkts_default_exec, exec_type, vendor_file_type, file_type;
-type hal_bspservice_default_exec, exec_type, vendor_file_type, file_type;
-type hal_camera3rd_default_exec, exec_type, vendor_file_type, file_type;
-type hal_capacitykey_default_exec, exec_type, vendor_file_type, file_type;
-type hal_dualleds_default_exec, exec_type, vendor_file_type, file_type;
-type hal_eid_default_exec, exec_type, vendor_file_type, file_type;
 type hal_esepowermanager_default_exec, exec_type, vendor_file_type, file_type;
-type hal_faceunlock_native_exec, exec_type, vendor_file_type, file_type;
 type hal_fido_default_exec, exec_type, vendor_file_type, file_type;
-type hal_lcmctl_default_exec, exec_type, vendor_file_type, file_type;
-type hal_omnipotentservice_default_exec, exec_type, vendor_file_type, file_type;
 type hal_ringleds_default_exec, exec_type, vendor_file_type, file_type;
-type hal_sectee_default_exec, exec_type, vendor_file_type, file_type;
-type hal_sensorfactory_default_exec, exec_type, vendor_file_type, file_type;
 type hal_superreolution_default_exec, exec_type, vendor_file_type, file_type;
 type hal_tam_default_exec, exec_type, vendor_file_type, file_type;
 type hal_trust_default_exec, exec_type, vendor_file_type, file_type;
-type hal_vcode_default_exec, exec_type, vendor_file_type, file_type;
-type hal_vcustom_default_exec, exec_type, vendor_file_type, file_type;
-type hal_vdtf_default_exec, exec_type, vendor_file_type, file_type;
-type hal_vgnss_default_exec, exec_type, vendor_file_type, file_type;
 type hal_vibrator_ext_default_exec, exec_type, vendor_file_type, file_type;
 type hal_vibrator_hall_default_exec, exec_type, vendor_file_type, file_type;
 type hal_vibrator_pro_default_exec, exec_type, vendor_file_type, file_type;
 type hal_visdisplaysrv_default_exec, exec_type, vendor_file_type, file_type;
 type hal_vivoasem_default_exec, exec_type, vendor_file_type, file_type;
-type hal_vivoconfigstore_default_exec, exec_type, vendor_file_type, file_type;
-type hal_vivoem_default_exec, exec_type, vendor_file_type, file_type;
-type hal_vperf_default_exec, exec_type, vendor_file_type, file_type;
 type init_insmod_sh_exec, exec_type, vendor_file_type, file_type;
 type io_enhance_exec, exec_type, vendor_file_type, file_type;
 type ipsec_exec, exec_type, vendor_file_type, file_type;
 type mobileevent_exec, exec_type, vendor_file_type, file_type;
-type mtk_hal_c2_exec, exec_type, vendor_file_type, file_type;
 type mtk_hal_memtrack_exec, exec_type, vendor_file_type, file_type;
 type mtk_hal_mmagent_exec, exec_type, vendor_file_type, file_type;
 type mtk_hal_nvramagent_exec, exec_type, vendor_file_type, file_type;
@@ -78,8 +44,6 @@ type tesiai_hal_hdcp_exec, exec_type, vendor_file_type, file_type;
 type thermal_core_exec, exec_type, vendor_file_type, file_type;
 type usbdbgd_exec, exec_type, vendor_file_type, file_type;
 type vivo_check_exec, exec_type, vendor_file_type, file_type;
-type vivo_em_svr_vendor_exec, exec_type, vendor_file_type, file_type;
-type vivo_hal_fingerprint_exec, exec_type, vendor_file_type, file_type;
 type vivojams_exec, exec_type, vendor_file_type, file_type;
 type volte_md_status_exec, exec_type, vendor_file_type, file_type;
 type vts_app_exec, exec_type, vendor_file_type, file_type;

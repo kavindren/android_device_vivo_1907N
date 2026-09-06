@@ -94,7 +94,6 @@
 /data/vendor/faceunlock(/.*)?          u:object_r:faceunlock_private_file:s0
 /data/vendor/fingerprint(/.*)?      u:object_r:fingerprint_private_file:s0
 /data/vendor/touchscreen(/.*)?			u:object_r:touchscreen_private_file:s0
-/data/vendor/engineermode(/.*)?   u:object_r:vendor_em_data_file:s0
 /data/vivo-others/cryptfs(/.*)?   u:object_r:vendor_cryptfs_data_file:s0
 /data/vendor/audio_hw_log(/.*)?  u:object_r:vendor_audio_hw_log_file:s0
 /mnt/vendor/persist/saleinfo(/.*)?     u:object_r:vivo_data_file:s0
@@ -104,7 +103,6 @@
 /data/vivo-common/cota-persist(/.*)?            u:object_r:cota_persist_data_file:s0
 /data/vivo-common/circulatedlog(/.*)? u:object_r:circulatedlog_data_file:s0
 /factory                        u:object_r:system_file:s0
-/dev/sar                                                                        u:object_r:vivo_sar_sensor:s0
 /dev/tll u:object_r:tll_device:s0
 /dev/tfa98xx			u:object_r:audio_ic_device:s0
 /vgc/data-app               u:object_r:system_file:s0
@@ -158,3 +156,8 @@
 /sys/kernel/debug/tzdbg/qsee_log         u:object_r:debugfs_vivo:s0
 /system/bin/hw/vendor\.vivo\.hardware\.camera\.cameralog@1\.0-service u:object_r:hal_cameralog_default_exec:s0
 /system/bin/hw/vendor\.vivo\.hardware\.nativecamera\.provider@1\.0-service u:object_r:hal_nativecamera_default_exec:s0
+/system/bin/hw/vendor\.vivo\.hardware\.osccamera\.provider@1\.0-service u:object_r:hal_osccamera_default_exec:s0
+
+/(vendor|system/vendor)/bin/hw/android\.hardware\.lights-service\.1907N u:object_r:hal_light_default_exec:s0
+
+/system_root(/.*)?          u:object_r:rootfs:s0

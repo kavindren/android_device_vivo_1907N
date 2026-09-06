@@ -3,17 +3,16 @@ ro.product.manufacturer=vivo
 ro.product.brand=vivo
 ro.product.model=vivo 1907
 ro.product.device=1907N
-# ro.product.name=1907N_RU
 
 # Vivo / BBK Asserts
 ro.vivo.product.model=PD1913F_EX
 ro.vivo.hardware.version=PD1913F_EXMA
 ro.hardware.bbk=PD1913F_EXMA
-# vts_app (touchscreen firmware updater) also references this directly (confirmed via strings on
-# the binary) alongside ro.vendor.vivo.product.model/ro.vivo.product.model - likely a project-id
-# gate checked before it proceeds with firmware lookup at all. Missing entirely from this tree
-# before now (stock has it in system/build.prop, not vendor).
+
+ro.vivo.product.overseas=yes
 ro.build.oem.projects=PD1913F_EX
+
+ro.product.model.bbk=PD1913F_EX
 
 # Debugging
 ro.debuggable=1
@@ -27,17 +26,30 @@ ro.vendor.usb.pid.adb=0x6001
 ro.vendor.usb.pid.mtp=0x6012
 ro.vendor.usb.pid.mtp_adb=0x6013
 
-# Default USB State
-persist.sys.usb.config=adb
-sys.usb.config=adb
+persist.vivo.support.dualwifi=yes
 
-# IMS / VoLTE / WFC
-# Stock has this in system/build.prop (not vendor/build.prop, where all the other
-# persist.vendor.*volte*/*ims*/*wfc* flags live and which we never touch). Without it,
-# libmtkproperty.so's "feature utils" check fails for WFC specifically - confirmed via
-# `RILC: setVendorSetting: serial: X, setting 16` (SET_WFC_ENABLE) immediately followed by
-# `MTK_PROPERTY: invalid operation, please use feature utils` in the radio logcat buffer
-# (`adb logcat -b radio`, not the default main buffer - Rlog-based telephony/IMS logging is
-# invisible without it). The VoLTE-only path (setting 11) never hit this error, matching
-# that all its persist.vendor.*volte* flags already live in vendor/build.prop untouched.
+ro.telephony.default_network=9,9
+
 persist.vendor.wfc.sys_wfc_support=1
+persist.vendor.volte_support=1
+persist.vendor.mtk_wfc_support=1
+persist.vendor.vilte_support=0
+persist.vendor.viwifi_support=0
+
+persist.vendor.ims_support=1
+persist.dbg.volte_avail_ovr=1
+persist.dbg.vt_avail_ovr=0
+persist.dbg.wfc_avail_ovr=1
+persist.dbg.allow_ims_off=1
+
+persist.vendor.mtk.volte.enable=1
+persist.vendor.mtk_dynamic_ims_switch=1
+persist.vendor.mims_support=2
+persist.vendor.mtk_ct_volte_support=3
+ro.telephony.iwlan_operation_mode=default
+
+vendor.ril.imsconfig.force.notify=1
+
+persist.mtk_epdg_support=1
+
+ro.vendor.md_auto_setup_ims=1

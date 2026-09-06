@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Confirmed via logcat: the whole native MTK IMS stack (volte_imsm_93, volte_imcb) boots
-     and talks to the modem fine (reads IMSI/MSISDN/ISIM off the SIM, HIDL-registers
-     android.hardware.radio@1.6::IRadio/imsAospSlot1 and
-     vendor.mediatek.hardware.mtkradioex@3.0::IMtkRadioEx/imsSlot1), and ImsService.apk (see
-     vendor/vivo/1907N/proprietary/system/priv-app/ImsService/) is installed with its
-     permissions read correctly - but ImsResolver logs "device MMTEL package: , device RCS
-     package:" (both empty) and every registerMmTelCapabilityCallback/registerImsRegistration
-     Callback call in Settings/Telephony fails with "no ImsService available". These two
-     resources are how ImsResolver knows which installed package is the platform's default
-     ImsService provider for each feature (see ImsResolver.java, maybeAddDeviceService()) -
-     without them it has an ImsService sitting on disk that nothing ever binds to. Confirmed
-     the package name via `strings -el` on ImsService.apk's binary AndroidManifest.xml:
-     com.mediatek.ims (service class com.mediatek.ims.MtkDynamicImsService). -->
 <resources>
     <string name="config_ims_mmtel_package" translatable="false">com.mediatek.ims</string>
-    <string name="config_ims_rcs_package" translatable="false">com.mediatek.ims</string>
+    <string name="config_ims_rcs_package" translatable="false">com.android.service.ims</string>
 </resources>

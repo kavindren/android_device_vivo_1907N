@@ -1,2 +1,1 @@
-#line 1 "system/sepolicy/private/service_contexts"
-
+media.vivocamera                                                u:object_r:vivocameraserver_service:s0

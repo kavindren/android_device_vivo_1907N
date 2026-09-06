@@ -91,6 +91,13 @@ static void displayInotifyEvent(struct inotify_event* i) {
     if (i->len > 0) ALOGE("        name = %s\n", i->name);
 }
 
+static bool pullUpGadget(const char* gadgetName) {
+    if (!!WriteStringToFile(gadgetName, PULLUP_PATH)) return true;
+    if (errno != EBUSY) return false;
+    std::string current;
+    return ReadFileToString(PULLUP_PATH, &current) && !current.empty();
+}
+
 void* MonitorFfs::startMonitorFd(void* param) {
     MonitorFfs* monitorFfs = (MonitorFfs*)param;
     char buf[kBufferSize];
@@ -109,7 +116,7 @@ void* MonitorFfs::startMonitorFd(void* param) {
     // notify here if the endpoints are already present.
     if (descriptorWritten) {
         usleep(kPullUpDelay);
-        if (!!WriteStringToFile(monitorFfs->mGadgetName, PULLUP_PATH)) {
+        if (pullUpGadget(monitorFfs->mGadgetName)) {
             lock_guard<mutex> lock(monitorFfs->mLock);
             monitorFfs->mCurrentUsbFunctionsApplied = true;
             monitorFfs->mCallback(monitorFfs->mCurrentUsbFunctionsApplied, monitorFfs->mPayload);
@@ -117,6 +124,8 @@ void* MonitorFfs::startMonitorFd(void* param) {
             writeUdc = false;
             ALOGI("GADGET pulled up");
             monitorFfs->mCv.notify_all();
+        } else {
+            ALOGE("initial UDC pullup write failed, errno=%d (%s)", errno, strerror(errno));
         }
     }
 
@@ -160,7 +169,7 @@ void* MonitorFfs::startMonitorFd(void* param) {
                             kPullUpDelay)
                             usleep(kPullUpDelay);
 
-                        if (!!WriteStringToFile(monitorFfs->mGadgetName, PULLUP_PATH)) {
+                        if (pullUpGadget(monitorFfs->mGadgetName)) {
                             lock_guard<mutex> lock(monitorFfs->mLock);
                             monitorFfs->mCurrentUsbFunctionsApplied = true;
                             monitorFfs->mCallback(monitorFfs->mCurrentUsbFunctionsApplied,
@@ -170,6 +179,9 @@ void* MonitorFfs::startMonitorFd(void* param) {
                             gadgetPullup = true;
                             // notify the main thread to signal userspace.
                             monitorFfs->mCv.notify_all();
+                        } else {
+                            ALOGE("inotify-triggered UDC pullup write failed, errno=%d (%s)", errno,
+                                  strerror(errno));
                         }
                     }
                 }

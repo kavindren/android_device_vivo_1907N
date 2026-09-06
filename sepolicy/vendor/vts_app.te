@@ -1,15 +1,31 @@
-# vendor/etc/init/vts_app.rc's touchupdate/touchaddpanel/touchtest/touchrecord services all
-# explicitly set `seclabel u:r:vts_app:s0` (rather than relying on an exec-label-driven
-# type_transition), but sepolicy/vendor/vivo_custom_hal_stubs.te only ever declared
-# vts_app_exec (the FILE label for /vendor/bin/vts_app) - the vts_app DOMAIN itself was never
-# declared anywhere in this tree or in device/mediatek/sepolicy_vndr (confirmed via `strings` on
-# the compiled precompiled_sepolicy: only "vts_app_exec" appears, never bare "vts_app"). An
-# explicit seclabel naming an undeclared type is an invalid security context - the kernel rejects
-# it as unknown at the context-validity level, independent of permissive/enforcing mode (that
-# distinction only governs allow/deny decisions for VALID contexts). The services almost
-# certainly fail to even start as a result, which would fully explain touch firmware never
-# getting flashed automatically during a real boot despite `vts_app --update` working fine when
-# run manually from TWRP under a real context (u:r:su:s0) - see the manual vts_app testing
-# session that led here.
 type vts_app, domain;
 init_daemon_domain(vts_app)
+
+allow vts_app vivo_tpfs:dir r_dir_perms;
+allow vts_app vivo_tpfs:file rw_file_perms;
+allow vts_app vts_fs:dir r_dir_perms;
+allow vts_app vts_fs:file rw_file_perms;
+allow vts_app mvts_device:chr_file rw_file_perms;
+allow vts_app vendor_data_file:dir create_dir_perms;
+allow vts_app vendor_data_file:file create_file_perms;
+allow vts_app touchscreen_private_file:dir create_dir_perms;
+allow vts_app touchscreen_private_file:file create_file_perms;
+
+# Focaltech (fts_i2c / fts_i2c_second)
+allow vts_app sysfs_ftm:dir r_dir_perms;
+allow vts_app sysfs_ftm:file rw_file_perms;
+
+# Samsung-style touch IC (sec_ts / sec_ts_vivo)
+allow vts_app sysfs_sec:dir r_dir_perms;
+allow vts_app sysfs_sec:file rw_file_perms;
+allow vts_app sysfs_sec_tsp:dir r_dir_perms;
+allow vts_app sysfs_sec_tsp:file rw_file_perms;
+
+allow vts_app gtp_tools_device:chr_file rw_file_perms;
+allow vts_app tcm0_device:chr_file rw_file_perms;
+
+allow vts_app ilitek_ioctl:chr_file rw_file_perms;
+allow vts_app st_test_device:chr_file rw_file_perms;
+allow vts_app cts_tool:chr_file rw_file_perms;
+
+allow vts_app proc:file r_file_perms;

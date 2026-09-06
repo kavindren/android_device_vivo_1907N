@@ -176,7 +176,6 @@
 /(vendor|system/vendor)/bin/hw/vendor\.vivo\.hardware\.lcmctl@1\.0-service    u:object_r:hal_lcmctl_default_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.vivo\.hardware\.vcode@1\.0-service     u:object_r:hal_vcode_default_exec:s0
 /(vendor|factory)/bin/atcid_factory     u:object_r:atcid_vendor_exec:s0
-/(vendor|factory)/bin                    u:object_r:atcid_vendor_exec:s0
 /(vendor|factory)/bin/stress     u:object_r:atcid_factory_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.vivo\.hardware\.vcustom@1\.0-service     u:object_r:hal_vcustom_default_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.vivo\.hardware\.superreolution@1\.0-service     u:object_r:hal_superreolution_default_exec:s0
@@ -196,6 +195,8 @@
 /dev/media[0-9]+   u:object_r:mtk_v4l2_media_device:s0
 /dev/i2c-9(/.*)?       u:object_r:tahiti_device:s0
 /dev/radio(/.*)?       u:object_r:mtk_radio_device:s0
+/dev/sar               u:object_r:vivo_sar_sensor:s0
+/data/vendor/engineermode(/.*)?   u:object_r:vendor_em_data_file:s0
 /vgc/fonts(/.*)?      u:object_r:font_datas_file:s0
 /sys/fp_id(/.*)?                    u:object_r:sysfs_fp:s0
 /dev/apusys(/.*)?  u:object_r:apusys_device:s0
@@ -434,7 +435,6 @@
 /dev/pn553             u:object_r:nfc_device:s0
 /dev/mml_pq     u:object_r:mml_pq_device:s0
 /dev/drm_wv u:object_r:widevine_drv_device:s0
-/dev/ttyGS0					u:object_r:serial_device:s0
 /dev/qbt_fd                                 u:object_r:vivo_fp_device:s0
 /donuts_key                                                     u:object_r:rootfs:s0
 /dev/gps2scp            u:object_r:gps2scp_device:s0
@@ -482,6 +482,7 @@
 /sys/lcm/bl_level        u:object_r:sysfs_oled_hbm:s0
 /sys/lcm/wise_fps u:object_r:sysfs_oled_hbm:s0
 /sys/lcm/oled_hbm       u:object_r:sysfs_oled_hbm:s0
+/sys/lcm/oled_hbm_force_hold u:object_r:sysfs_oled_hbm:s0
 /dev/ccci_c2k_agps u:object_r:agps_device:s0
 /dev/ccci_ccb_ctrl  u:object_r:ccci_ccb_device:s0
 /sys/lcm/oled_hbm1       u:object_r:sysfs_oled_hbm:s0
@@ -625,6 +626,8 @@
 /sys/bus/i2c/devices/4-0049/fts_fp_info u:object_r:sysfs_fp_touchevent:s0
 /dev/dma_heap/mtk_sapu_engine_shm_region            u:object_r:dmabuf_system_secure_heap_device:s0
 /sys/devices/platform/mt_usb/otg_charger u:object_r:sysfs_otg:s0
+/sys/devices/platform/mt_usb/saving u:object_r:sysfs_otg:s0
+/sys/class/usb_rawbulk(/.*)?     u:object_r:sysfs_otg:s0
 /sys/kernel/debug/audio-tas2560/check_reg  u:object_r:debugfs_atcid:s0
 /sys/devices/virtual/switch/gsensor/state  u:object_r:sysfs_switch_gsensor:s0
 /sys/devices/platform/extcon_usb/otg_mode u:object_r:sysfs_otg:s0

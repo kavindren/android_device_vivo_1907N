@@ -1,13 +1,7 @@
-# Minimal property_type stubs for vendor.* properties labeled in property_contexts that
-# aren't declared anywhere in AOSP base sepolicy or device/mediatek/sepolicy_vndr - this
-# property_contexts file was carried over from a vivo/BBK community sepolicy set that
-# assumed its own separate type-declaration file we don't have. Declared here just enough
-# to let property_contexts compile; see vivo_custom_hal_stubs.te for the same situation
-# with file_contexts exec types.
-
 type vendor_mtk_ctl_muxreport-daemon_prop, property_type, vendor_property_type;
 type vendor_mtk_ctl_ril-daemon-mtk_prop, property_type, vendor_property_type;
 type vendor_mtk_ctl_ril-proxy_prop, property_type, vendor_property_type;
+type vendor_vgc_prop, property_type, vendor_property_type;
 type vendor_fuelsummary_prop, property_type, vendor_property_type;
 type framework_svadump_prop, property_type, vendor_property_type;
 type vendor_alipay_prop, property_type, vendor_property_type;
@@ -232,4 +226,9 @@ type vendor_vivo_audio_prop, property_type, vendor_property_type;
 type vendor_vivo_defend_prop, property_type, vendor_property_type;
 type vendor_vivo_serialno_prop, property_type, vendor_property_type;
 type vendor_zramwb_prop, property_type, vendor_property_type;
+type vivo_dyn_name_prop, property_type, vendor_property_type;
+type vivo_fingerprint_front_prop, property_type, vendor_property_type;
+type vivo_vold_primary_physical_prop, property_type, vendor_property_type;
+type vivo_viatel_device_prop, property_type, vendor_property_type;
+type vivo_imei_match_prop, property_type, vendor_property_type;
 type vivo_prop, property_type, vendor_property_type;
