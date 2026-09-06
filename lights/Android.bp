@@ -1,0 +1,15 @@
+cc_binary {
+    name: "android.hardware.lights-service.1907N",
+    relative_install_path: "hw",
+    init_rc: ["lights-1907N.rc"],
+    vendor: true,
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "android.hardware.light-V1-ndk_platform",
+    ],
+    srcs: [
+        "Lights.cpp",
+        "main.cpp",
+    ],
+}
