@@ -53,3 +53,8 @@ vendor.ril.imsconfig.force.notify=1
 persist.mtk_epdg_support=1
 
 ro.vendor.md_auto_setup_ims=1
+
+# Self-hosted OTA (LineageOS Updater). Overrides updater_server_url. Placeholders:
+# {device}=ro.lineage.device, {type}=ro.lineage.releasetype (lowercased), {incr}=ro.build.version.incremental.
+# Set to your own host before building; see tools/ota/.
+ro.updater.uri=https://CHANGE-ME.example/api/v1/{device}/{type}/{incr}
