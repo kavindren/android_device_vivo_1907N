@@ -1,0 +1,778 @@
+diff --git a/res/layout/face_enroll_education.xml b/res/layout/face_enroll_education.xml
+index 2a78f999eb..b76f6cdf35 100644
+--- a/res/layout/face_enroll_education.xml
++++ b/res/layout/face_enroll_education.xml
+@@ -60,13 +60,20 @@
+                 app:lottie_loop="true"
+                 app:lottie_speed="1.5" />
+ 
++            <!-- vivo 1907N Face Unlock bring-up (not AOSP): android:background dropped - it drew
++                 the same face icon a second time, underneath/overlapping
++                 FaceEducationAnimationDrawable's own copy of it (now set as this ImageView's
++                 src via setImageDrawable() in FaceEnrollEducation.java, sized/centered properly
++                 within the drawable's own onBoundsChange logic) - confirmed on a real device as
++                 two overlapping faces, one correctly sized and one stretched (the background
++                 drawable, with no aspect-ratio-aware sizing of its own under wrap_content). See
++                 FaceEducationAnimationDrawable's doc comment for why this view exists at all. -->
+             <ImageView
+                 android:id="@+id/illustration_accessibility"
+-                android:layout_width="wrap_content"
+-                android:layout_height="wrap_content"
++                android:layout_width="match_parent"
++                android:layout_height="match_parent"
+                 android:layout_gravity="center"
+-                android:visibility="invisible"
+-                android:background="@drawable/face_enroll_icon_large"/>
++                android:visibility="invisible"/>
+ 
+         </FrameLayout>
+ 
+diff --git a/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java b/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java
+new file mode 100644
+index 0000000000..ef2a3b4ed5
+--- /dev/null
++++ b/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java
+@@ -0,0 +1,111 @@
++/*
++ * vivo 1907N Face Unlock bring-up (not AOSP).
++ *
++ * The "how Face Unlock works" screen (FaceEnrollEducation) is supposed to show an animated
++ * illustration, but neither of AOSP's own two options actually has real content in this open
++ * source tree: res/raw/face_education.mp4 fails to play on this device (a genuine low-level
++ * MediaPlayer/mediaserver error, "MediaPlayer error (1, -2147483648)", confirmed via a real
++ * device log - not something worth chasing blind on a from-scratch device tree), and its
++ * supposed Lottie fallback (res/raw/face_education_lottie.json) turned out to be a 0-byte empty
++ * file - the same kind of unfinished AOSP placeholder as the empty strings this device tree
++ * already had to fill in elsewhere (see FaceEnrollIntroduction's string overlay). Google's real
++ * Pixel-specific assets for this screen were evidently never open-sourced, same story as those
++ * strings.
++ *
++ * This draws a real, working alternative instead: the static face icon AOSP already ships and
++ * uses correctly elsewhere on this same screen (R.drawable.face_enroll_icon_large, used for the
++ * accessibility variant of this illustration) plus the same animated "particle" dots already
++ * used successfully on the enrolling screen (ParticleCollection, see
++ * FaceEnrollAnimationDrawable) - reusing a working, already-in-tree visual language instead of
++ * inventing a new one from scratch or hand-authoring Lottie/video content blind.
++ */
++package com.android.settings.biometrics.face;
++
++import android.animation.TimeAnimator;
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.ColorFilter;
++import android.graphics.PixelFormat;
++import android.graphics.Rect;
++import android.graphics.drawable.Drawable;
++
++import com.android.settings.R;
++
++public class FaceEducationAnimationDrawable extends Drawable {
++
++    // Matches FaceEnrollAnimationDrawable's own BORDER_BOUNDS - keeps the particle ring's visual
++    // proportions consistent between the education and enrolling screens.
++    private static final int BORDER_BOUNDS = 20;
++
++    private final Context mContext;
++    private final Drawable mFaceIcon;
++    private ParticleCollection mParticleCollection;
++    private TimeAnimator mTimeAnimator;
++    private Rect mBounds;
++
++    public FaceEducationAnimationDrawable(Context context) {
++        mContext = context;
++        mFaceIcon = context.getDrawable(R.drawable.face_enroll_icon_large).mutate();
++    }
++
++    @Override
++    protected void onBoundsChange(Rect bounds) {
++        mBounds = bounds;
++
++        // Centered square, leaving room for the particle ring around it - matches how
++        // face_enroll_icon_large is already sized/positioned for the accessibility variant of
++        // this same screen (FaceEnrollEducation's illustration_accessibility ImageView, plain
++        // wrap_content + center gravity over the same overall bounds).
++        final int iconSize = Math.min(bounds.width(), bounds.height()) - BORDER_BOUNDS * 4;
++        final int left = bounds.left + (bounds.width() - iconSize) / 2;
++        final int top = bounds.top + (bounds.height() - iconSize) / 2;
++        mFaceIcon.setBounds(left, top, left + iconSize, top + iconSize);
++
++        // No-op listener - this is a looping preview animation on a tutorial screen, not a real
++        // enrollment session, so there's no "enrolled" event to react to here.
++        mParticleCollection = new ParticleCollection(mContext, () -> { }, bounds,
++                BORDER_BOUNDS);
++
++        if (mTimeAnimator == null) {
++            mTimeAnimator = new TimeAnimator();
++            mTimeAnimator.setTimeListener((animation, totalTimeMs, deltaTimeMs) -> {
++                mParticleCollection.update(totalTimeMs, deltaTimeMs);
++                invalidateSelf();
++            });
++            mTimeAnimator.start();
++        }
++    }
++
++    @Override
++    public void draw(Canvas canvas) {
++        if (mBounds == null) {
++            return;
++        }
++        mFaceIcon.draw(canvas);
++        mParticleCollection.draw(canvas);
++    }
++
++    /** Stops the looping animation - call from the hosting Activity/Fragment's onDestroy() to
++     *  avoid leaking the TimeAnimator. */
++    public void stop() {
++        if (mTimeAnimator != null) {
++            mTimeAnimator.cancel();
++            mTimeAnimator = null;
++        }
++    }
++
++    @Override
++    public void setAlpha(int alpha) {
++        mFaceIcon.setAlpha(alpha);
++    }
++
++    @Override
++    public void setColorFilter(ColorFilter colorFilter) {
++        mFaceIcon.setColorFilter(colorFilter);
++    }
++
++    @Override
++    public int getOpacity() {
++        return PixelFormat.TRANSLUCENT;
++    }
++}
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollAnimationDrawable.java b/src/com/android/settings/biometrics/face/FaceEnrollAnimationDrawable.java
+index 5be7c5331d..5d6abb8ef3 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollAnimationDrawable.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollAnimationDrawable.java
+@@ -19,14 +19,13 @@ package com.android.settings.biometrics.face;
+ import android.animation.TimeAnimator;
+ import android.content.Context;
+ import android.graphics.Canvas;
+-import android.graphics.Color;
+ import android.graphics.ColorFilter;
+ import android.graphics.Paint;
++import android.graphics.Path;
+ import android.graphics.PixelFormat;
+-import android.graphics.PorterDuff;
+-import android.graphics.PorterDuffXfermode;
+ import android.graphics.Rect;
+ import android.graphics.drawable.Drawable;
++import android.util.TypedValue;
+ 
+ import com.android.settings.biometrics.BiometricEnrollSidecar;
+ 
+@@ -44,7 +43,10 @@ public class FaceEnrollAnimationDrawable extends Drawable
+     private final ParticleCollection.Listener mListener;
+     private Rect mBounds;
+     private final Paint mSquarePaint;
+-    private final Paint mCircleCutoutPaint;
++    // vivo 1907N: the square-minus-circle cutout is now computed geometrically (see
++    // updateCutoutPath()) rather than via a PorterDuff.Mode.CLEAR blend, so there's no separate
++    // paint for it anymore - see the comment on mCutoutPath below for why.
++    private final Path mCutoutPath = new Path();
+ 
+     private ParticleCollection mParticleCollection;
+ 
+@@ -66,13 +68,20 @@ public class FaceEnrollAnimationDrawable extends Drawable
+         mListener = listener;
+ 
+         mSquarePaint = new Paint();
+-        mSquarePaint.setColor(Color.WHITE);
++        // vivo 1907N: this paints the square-minus-circle "frame" area around the camera preview
++        // (see updateCutoutPath()/draw()). Was hardcoded Color.WHITE from the earlier fix that
++        // made the circular cutout itself render correctly (see updateCutoutPath()'s comment) -
++        // that fix was only ever about the cutout geometry, not this color, and white was never
++        // revisited. Confirmed via a device screenshot: a solid white square around the circle,
++        // clashing hard with the rest of this screen's dark theme - looks like a rendering bug
++        // even though the circle itself is correct. Resolving the theme's actual background
++        // color instead of hardcoding one, so this frame blends into whatever's around it
++        // (dark theme here, but also correct if this screen is ever shown in light theme).
++        final TypedValue backgroundColor = new TypedValue();
++        context.getTheme().resolveAttribute(
++                android.R.attr.colorBackground, backgroundColor, true /* resolveRefs */);
++        mSquarePaint.setColor(backgroundColor.data);
+         mSquarePaint.setAntiAlias(true);
+-
+-        mCircleCutoutPaint = new Paint();
+-        mCircleCutoutPaint.setColor(Color.TRANSPARENT);
+-        mCircleCutoutPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+-        mCircleCutoutPaint.setAntiAlias(true);
+     }
+ 
+     @Override
+@@ -93,6 +102,7 @@ public class FaceEnrollAnimationDrawable extends Drawable
+     @Override
+     protected void onBoundsChange(Rect bounds) {
+         mBounds = bounds;
++        updateCutoutPath();
+         mParticleCollection =
+                 new ParticleCollection(mContext, mAnimationListener, bounds, BORDER_BOUNDS);
+ 
+@@ -106,6 +116,32 @@ public class FaceEnrollAnimationDrawable extends Drawable
+         }
+     }
+ 
++    // vivo 1907N: originally this cutout was "draw an opaque white rect, then draw a circle with
++    // a PorterDuff.Mode.CLEAR xfermode on top of it" - a blend-mode trick that needs a software
++    // (non-hardware-accelerated) canvas layer to work at all, which FaceEnrollPreviewFragment
++    // forces via setLayerType(LAYER_TYPE_SOFTWARE, ...) specifically for this view. On this
++    // device that software-layer forcing doesn't actually prevent the CLEAR blend from being
++    // dropped by the compositor/GPU driver (MT6768/PowerVR) - symptom: an opaque white square
++    // with no circular cutout at all, hiding the camera preview underneath entirely. Rebuilt as
++    // plain geometry instead (rect-path minus circle-path, Path.Op.DIFFERENCE) so there's no
++    // blend mode involved and it renders identically under hardware acceleration - this is not a
++    // stock-AOSP-only bug (any device with a similar driver quirk would show the same symptom),
++    // fixing it here rather than in a per-device overlay since Settings source is directly in
++    // this tree and there is no other correct place to override Drawable#draw() from a device
++    // tree.
++    private void updateCutoutPath() {
++        if (mBounds == null) {
++            return;
++        }
++        Path square = new Path();
++        square.addRect(0, 0, mBounds.width(), mBounds.height(), Path.Direction.CW);
++        Path circle = new Path();
++        circle.addCircle(mBounds.exactCenterX(), mBounds.exactCenterY(),
++                mBounds.height() / 2f - BORDER_BOUNDS, Path.Direction.CW);
++        mCutoutPath.reset();
++        mCutoutPath.op(square, circle, Path.Op.DIFFERENCE);
++    }
++
+     @Override
+     public void draw(Canvas canvas) {
+         if (mBounds == null) {
+@@ -113,12 +149,9 @@ public class FaceEnrollAnimationDrawable extends Drawable
+         }
+         canvas.save();
+ 
+-        // Draw a rectangle covering the whole view
+-        canvas.drawRect(0, 0, mBounds.width(), mBounds.height(), mSquarePaint);
+-
+-        // Clear a circle in the middle for the camera preview
+-        canvas.drawCircle(mBounds.exactCenterX(), mBounds.exactCenterY(),
+-                mBounds.height() / 2 - BORDER_BOUNDS, mCircleCutoutPaint);
++        // Square with a circular hole in the middle for the camera preview to show through -
++        // see updateCutoutPath() for why this is plain geometry rather than a canvas blend mode.
++        canvas.drawPath(mCutoutPath, mSquarePaint);
+ 
+         // Draw the animation
+         mParticleCollection.draw(canvas);
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollEducation.java b/src/com/android/settings/biometrics/face/FaceEnrollEducation.java
+index 6509d4e6e2..87ab8c7026 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollEducation.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollEducation.java
+@@ -27,6 +27,7 @@ import android.view.View;
+ import android.view.accessibility.AccessibilityManager;
+ import android.widget.Button;
+ import android.widget.CompoundButton;
++import android.widget.ImageView;
+ 
+ import com.android.settings.R;
+ import com.android.settings.Utils;
+@@ -50,7 +51,14 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+     private boolean mIsUsingLottie;
+     private IllustrationVideoView mIllustrationDefault;
+     private LottieAnimationView mIllustrationLottie;
+-    private View mIllustrationAccessibility;
++    private ImageView mIllustrationAccessibility;
++    // vivo 1907N Face Unlock bring-up (not AOSP): see FaceEducationAnimationDrawable's own doc
++    // comment for why - neither of the two AOSP illustration options above actually has content
++    // in this tree (video fails to play, Lottie JSON is a 0-byte empty file). Repurposed
++    // illustration_accessibility (an ImageView, correctly sized/positioned in the layout
++    // already) as the one real illustration, used for both the normal and accessibility-switch
++    // states now - there's nothing left to switch between.
++    private FaceEducationAnimationDrawable mEducationAnimationDrawable;
+     private Intent mResultIntent;
+     private boolean mNextClicked;
+     private boolean mAccessibilityEnabled;
+@@ -64,13 +72,16 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+                             : R.string.security_settings_face_enroll_education_message;
+                     setDescriptionText(descriptionRes);
+ 
++                    // vivo 1907N Face Unlock bring-up (not AOSP): mIllustrationAccessibility is
++                    // now the only illustration (see its field comment) - always visible,
++                    // regardless of this switch. hideDefaultIllustration()/
++                    // showDefaultIllustration() are no-ops for the same reason.
+                     if (isChecked) {
+                         hideDefaultIllustration();
+-                        mIllustrationAccessibility.setVisibility(View.VISIBLE);
+                     } else {
+                         showDefaultIllustration();
+-                        mIllustrationAccessibility.setVisibility(View.INVISIBLE);
+                     }
++                    mIllustrationAccessibility.setVisibility(View.VISIBLE);
+                 }
+             };
+ 
+@@ -88,14 +99,17 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+         mIllustrationLottie = findViewById(R.id.illustration_lottie);
+         mIllustrationAccessibility = findViewById(R.id.illustration_accessibility);
+ 
+-        mIsUsingLottie = getResources().getBoolean(R.bool.config_face_education_use_lottie);
+-        if (mIsUsingLottie) {
+-            mIllustrationDefault.stop();
+-            mIllustrationDefault.setVisibility(View.INVISIBLE);
+-            mIllustrationLottie.setAnimation(R.raw.face_education_lottie);
+-            mIllustrationLottie.setVisibility(View.VISIBLE);
+-            mIllustrationLottie.playAnimation();
+-        }
++        // vivo 1907N Face Unlock bring-up (not AOSP): both AOSP illustration paths are dead on
++        // this device tree (see FaceEducationAnimationDrawable's doc comment) - neither is ever
++        // shown, and config_face_education_use_lottie is no longer read here at all (mIsUsingLottie
++        // stays permanently false). A future device tree with real video/Lottie assets can revert
++        // this whole change.
++        mIllustrationDefault.stop();
++        mIllustrationDefault.setVisibility(View.GONE);
++        mIllustrationLottie.setVisibility(View.GONE);
++        mEducationAnimationDrawable = new FaceEducationAnimationDrawable(this);
++        mIllustrationAccessibility.setImageDrawable(mEducationAnimationDrawable);
++        mIllustrationAccessibility.setVisibility(View.VISIBLE);
+ 
+         mFooterBarMixin = getLayout().getMixin(FooterBarMixin.class);
+ 
+@@ -154,6 +168,16 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+         }
+     }
+ 
++    @Override
++    protected void onDestroy() {
++        // vivo 1907N Face Unlock bring-up (not AOSP): avoid leaking the TimeAnimator - see
++        // FaceEducationAnimationDrawable.stop()'s doc comment.
++        if (mEducationAnimationDrawable != null) {
++            mEducationAnimationDrawable.stop();
++        }
++        super.onDestroy();
++    }
++
+     @Override
+     protected void onResume() {
+         super.onResume();
+@@ -246,23 +270,15 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+         return SettingsEnums.FACE_ENROLL_INTRO;
+     }
+ 
++    // vivo 1907N Face Unlock bring-up (not AOSP): both used to switch between the "default" and
++    // "accessibility" illustration views - now the same single view/drawable
++    // (mIllustrationAccessibility/mEducationAnimationDrawable) serves both states, so there's
++    // nothing left to actually swap. Kept as call sites (rather than removing the calls from
++    // mSwitchDiversityListener) so a future device tree with real default/accessibility assets
++    // can restore the distinction here without touching the listener.
+     private void hideDefaultIllustration() {
+-        if (mIsUsingLottie) {
+-            mIllustrationLottie.cancelAnimation();
+-            mIllustrationLottie.setVisibility(View.INVISIBLE);
+-        } else {
+-            mIllustrationDefault.stop();
+-            mIllustrationDefault.setVisibility(View.INVISIBLE);
+-        }
+     }
+ 
+     private void showDefaultIllustration() {
+-        if (mIsUsingLottie) {
+-            mIllustrationLottie.setVisibility(View.VISIBLE);
+-            mIllustrationLottie.playAnimation();
+-        } else {
+-            mIllustrationDefault.setVisibility(View.VISIBLE);
+-            mIllustrationDefault.start();
+-        }
+     }
+ }
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
+index 853ca7c40c..7edbee7334 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
+@@ -17,53 +17,51 @@
+ package com.android.settings.biometrics.face;
+ 
+ import android.app.settings.SettingsEnums;
+-import android.content.Context;
+-import android.graphics.Matrix;
+ import android.graphics.SurfaceTexture;
+-import android.hardware.camera2.CameraAccessException;
+-import android.hardware.camera2.CameraCaptureSession;
+-import android.hardware.camera2.CameraCharacteristics;
+-import android.hardware.camera2.CameraDevice;
+-import android.hardware.camera2.CameraManager;
+-import android.hardware.camera2.CaptureRequest;
+-import android.hardware.camera2.params.StreamConfigurationMap;
++import android.hardware.face.FaceManager;
+ import android.os.Bundle;
+-import android.os.Handler;
+-import android.os.Looper;
+-import android.util.Log;
+-import android.util.Size;
+-import android.util.TypedValue;
+ import android.view.Surface;
+ import android.view.TextureView;
+ import android.view.View;
+ import android.widget.ImageView;
+ 
+ import com.android.settings.R;
++import com.android.settings.Utils;
+ import com.android.settings.biometrics.BiometricEnrollSidecar;
+ import com.android.settings.core.InstrumentedPreferenceFragment;
+ 
+-import java.util.Arrays;
+-
+ /**
+  * Fragment that contains the logic for showing and controlling the camera preview, circular
+  * overlay, as well as the enrollment animations.
++ *
++ * vivo 1907N Face Unlock bring-up (not AOSP): this fragment used to open the front camera itself
++ * via Camera2, but that conflicted with FaceCaptureService (device/vivo/1907N/apps/
++ * FaceCaptureService/) also wanting the same camera - Camera2 only allows one client per camera
++ * device at all, foreground-Activity-vs-foreground-Service priority doesn't change that, it just
++ * changes which client wins (confirmed on-device: this fragment's own session always won,
++ * leaving FaceCaptureService with a permanent CAMERA_IN_USE and no frames ever reaching the
++ * vendor HAL). FaceCaptureService is the only camera owner now; this fragment just hands it a
++ * Surface (via FaceManager.setPreviewSurface(), a device-specific, non-AOSP FaceManager method)
++ * and FaceCaptureService draws each frame it already captures for the HAL into that Surface too -
++ * see FaceCaptureService.renderPreviewFrame(). This also incidentally fixes an old visual bug
++ * where a strip of un-masked camera image was visible below the circular cutout: the old
++ * Camera2-direct path used a Matrix transform to scale the (non-square) preview stream to cover
++ * this square view, and the containing layout has clipChildren="false" (for the particle
++ * animations, which are meant to draw slightly outside the circle) - so the scaled-up texture
++ * content overflowed past the square's own bounds too. FaceCaptureService's Canvas-based
++ * drawing is naturally clipped to the Surface's own buffer bounds, so that overflow can't happen
++ * here regardless of the source frame's aspect ratio.
+  */
+ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+         implements BiometricEnrollSidecar.Listener {
+ 
+     private static final String TAG = "FaceEnrollPreviewFragment";
+ 
+-    private static final int MAX_PREVIEW_WIDTH = 1920;
+-    private static final int MAX_PREVIEW_HEIGHT = 1080;
+-
+-    private Handler mHandler = new Handler(Looper.getMainLooper());
+-    private CameraManager mCameraManager;
+-    private String mCameraId;
+-    private CameraDevice mCameraDevice;
+-    private CaptureRequest.Builder mPreviewRequestBuilder;
+-    private CameraCaptureSession mCaptureSession;
+-    private CaptureRequest mPreviewRequest;
+-    private Size mPreviewSize;
++    // vivo 1907N Face Unlock bring-up: matches FaceCaptureService's own hardcoded SENSOR_ID and
++    // config_biometric_sensors' "1:8:4095" entry - see those files' comments.
++    private static final int SENSOR_ID = 1;
++
++    private FaceManager mFaceManager;
+     private ParticleCollection.Listener mListener;
+ 
+     // View used to contain the circular cutout and enrollment animation drawable
+@@ -75,6 +73,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+     // Texture used for showing the camera preview
+     private FaceSquareTextureView mTextureView;
+ 
++    // vivo 1907N Face Unlock bring-up (not AOSP): last width/height actually sent to
++    // FaceCaptureService - see onSurfaceTextureSizeChanged()'s comment.
++    private int mLastSentWidth = -1;
++    private int mLastSentHeight = -1;
++
+     // Listener sent to the animation drawable
+     private final ParticleCollection.Listener mAnimationListener
+             = new ParticleCollection.Listener() {
+@@ -90,18 +93,38 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+         @Override
+         public void onSurfaceTextureAvailable(
+                 SurfaceTexture surfaceTexture, int width, int height) {
+-            openCamera(width, height);
++            sendPreviewSurface(surfaceTexture, width, height);
+         }
+ 
+         @Override
+         public void onSurfaceTextureSizeChanged(
+                 SurfaceTexture surfaceTexture, int width, int height) {
+-            // Shouldn't be called, but do this for completeness.
+-            configureTransform(width, height);
++            // vivo 1907N Face Unlock bring-up: re-sends a fresh Surface (not just a buffer-size
++            // tweak on the old one) whenever the size genuinely changes - see mLastSentWidth/
++            // mLastSentHeight. An earlier version of this method just called
++            // setDefaultBufferSize() on the existing SurfaceTexture without re-sending, on the
++            // theory that the same cross-process Surface stays usable across a buffer-size
++            // change - confirmed WRONG on-device: a real size change partway through enrollment
++            // (the error/hint TextView becoming visible shifts the layout, genuinely resizing
++            // this square TextureView, not just the initial-layout settling burst this guard was
++            // originally written for) left the live preview visually frozen on the last frame
++            // from before the resize, even though enrollment progress kept advancing normally
++            // underneath - the size change desynced FaceCaptureService's already-held Surface
++            // (drawn into cross-process via Canvas, not through Camera2's own buffer
++            // renegotiation) from the TextureView's new buffer queue. Re-sending is safe now
++            // that scheduleSetPreviewSurface() only re-triggers startFaceCapture() (not a costly
++            // chain) - the mLastSentWidth/Height guard below still exists to skip the *actually
++            // identical, repeated* calls from the initial layout-settling burst.
++            if (width <= 0 || height <= 0 || (width == mLastSentWidth
++                    && height == mLastSentHeight)) {
++                return;
++            }
++            sendPreviewSurface(surfaceTexture, width, height);
+         }
+ 
+         @Override
+         public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
++            clearPreviewSurface();
+             return true;
+         }
+ 
+@@ -111,74 +134,6 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+         }
+     };
+ 
+-    private final CameraDevice.StateCallback mCameraStateCallback =
+-            new CameraDevice.StateCallback() {
+-
+-        @Override
+-        public void onOpened(CameraDevice cameraDevice) {
+-            mCameraDevice = cameraDevice;
+-            try {
+-                // Configure the size of default buffer
+-                SurfaceTexture texture = mTextureView.getSurfaceTexture();
+-                texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+-
+-                // This is the output Surface we need to start preview
+-                Surface surface = new Surface(texture);
+-
+-                // Set up a CaptureRequest.Builder with the output Surface
+-                mPreviewRequestBuilder =
+-                        mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+-                mPreviewRequestBuilder.addTarget(surface);
+-
+-                // Create a CameraCaptureSession for camera preview
+-                mCameraDevice.createCaptureSession(Arrays.asList(surface),
+-                    new CameraCaptureSession.StateCallback() {
+-
+-                        @Override
+-                        public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+-                            // The camera is already closed
+-                            if (null == mCameraDevice) {
+-                                return;
+-                            }
+-                            // When the session is ready, we start displaying the preview.
+-                            mCaptureSession = cameraCaptureSession;
+-                            try {
+-                                // Auto focus should be continuous for camera preview.
+-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+-                                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+-
+-                                // Finally, we start displaying the camera preview.
+-                                mPreviewRequest = mPreviewRequestBuilder.build();
+-                                mCaptureSession.setRepeatingRequest(mPreviewRequest,
+-                                        null /* listener */, mHandler);
+-                            } catch (CameraAccessException e) {
+-                                Log.e(TAG, "Unable to access camera", e);
+-                            }
+-                        }
+-
+-                        @Override
+-                        public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+-                            Log.e(TAG, "Unable to configure camera");
+-                        }
+-                    }, null /* handler */);
+-            } catch (CameraAccessException e) {
+-                e.printStackTrace();
+-            }
+-        }
+-
+-        @Override
+-        public void onDisconnected(CameraDevice cameraDevice) {
+-            cameraDevice.close();
+-            mCameraDevice = null;
+-        }
+-
+-        @Override
+-        public void onError(CameraDevice cameraDevice, int error) {
+-            cameraDevice.close();
+-            mCameraDevice = null;
+-        }
+-    };
+-
+     @Override
+     public int getMetricsCategory() {
+         return SettingsEnums.FACE_ENROLL_PREVIEW;
+@@ -196,7 +151,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+         mAnimationDrawable = new FaceEnrollAnimationDrawable(getContext(), mAnimationListener);
+         mCircleView.setImageDrawable(mAnimationDrawable);
+ 
+-        mCameraManager = (CameraManager) getContext().getSystemService(Context.CAMERA_SERVICE);
++        mFaceManager = Utils.getFaceManagerOrNull(getActivity());
+     }
+ 
+     @Override
+@@ -204,11 +159,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+         super.onResume();
+ 
+         // When the screen is turned off and turned back on, the SurfaceTexture is already
+-        // available, and "onSurfaceTextureAvailable" will not be called. In that case, we can open
+-        // a camera and start preview from here (otherwise, we wait until the surface is ready in
+-        // the SurfaceTextureListener).
++        // available, and "onSurfaceTextureAvailable" will not be called. In that case, we send
++        // the surface from here (otherwise, we wait until it's ready in the listener).
+         if (mTextureView.isAvailable()) {
+-            openCamera(mTextureView.getWidth(), mTextureView.getHeight());
++            sendPreviewSurface(mTextureView.getSurfaceTexture(),
++                    mTextureView.getWidth(), mTextureView.getHeight());
+         } else {
+             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+         }
+@@ -217,7 +172,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+     @Override
+     public void onPause() {
+         super.onPause();
+-        closeCamera();
++        clearPreviewSurface();
+     }
+ 
+     @Override
+@@ -240,106 +195,26 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+     }
+ 
+     /**
+-     * Sets up member variables related to camera.
+-     */
+-    private void setUpCameraOutputs() {
+-        try {
+-            for (String cameraId : mCameraManager.getCameraIdList()) {
+-                CameraCharacteristics characteristics =
+-                        mCameraManager.getCameraCharacteristics(cameraId);
+-
+-                // Find front facing camera
+-                Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
+-                if (facing == null || facing != CameraCharacteristics.LENS_FACING_FRONT) {
+-                    continue;
+-                }
+-                mCameraId = cameraId;
+-
+-                // Get the stream configurations
+-                StreamConfigurationMap map = characteristics.get(
+-                        CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+-                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class));
+-                break;
+-            }
+-        } catch (CameraAccessException e) {
+-            Log.e(TAG, "Unable to access camera", e);
+-        }
+-    }
+-
+-    /**
+-     * Opens the camera specified by mCameraId.
+-     * @param width  The width of the texture view
+-     * @param height The height of the texture view
+-     */
+-    private void openCamera(int width, int height) {
+-        try {
+-            setUpCameraOutputs();
+-            mCameraManager.openCamera(mCameraId, mCameraStateCallback, mHandler);
+-            configureTransform(width, height);
+-        } catch (CameraAccessException e) {
+-            Log.e(TAG, "Unable to open camera", e);
+-        }
+-    }
+-
+-    /**
+-     * Chooses the optimal resolution for the camera to open.
++     * vivo 1907N Face Unlock bring-up (not AOSP): builds a {@link Surface} from this fragment's
++     * own TextureView and hands it to FaceCaptureService (via Face10.java) to render into. The
++     * buffer size is set to exactly the (square) view's own size - no aspect-ratio-driven Matrix
++     * scaling needed here at all, FaceCaptureService's own Canvas draw does the
++     * cover-scale-and-center itself, already clipped to this exact size (see that class's
++     * drawFrameCovering()).
+      */
+-    private Size chooseOptimalSize(Size[] choices) {
+-        for (int i = 0; i < choices.length; i++) {
+-            if (choices[i].getHeight() == MAX_PREVIEW_HEIGHT
+-                    && choices[i].getWidth() == MAX_PREVIEW_WIDTH) {
+-                return choices[i];
+-            }
+-        }
+-        Log.w(TAG, "Unable to find a good resolution");
+-        return choices[0];
+-    }
+-
+-    /**
+-     * Configures the necessary {@link android.graphics.Matrix} transformation to `mTextureView`.
+-     * This method should be called after the camera preview size is determined in
+-     * setUpCameraOutputs and also the size of `mTextureView` is fixed.
+-     *
+-     * @param viewWidth  The width of `mTextureView`
+-     * @param viewHeight The height of `mTextureView`
+-     */
+-    private void configureTransform(int viewWidth, int viewHeight) {
+-        if (mTextureView == null) {
++    private void sendPreviewSurface(SurfaceTexture surfaceTexture, int width, int height) {
++        if (mFaceManager == null || surfaceTexture == null || width <= 0 || height <= 0) {
+             return;
+         }
+-
+-        // Fix the aspect ratio
+-        float scaleX = (float) viewWidth / mPreviewSize.getWidth();
+-        float scaleY = (float) viewHeight / mPreviewSize.getHeight();
+-
+-        // Now divide by smaller one so it fills up the original space.
+-        float smaller = Math.min(scaleX, scaleY);
+-        scaleX = scaleX / smaller;
+-        scaleY = scaleY / smaller;
+-
+-        final TypedValue tx = new TypedValue();
+-        final TypedValue ty = new TypedValue();
+-        final TypedValue scale = new TypedValue();
+-        getResources().getValue(R.dimen.face_preview_translate_x, tx, true /* resolveRefs */);
+-        getResources().getValue(R.dimen.face_preview_translate_y, ty, true /* resolveRefs */);
+-        getResources().getValue(R.dimen.face_preview_scale, scale, true /* resolveRefs */);
+-
+-        // Apply the transformation/scale
+-        final Matrix transform = new Matrix();
+-        mTextureView.getTransform(transform);
+-        transform.setScale(scaleX * scale.getFloat(), scaleY * scale.getFloat());
+-        transform.postTranslate(tx.getFloat(), ty.getFloat());
+-        mTextureView.setTransform(transform);
++        surfaceTexture.setDefaultBufferSize(width, height);
++        mFaceManager.setPreviewSurface(SENSOR_ID, new Surface(surfaceTexture));
++        mLastSentWidth = width;
++        mLastSentHeight = height;
+     }
+ 
+-    private void closeCamera() {
+-        if (mCaptureSession != null) {
+-            mCaptureSession.close();
+-            mCaptureSession = null;
+-        }
+-        if (mCameraDevice != null) {
+-            mCameraDevice.close();
+-            mCameraDevice = null;
++    private void clearPreviewSurface() {
++        if (mFaceManager != null) {
++            mFaceManager.setPreviewSurface(SENSOR_ID, null);
+         }
+     }
+ }
+diff --git a/src/com/android/settings/connecteddevice/usb/UsbDetailsFunctionsController.java b/src/com/android/settings/connecteddevice/usb/UsbDetailsFunctionsController.java
+index 006f72a39e..1f6706ef2f 100644
+--- a/src/com/android/settings/connecteddevice/usb/UsbDetailsFunctionsController.java
++++ b/src/com/android/settings/connecteddevice/usb/UsbDetailsFunctionsController.java
+@@ -16,8 +16,6 @@
+ 
+ package com.android.settings.connecteddevice.usb;
+ 
+-import static android.hardware.usb.UsbPortStatus.DATA_ROLE_DEVICE;
+-
+ import android.content.Context;
+ import android.hardware.usb.UsbManager;
+ import android.net.TetheringManager;
+@@ -102,7 +100,12 @@ public class UsbDetailsFunctionsController extends UsbDetailsController
+             Log.d(TAG, "refresh() connected : " + connected + ", functions : " + functions
+                     + ", powerRole : " + powerRole + ", dataRole : " + dataRole);
+         }
+-        if (!connected || dataRole != DATA_ROLE_DEVICE) {
++        // No IUsb (port role) HAL is present on this device, so dataRole never resolves to
++        // DATA_ROLE_DEVICE (UsbBackend.getDataRole() always falls back to DATA_ROLE_NONE without
++        // a real UsbPortStatus). This device has no USB-C role switching to begin with - it's
++        // always device mode - so gate on "connected" alone instead of an unreachable dataRole
++        // check.
++        if (!connected) {
+             mProfilesContainer.setEnabled(false);
+         } else {
+             // Functions are only available in device mode

@@ -1,0 +1,60 @@
+diff --git a/Tethering/src/com/android/networkstack/tethering/Tethering.java b/Tethering/src/com/android/networkstack/tethering/Tethering.java
+index f393f784d..940c07f83 100644
+--- a/Tethering/src/com/android/networkstack/tethering/Tethering.java
++++ b/Tethering/src/com/android/networkstack/tethering/Tethering.java
+@@ -796,14 +796,52 @@ public class Tethering {
+         }
+     }
+ 
++    // device/vivo/1907N: when the AP interface is a freshly, dynamically created one (this
++    // device's dual-interface concurrent STA+AP wifi mode creates a brand new "wlanN" netdev
++    // per SoftAp session, instead of reusing the always-present "wlan0"), this device's
++    // Tethering process never receives netd's own interfaceAdded notification for it at all -
++    // confirmed via logcat across many attempts: "AddSingleAccessPoint, iface=wlan2"
++    // immediately followed by "Tried to Tether an unknown iface: wlan2", with no amount of
++    // waiting (tried up to several seconds) ever making mTetherStates learn about it.
++    // Meanwhile netd itself is fully aware of the interface the whole time (confirmed via
++    // "netd: interfaceGetCfg(wlan2)" succeeding on every attempt) - only the push
++    // notification to this process is missing, not netd's own knowledge of the interface.
++    // Rather than wait for a notification that may never arrive, register the interface
++    // directly here (mirroring exactly what interfaceAdded()/processInterfaceStateChange()
++    // would have done) whenever WifiService asks to tether an iface we don't know about yet.
++    // The newly created IpServer still needs a moment to run its own state machine up to
++    // STATE_AVAILABLE before tether() will accept it, so poll briefly for that (this wait is
++    // local/in-process, unlike the netd notification, so it's expected to resolve quickly).
++    private static final int TETHER_IFACE_AVAILABLE_MAX_RETRIES = 20;
++    private static final int TETHER_IFACE_AVAILABLE_RETRY_DELAY_MS = 50;
++
+     void tether(String iface, int requestedState, final IIntResultListener listener) {
+         mHandler.post(() -> {
+-            try {
+-                listener.onResult(tether(iface, requestedState));
+-            } catch (RemoteException e) { }
++            if (!mTetherStates.containsKey(iface)) {
++                Log.w(TAG, "tether(" + iface + "): iface not yet known, registering it "
++                        + "directly instead of waiting for a netd notification that may "
++                        + "never arrive");
++                ensureIpServerStarted(iface);
++            }
++            tetherWhenAvailable(iface, requestedState, listener, 0 /* retryCount */);
+         });
+     }
+ 
++    private void tetherWhenAvailable(String iface, int requestedState,
++            final IIntResultListener listener, int retryCount) {
++        final TetherState tetherState = mTetherStates.get(iface);
++        if (tetherState != null && tetherState.lastState != IpServer.STATE_AVAILABLE
++                && retryCount < TETHER_IFACE_AVAILABLE_MAX_RETRIES) {
++            mHandler.postDelayed(
++                    () -> tetherWhenAvailable(iface, requestedState, listener, retryCount + 1),
++                    TETHER_IFACE_AVAILABLE_RETRY_DELAY_MS);
++            return;
++        }
++        try {
++            listener.onResult(tether(iface, requestedState));
++        } catch (RemoteException e) { }
++    }
++
+     private int tether(String iface, int requestedState) {
+         if (DBG) Log.d(TAG, "Tethering " + iface);
+         TetherState tetherState = mTetherStates.get(iface);

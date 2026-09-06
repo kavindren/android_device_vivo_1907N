@@ -1,0 +1,5 @@
+frameworks/base 5f6b8d6098f8d858d1450db45c350c7ba08ae455
+packages/apps/Settings cd9f7949413df68160aa5026e95d9591395e539e
+packages/modules/Connectivity 5b7fbdcb154304b4da9bd4da5df25b22e095f8b9
+packages/modules/Wifi 0c6fdca6a80f293dbc7d01d5ab22976e6253ebad
+system/core 1dd6bab94356caa929a505fe5059954536b21a0a

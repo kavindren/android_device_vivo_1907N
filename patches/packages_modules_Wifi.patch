@@ -1,0 +1,29 @@
+diff --git a/service/java/com/android/server/wifi/SoftApManager.java b/service/java/com/android/server/wifi/SoftApManager.java
+index cb3e18706..4c27fd571 100644
+--- a/service/java/com/android/server/wifi/SoftApManager.java
++++ b/service/java/com/android/server/wifi/SoftApManager.java
+@@ -599,6 +599,24 @@ public class SoftApManager implements ActiveModeManager {
+             // Absence of country code is not fatal for 2Ghz & Any band options.
+             return SUCCESS;
+         }
++        // device/vivo/1907N: unlike updateCountryCode() above, this call site was never gated
++        // on device capability - confirmed via a real tombstone that this device's vendor
++        // libwifi-hal.so crashes (getHalInfo() null pointer deref inside wifi_set_country_code)
++        // when WifiApIface::setCountryCode() is called on a freshly created AP interface, which
++        // this method always does as part of every startSoftAp(). The exact same
++        // isSoftApDynamicCountryCodeSupported()/SOFTAP_FEATURE_ACS_OFFLOAD check already used by
++        // updateCountryCode() correctly identifies this device as unsafe for it - apply it here
++        // too instead of skipping straight to the native call.
++        if (!ApConfigUtil.isSoftApDynamicCountryCodeSupported(mContext)
++                || !mCurrentSoftApCapability.areFeaturesSupported(
++                        SoftApCapability.SOFTAP_FEATURE_ACS_OFFLOAD)) {
++            if (band == SoftApConfiguration.BAND_5GHZ) {
++                Log.e(getTag(), "Failed to set country code, "
++                        + "required for setting up soft ap in 5GHz");
++                return ERROR_GENERIC;
++            }
++            return SUCCESS;
++        }
+         if (!mWifiNative.setApCountryCode(
+                 mApInterfaceName, mCountryCode.toUpperCase(Locale.ROOT))) {
+             if (band == SoftApConfiguration.BAND_5GHZ) {

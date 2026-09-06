@@ -1,0 +1,1081 @@
+diff --git a/core/java/android/hardware/face/FaceManager.java b/core/java/android/hardware/face/FaceManager.java
+index b97055976e3e..65417cfec44d 100644
+--- a/core/java/android/hardware/face/FaceManager.java
++++ b/core/java/android/hardware/face/FaceManager.java
+@@ -37,6 +37,7 @@ import android.os.Handler;
+ import android.os.IBinder;
+ import android.os.IRemoteCallback;
+ import android.os.Looper;
++import android.os.ParcelFileDescriptor;
+ import android.os.PowerManager;
+ import android.os.RemoteException;
+ import android.os.Trace;
+@@ -466,6 +467,68 @@ public class FaceManager implements BiometricAuthenticator, BiometricFaceConstan
+         }
+     }
+ 
++    /**
++     * vivo 1907N Face Unlock bring-up: not an AOSP API. Allocates (or returns the existing) shared
++     * memory region the capture app should write raw camera frame bytes (tightly-packed NV21, no
++     * header) into, one frame at a time, before each {@link #sendCommand}. See the vivo 1907N
++     * Face Unlock bring-up plan for the reverse-engineered protocol this exists to support.
++     *
++     * @hide
++     */
++    @RequiresPermission(USE_BIOMETRIC_INTERNAL)
++    public ParcelFileDescriptor getShareMemoryFd(int sensorId, int size) {
++        if (mService != null) {
++            try {
++                return mService.getShareMemoryFd(sensorId, size, mContext.getOpPackageName());
++            } catch (RemoteException e) {
++                throw e.rethrowFromSystemServer();
++            }
++        }
++        return null;
++    }
++
++    /**
++     * vivo 1907N Face Unlock bring-up: not an AOSP API. Forwards a vendor-defined command to the
++     * face HAL - used by the capture app to signal that a new frame is ready in the shared memory
++     * region obtained from {@link #getShareMemoryFd}. See the vivo 1907N Face Unlock bring-up plan.
++     *
++     * @hide
++     */
++    @RequiresPermission(USE_BIOMETRIC_INTERNAL)
++    public void sendCommand(int sensorId, int cmd, int extra, String bundle) {
++        if (mService != null) {
++            try {
++                mService.sendCommand(sensorId, cmd, extra, bundle, mContext.getOpPackageName());
++            } catch (RemoteException e) {
++                throw e.rethrowFromSystemServer();
++            }
++        }
++    }
++
++    /**
++     * vivo 1907N Face Unlock bring-up: not an AOSP API. Lets the enrollment UI hand the capture
++     * app a {@link Surface} (its camera preview TextureView's) to render a live self-view into,
++     * independent of the enroll() call's own timing (the standard AOSP {@code previewSurface}
++     * parameter on {@link #enroll} is plumbed through the newer AIDL face HAL path only - this
++     * device uses the older HIDL path, where that parameter is accepted but never used - see
++     * hidl/FaceEnrollClient.java). Called from FaceEnrollPreviewFragment as soon as its
++     * TextureView's SurfaceTexture becomes available, which may be before or after enrollment
++     * actually starts. Pass {@code null} to stop rendering into a previously-set surface (e.g.
++     * when the preview fragment pauses).
++     *
++     * @hide
++     */
++    @RequiresPermission(USE_BIOMETRIC_INTERNAL)
++    public void setPreviewSurface(int sensorId, @Nullable Surface surface) {
++        if (mService != null) {
++            try {
++                mService.setPreviewSurface(sensorId, surface, mContext.getOpPackageName());
++            } catch (RemoteException e) {
++                throw e.rethrowFromSystemServer();
++            }
++        }
++    }
++
+     /**
+      * @hide
+      */
+diff --git a/core/java/android/hardware/face/IFaceService.aidl b/core/java/android/hardware/face/IFaceService.aidl
+index 989b001ca8bf..d2457de60368 100644
+--- a/core/java/android/hardware/face/IFaceService.aidl
++++ b/core/java/android/hardware/face/IFaceService.aidl
+@@ -23,6 +23,7 @@ import android.hardware.biometrics.ITestSessionCallback;
+ import android.hardware.face.IFaceServiceReceiver;
+ import android.hardware.face.Face;
+ import android.hardware.face.FaceSensorPropertiesInternal;
++import android.os.ParcelFileDescriptor;
+ import android.view.Surface;
+ 
+ /**
+@@ -134,4 +135,20 @@ interface IFaceService {
+     // AIDL sensor properties are retrieved directly from the available HALs. If no HIDL HALs exist,
+     // hidlSensors must be non-null and empty. See AuthService.java
+     void registerAuthenticators(in List<FaceSensorPropertiesInternal> hidlSensors);
++
++    // vivo 1907N Face Unlock bring-up: not an AOSP API. Allocates (or returns the existing) shared
++    // memory region the capture app writes raw camera frame bytes into, and hands its native handle
++    // to the vendor.vivo.hardware.biometrics.face@2.0 HAL via sendhandle() the first time this is
++    // called for a session. See device/vivo/1907N's Face Unlock bring-up plan for the full protocol.
++    ParcelFileDescriptor getShareMemoryFd(int sensorId, int size, String opPackageName);
++
++    // vivo 1907N Face Unlock bring-up: not an AOSP API. Forwards a vendor-defined command to the
++    // vendor.vivo.hardware.biometrics.face@2.0 HAL's sendCommand(). Used by the capture app to signal
++    // "a new frame is ready in the shared memory region from getShareMemoryFd()" once per frame.
++    void sendCommand(int sensorId, int cmd, int extra, String bundle, String opPackageName);
++
++    // vivo 1907N Face Unlock bring-up: not an AOSP API. Hands the capture app a Surface to render
++    // a live self-view preview into (see FaceManager.setPreviewSurface() for the full rationale).
++    // Pass null to stop rendering into a previously-set surface.
++    void setPreviewSurface(int sensorId, in Surface surface, String opPackageName);
+ }
+diff --git a/core/java/android/hardware/fingerprint/FingerprintSensorPropertiesInternal.java b/core/java/android/hardware/fingerprint/FingerprintSensorPropertiesInternal.java
+index 4bf9a740f971..5d0bf0fbad29 100644
+--- a/core/java/android/hardware/fingerprint/FingerprintSensorPropertiesInternal.java
++++ b/core/java/android/hardware/fingerprint/FingerprintSensorPropertiesInternal.java
+@@ -22,6 +22,7 @@ import static android.hardware.fingerprint.FingerprintSensorProperties.TYPE_UDFP
+ 
+ import android.annotation.NonNull;
+ import android.annotation.Nullable;
++import android.graphics.Bitmap;
+ import android.hardware.biometrics.ComponentInfoInternal;
+ import android.hardware.biometrics.SensorLocationInternal;
+ import android.hardware.biometrics.SensorProperties;
+@@ -40,6 +41,21 @@ public class FingerprintSensorPropertiesInternal extends SensorPropertiesInterna
+      */
+     public final @FingerprintSensorProperties.SensorType int sensorType;
+ 
++    // vivo's own framework build (not part of AOSP) adds these two fields to this exact class -
++    // vivo/1907N's FingerprintEngineer.apk (a factory diagnostic tool, compiled against that
++    // framework) accesses them directly via iget-object bytecode, not reflection, so it crashes
++    // with NoSuchFieldError without them regardless of what the values actually contain. Added
++    // here purely so that tool doesn't crash - nothing in this framework's own Fingerprint21/HAL
++    // stack reads or populates them with anything meaningful yet.
++    public final String moduleName = "";
++    public final String manufacturerName = "";
++    // Bitmaps FingerprintEngineer draws for its own illumination-preview UI (separate from the
++    // real capture path) and an anti-spoofing/liveness-related flag it also reads directly -
++    // same NoSuchFieldError reasoning as above; null/0 since nothing here populates them yet.
++    @Nullable public final Bitmap illuminatorBitmap = null;
++    @Nullable public final Bitmap antifakeBitmap = null;
++    public final int antifake = 0;
++
+     private final List<SensorLocationInternal> mSensorLocations;
+ 
+     public FingerprintSensorPropertiesInternal(int sensorId,
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+index 8533f356d67a..2bbb6daae9b4 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+@@ -1023,6 +1023,13 @@ public class UdfpsController implements DozeReceiver {
+         mFingerprintManager.onPointerDown(mSensorProps.sensorId, x, y, minor, major);
+         Trace.endAsyncSection("UdfpsController.e2e.onPointerDown", 0);
+         Trace.beginAsyncSection("UdfpsController.e2e.startIllumination", 0);
++        // Force this overlay window to full brightness for the duration of illumination - this
++        // device's optical sensor needs more light than the drawn circle's color alone
++        // provides, and unlike a raw vendor sysfs write, screenBrightness is the standard
++        // per-window Android brightness-override API (goes through the normal
++        // SurfaceFlinger/display HAL path, no vendor sepolicy boundary to cross).
++        mCoreLayoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
++        mWindowManager.updateViewLayout(mView, mCoreLayoutParams);
+         mView.startIllumination(() -> {
+             mFingerprintManager.onUiReady(mSensorProps.sensorId);
+             Trace.endAsyncSection("UdfpsController.e2e.startIllumination", 0);
+@@ -1051,6 +1058,10 @@ public class UdfpsController implements DozeReceiver {
+         if (mView.isIlluminationRequested()) {
+             mView.stopIllumination();
+         }
++        // Restore normal (system-controlled) brightness - see the matching override in
++        // onFingerDown().
++        mCoreLayoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
++        mWindowManager.updateViewLayout(mView, mCoreLayoutParams);
+     }
+ 
+     private void updateTouchListener() {
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/Vivo1907NUdfpsHbmProvider.java b/packages/SystemUI/src/com/android/systemui/biometrics/Vivo1907NUdfpsHbmProvider.java
+new file mode 100644
+index 000000000000..534122da0628
+--- /dev/null
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/Vivo1907NUdfpsHbmProvider.java
+@@ -0,0 +1,95 @@
++/*
++ * Copyright (C) 2020 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.systemui.biometrics;
++
++import android.annotation.Nullable;
++import android.content.Context;
++import android.os.SystemClock;
++import android.os.SystemProperties;
++import android.view.Surface;
++
++/**
++ * vivo 1907N (Goodix gf9518) UDFPS local illumination.
++ *
++ * Stock Funtouch draws a solid bright circle exactly over the sensor via its own
++ * FingerprintUI.apk. AOSP's {@link UdfpsView} already draws that same circle -
++ * {@code drawIlluminationDot()} in {@code UdfpsSurfaceView} - but only when
++ * {@code config_udfpsHbmType} is {@link UdfpsHbmTypes#GLOBAL_HBM}; with the stock LineageOS
++ * default of {@link UdfpsHbmTypes#LOCAL_HBM} plus {@link DummyUdfpsHbmProvider}, nothing is ever
++ * drawn at all. This provider exists to flip that switch (see the device's
++ * SystemUI/res/values/lineage_config.xml overlay) so the sensor images a bright, known-color
++ * circle instead of whatever the underlying app content happens to be at that spot.
++ *
++ * 2026-08-30 correction: an earlier version of this class removed the raw panel-level HBM boost
++ * below, on the theory that it was a no-op - stock never triggers it from an init trigger, and
++ * the kernel's oled_hbm_store() only has one real "on" level, so there was nothing to "tune".
++ * That reasoning conflated two different things: stock DOES write this sysfs node for real, just
++ * from its own FingerprintUI.apk at touch time (app-domain), not from init at boot - the "only
++ * one on-level" fact just means there's no brightness curve to pick a better value from, not
++ * that writing "4" does nothing. The write itself is a genuine backlight-boost side effect on
++ * top of (not a substitute for) the drawn circle's color, and skipping it left the illumination
++ * area only tinted at normal brightness instead of actually lit - confirmed visually on-device
++ * (color-only, no real illumination). Restored, wired the same way as before: SystemUI can't
++ * write a vendor sysfs node directly (Treble boundary), so this goes through the same
++ * vendor.udfps.hbm_state property bridge to vendor init (see
++ * device/vivo/1907N/rootdir/etc/init.udfps-hbm.rc) that stock's own app-domain access
++ * conceptually mirrors.
++ */
++public class Vivo1907NUdfpsHbmProvider implements UdfpsHbmProvider {
++
++    private static final String UDFPS_HBM_PROP = "vendor.udfps.hbm_state";
++
++    // The vendor gf9518 daemon auto-reverts panel HBM ~85ms after a single "4" write (confirmed
++    // via dmesg: OverlayEngine_0's lcm_set_hbm_cmdq reverting hbm=4->5 on its own timer,
++    // unrelated to the app), but a real image capture takes ~150ms. This alternates two distinct
++    // "on" property values (both wired to "write 4" in init.udfps-hbm.rc) to keep re-arming it
++    // for as long as the illumination dot needs to stay lit, since property triggers only fire
++    // on a real value transition, not a redundant re-set to the same value.
++    private static final long HBM_KEEPALIVE_INTERVAL_MS = 50;
++    private volatile boolean mKeepAliveActive;
++
++    public Vivo1907NUdfpsHbmProvider(Context context) {
++    }
++
++    @Override
++    public void enableHbm(int hbmType, @Nullable Surface surface,
++            @Nullable Runnable onHbmEnabled) {
++        mKeepAliveActive = true;
++        new Thread(() -> {
++            boolean toggle = false;
++            while (mKeepAliveActive) {
++                SystemProperties.set(UDFPS_HBM_PROP, toggle ? "2" : "1");
++                toggle = !toggle;
++                SystemClock.sleep(HBM_KEEPALIVE_INTERVAL_MS);
++            }
++        }, "Vivo1907NUdfpsHbmKeepAlive").start();
++
++        if (onHbmEnabled != null) {
++            onHbmEnabled.run();
++        }
++    }
++
++    @Override
++    public void disableHbm(@Nullable Runnable onHbmDisabled) {
++        mKeepAliveActive = false;
++        SystemProperties.set(UDFPS_HBM_PROP, "0");
++
++        if (onHbmDisabled != null) {
++            onHbmDisabled.run();
++        }
++    }
++}
+diff --git a/services/core/Android.bp b/services/core/Android.bp
+index 1893b24c2501..65d258569b72 100644
+--- a/services/core/Android.bp
++++ b/services/core/Android.bp
+@@ -147,6 +147,10 @@ java_library_static {
+         "android.hardware.weaver-V1.0-java",
+         "android.hardware.biometrics.face-V1-java",
+         "android.hardware.biometrics.face-V1.0-java",
++        // vivo 1907N Face Unlock bring-up (not AOSP): reverse-engineered vendor extension HAL,
++        // see hardware/vivo/interfaces/biometrics/face/2.0/ and Face10.java.
++        "vendor.vivo.hardware.biometrics.face-V2.0-java",
++        "vendor.vivo.hardware.biometrics.fingerprint-V3.0-java",
+         "android.hardware.biometrics.fingerprint-V2.3-java",
+         "android.hardware.biometrics.fingerprint-V1-java",
+         "android.hardware.oemlock-V1.0-java",
+diff --git a/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java b/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
+index 039b08e805c1..e3c43a882eaa 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
++++ b/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
+@@ -622,6 +622,50 @@ public class FaceService extends SystemService {
+                     new ClientMonitorCallbackConverter(receiver), opPackageName);
+         }
+ 
++        @Override // Binder call
++        public android.os.ParcelFileDescriptor getShareMemoryFd(int sensorId, int size,
++                String opPackageName) {
++            // vivo 1907N Face Unlock bring-up: not an AOSP method - see IFaceService.aidl.
++            Utils.checkPermission(getContext(), USE_BIOMETRIC_INTERNAL);
++
++            final ServiceProvider provider = getProviderForSensor(sensorId);
++            if (provider == null) {
++                Slog.w(TAG, "Null provider for getShareMemoryFd, caller: " + opPackageName);
++                return null;
++            }
++
++            return provider.scheduleGetShareMemoryFd(sensorId, size);
++        }
++
++        @Override // Binder call
++        public void sendCommand(int sensorId, int cmd, int extra, String bundle,
++                String opPackageName) {
++            // vivo 1907N Face Unlock bring-up: not an AOSP method - see IFaceService.aidl.
++            Utils.checkPermission(getContext(), USE_BIOMETRIC_INTERNAL);
++
++            final ServiceProvider provider = getProviderForSensor(sensorId);
++            if (provider == null) {
++                Slog.w(TAG, "Null provider for sendCommand, caller: " + opPackageName);
++                return;
++            }
++
++            provider.scheduleSendCommand(sensorId, cmd, extra, bundle);
++        }
++
++        @Override // Binder call
++        public void setPreviewSurface(int sensorId, Surface surface, String opPackageName) {
++            // vivo 1907N Face Unlock bring-up: not an AOSP method - see IFaceService.aidl.
++            Utils.checkPermission(getContext(), USE_BIOMETRIC_INTERNAL);
++
++            final ServiceProvider provider = getProviderForSensor(sensorId);
++            if (provider == null) {
++                Slog.w(TAG, "Null provider for setPreviewSurface, caller: " + opPackageName);
++                return;
++            }
++
++            provider.scheduleSetPreviewSurface(sensorId, surface);
++        }
++
+         private void addHidlProviders(@NonNull List<FaceSensorPropertiesInternal> hidlSensors) {
+             for (FaceSensorPropertiesInternal hidlSensor : hidlSensors) {
+                 mServiceProviders.add(
+diff --git a/services/core/java/com/android/server/biometrics/sensors/face/ServiceProvider.java b/services/core/java/com/android/server/biometrics/sensors/face/ServiceProvider.java
+index 77e431c81192..467e3e532198 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/face/ServiceProvider.java
++++ b/services/core/java/com/android/server/biometrics/sensors/face/ServiceProvider.java
+@@ -26,6 +26,7 @@ import android.hardware.face.FaceManager;
+ import android.hardware.face.FaceSensorPropertiesInternal;
+ import android.hardware.face.IFaceServiceReceiver;
+ import android.os.IBinder;
++import android.os.ParcelFileDescriptor;
+ import android.util.proto.ProtoOutputStream;
+ import android.view.Surface;
+ 
+@@ -151,4 +152,33 @@ public interface ServiceProvider {
+             @NonNull String opPackageName);
+ 
+     void dumpHal(int sensorId, @NonNull FileDescriptor fd, @NonNull String[] args);
++
++    /**
++     * vivo 1907N Face Unlock bring-up: not an AOSP concept, only meaningful for the HIDL/Face10
++     * provider talking to vendor.vivo.hardware.biometrics.face@2.0. Default-throws so the AIDL
++     * provider (FaceProvider) doesn't need an implementation, same idiom as
++     * {@link #scheduleInvalidateAuthenticatorId}.
++     */
++    default ParcelFileDescriptor scheduleGetShareMemoryFd(int sensorId, int size) {
++        throw new IllegalStateException("Providers that support the vivo face share-memory"
++                + " extension must override this method");
++    }
++
++    /**
++     * vivo 1907N Face Unlock bring-up: not an AOSP concept - see
++     * {@link #scheduleGetShareMemoryFd(int, int)}.
++     */
++    default void scheduleSendCommand(int sensorId, int cmd, int extra, @NonNull String bundle) {
++        throw new IllegalStateException("Providers that support the vivo face share-memory"
++                + " extension must override this method");
++    }
++
++    /**
++     * vivo 1907N Face Unlock bring-up: not an AOSP concept - see
++     * {@link #scheduleGetShareMemoryFd(int, int)}.
++     */
++    default void scheduleSetPreviewSurface(int sensorId, @Nullable Surface surface) {
++        throw new IllegalStateException("Providers that support the vivo face share-memory"
++                + " extension must override this method");
++    }
+ }
+diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
+index e957794372aa..6f87cffb0eb5 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
++++ b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
+@@ -21,7 +21,9 @@ import android.annotation.Nullable;
+ import android.app.ActivityManager;
+ import android.app.SynchronousUserSwitchObserver;
+ import android.app.UserSwitchObserver;
++import android.content.ComponentName;
+ import android.content.Context;
++import android.content.Intent;
+ import android.content.pm.UserInfo;
+ import android.hardware.biometrics.BiometricConstants;
+ import android.hardware.biometrics.BiometricFaceConstants;
+@@ -40,11 +42,14 @@ import android.os.IBinder;
+ import android.os.IHwBinder;
+ import android.os.Looper;
+ import android.os.NativeHandle;
++import android.os.ParcelFileDescriptor;
+ import android.os.RemoteException;
++import android.os.SharedMemory;
+ import android.os.SystemProperties;
+ import android.os.UserHandle;
+ import android.os.UserManager;
+ import android.provider.Settings;
++import android.system.ErrnoException;
+ import android.util.Slog;
+ import android.util.proto.ProtoOutputStream;
+ import android.view.Surface;
+@@ -123,6 +128,28 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+     private final List<Long> mGeneratedChallengeCount = new ArrayList<>();
+     private FaceGenerateChallengeClient mGeneratedChallengeCache = null;
+ 
++    // vivo 1907N Face Unlock bring-up (not AOSP): shared-memory region the capture app writes
++    // camera frames into, and whether its native handle has already been pushed to the HAL via
++    // sendhandle() for the CURRENT enroll/authenticate session - reset at the start of each new
++    // session (see scheduleEnroll/scheduleAuthenticate) so a fresh handle is always sent before
++    // the first sendCommand() of that session, matching what the reverse-engineered protocol
++    // showed (sendhandle() called once per session, not once ever). See the Face Unlock bring-up
++    // plan for the full protocol this supports.
++    @Nullable private SharedMemory mFaceShareMemory;
++    private boolean mSentShareMemoryHandle;
++
++    // vivo 1907N Face Unlock bring-up (not AOSP): live self-view preview surface, set by
++    // FaceEnrollPreviewFragment via FaceManager.setPreviewSurface() as soon as its TextureView is
++    // ready - independent of scheduleEnroll()'s own timing (the standard AOSP previewSurface
++    // parameter is dead on this HIDL path, see hidl/FaceEnrollClient.java). Re-sent to
++    // FaceCaptureService every time it's (re)started so a session that starts after the surface
++    // is already known gets it immediately too.
++    @Nullable private Surface mPreviewSurface;
++
++    private static final String FACE_CAPTURE_PACKAGE = "com.android.facecapture";
++    private static final String FACE_CAPTURE_SERVICE_CLASS =
++            "com.android.facecapture.FaceCaptureService";
++
+     private final UserSwitchObserver mUserSwitchObserver = new SynchronousUserSwitchObserver() {
+         @Override
+         public void onUserSwitching(int newUserId) {
+@@ -133,7 +160,13 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+         }
+     };
+ 
+-    public static class HalResultController extends IBiometricsFaceClientCallback.Stub {
++    // vivo 1907N Face Unlock bring-up: extends the vendor stub (which itself extends the base
++    // android.hardware.biometrics.face@1.0::IBiometricsFaceClientCallback.Stub, so every existing
++    // @Override below still satisfies it) instead of the plain base Stub, so this single object
++    // can be registered both via setCallback() (base) and setCallback2() (vendor extension) - see
++    // getDaemon() below. Only the new onFaceAlgorithmResult() override is actually new behavior.
++    public static class HalResultController
++            extends vendor.vivo.hardware.biometrics.face.V2_0.IBiometricsFaceClientCallback.Stub {
+         /**
+          * Interface to sends results to the HalResultController's owner.
+          */
+@@ -151,6 +184,9 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+         @Nullable private Callback mCallback;
+         @NonNull private final LockoutHalImpl mLockoutTracker;
+         @NonNull private final LockoutResetDispatcher mLockoutResetDispatcher;
++        // vivo 1907N Face Unlock bring-up (not AOSP): see onEnrollResult()'s mEnrollFinished
++        // comment and setStopCaptureCallback()'s call site in the Face10 constructor.
++        @Nullable private Runnable mStopCaptureCallback;
+ 
+         HalResultController(int sensorId, @NonNull Context context, @NonNull Handler handler,
+                 @NonNull BiometricScheduler scheduler, @NonNull LockoutHalImpl lockoutTracker,
+@@ -167,8 +203,77 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+             mCallback = callback;
+         }
+ 
++        void setStopCaptureCallback(@NonNull Runnable stopCaptureCallback) {
++            mStopCaptureCallback = stopCaptureCallback;
++        }
++
++        // vivo 1907N Face Unlock bring-up (not AOSP): see onEnrollResult()'s comment. Reset via
++        // resetEnrollDedup(), called from scheduleEnroll()'s onClientStarted alongside
++        // mSentShareMemoryHandle - stale state left over from a previous session could otherwise
++        // suppress the whole next one.
++        private int mLastEnrollRemaining = -1;
++        private boolean mEnrollFinished;
++
++        void resetEnrollDedup() {
++            mLastEnrollRemaining = -1;
++            mEnrollFinished = false;
++        }
++
+         @Override
+         public void onEnrollResult(long deviceId, int faceId, int userId, int remaining) {
++            // vivo 1907N Face Unlock bring-up: the vendor daemon calls this on nearly every
++            // processed camera frame (~every 80-100ms). Two distinct problems, found via two
++            // rounds of real device logs (see FACE_UNLOCK_STATUS.md):
++            //
++            // 1. It sometimes repeats the same "remaining" value on consecutive calls (a real
++            //    but minor effect - only ~12% of calls in a real session). mLastEnrollRemaining
++            //    dedupes these.
++            //
++            // 2. The much bigger effect: after a full 5-sample round reaches remaining==0, the
++            //    daemon just keeps going and starts ANOTHER round from remaining==5 - confirmed
++            //    the enrolled face is already usable after the very first round (a real
++            //    unlock succeeded in an earlier test), so every subsequent round is pure
++            //    unwanted extra work from our bridge's perspective. Each round's genuinely
++            //    novel remaining values (5,4,3,2,1,0 again) all sail past the dedup above since
++            //    they're never literally IDENTICAL to the immediately preceding call - so this
++            //    is a separate guard. Confirmed via a real device log that forwarding every
++            //    round's calls into EnrollClient.onEnrollResult() calls
++            //    mCallback.onClientFinished() again on an already-finished operation each time -
++            //    BiometricSchedulerOperation logs "[Finished / destroy]" repeatedly (4 times in
++            //    one captured session) without the scheduler actually advancing to the next
++            //    queued operation until much later, and the whole time AOSP's EnrollClient
++            //    (stock, unmodified) is vibrating and doing other per-call work on every one of
++            //    these calls - confirmed via the same log showing ~130-150ms "Slow dispatch"
++            //    warnings on system_server's main thread essentially back-to-back for the whole
++            //    session, and the user reporting the device stops responding to hardware buttons
++            //    while a capture session is running. mEnrollFinished stops forwarding entirely
++            //    once we've genuinely seen one remaining==0 for this session, regardless of what
++            //    the daemon keeps sending afterwards.
++            if (mEnrollFinished || remaining == mLastEnrollRemaining) {
++                return;
++            }
++            mLastEnrollRemaining = remaining;
++            if (remaining == 0) {
++                mEnrollFinished = true;
++                // vivo 1907N Face Unlock bring-up: called directly, right here, synchronously on
++                // whatever thread the HIDL callback arrived on - NOT via mHandler.post() and NOT
++                // relying on the standard mCallback.onClientFinished() -> stopFaceCapture() path
++                // triggered later from within the mHandler.post() Runnable below. Confirmed via a
++                // real device log that that path can take minutes to actually run:
++                // BiometricSchedulerOperation logged "[Finished / destroy]" immediately, but
++                // BiometricScheduler's own "[Finishing]" (the point where our onClientFinished
++                // callback and therefore stopFaceCapture() actually fires) didn't happen until
++                // 2m48s later - the whole time, FaceCaptureService kept running (confirmed via
++                // its notification only getting cancelled at that same late moment) and the
++                // vendor daemon kept calling onAcquired() (never throttled - only onEnrollResult
++                // is) continuously, which is consistent with what was saturating system_server's
++                // main thread that whole time. Calling stopFaceCapture() immediately here, from
++                // the actual moment of completion rather than from wherever the framework's own
++                // scheduler eventually gets around to it, cuts that off right away.
++                if (mStopCaptureCallback != null) {
++                    mStopCaptureCallback.run();
++                }
++            }
+             mHandler.post(() -> {
+                 final CharSequence name = FaceUtils.getLegacyInstance(mSensorId)
+                         .getUniqueName(mContext, userId);
+@@ -327,6 +432,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+                 }
+             });
+         }
++
++        @Override
++        public void onFaceAlgorithmResult(long deviceId, int command, int result, int extra,
++                String bundle) {
++            // vivo 1907N Face Unlock bring-up: reverse-engineered extension callback. Not
++            // confirmed to be required for basic enroll/authenticate to function - the standard
++            // callbacks above may be sufficient on their own, since the HAL also implements the
++            // base callback interface. Logged only for now; see the Face Unlock bring-up plan's
++            // risk notes for the first-stage test that checks whether this matters in practice.
++            Slog.d(TAG, "onFaceAlgorithmResult: command=" + command + ", result=" + result
++                    + ", extra=" + extra + ", bundle=" + bundle);
++        }
+     }
+ 
+     @VisibleForTesting
+@@ -350,6 +467,10 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+             mDaemon = null;
+             mCurrentUserId = UserHandle.USER_NULL;
+         });
++        // vivo 1907N Face Unlock bring-up (not AOSP): see onEnrollResult()'s mEnrollFinished
++        // comment for why this needs to happen immediately rather than through the normal
++        // BaseClientMonitor.Callback.onClientFinished() -> stopFaceCapture() path.
++        mHalResultController.setStopCaptureCallback(this::stopFaceCapture);
+ 
+         try {
+             ActivityManager.getService().registerUserSwitchObserver(mUserSwitchObserver, TAG);
+@@ -409,7 +530,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+                 + mScheduler.getCurrentClient());
+ 
+         try {
+-            mDaemon = IBiometricsFace.getService();
++            // vivo 1907N Face Unlock bring-up: target the vendor-extended interface's own
++            // generated getService() directly (declared under vendor.vivo.hardware.biometrics.
++            // face@2.0::IBiometricsFace/default in device/vivo/1907N/manifest.xml) instead of
++            // the base android.hardware.biometrics.face@1.0 lookup below (which would only work
++            // if vivo's service binary also registers under the base package/instance name - not
++            // confirmed). The returned object is usable as a normal base IBiometricsFace daemon
++            // for every existing call in this class, since the vendor interface extends it.
++            mDaemon = vendor.vivo.hardware.biometrics.face.V2_0.IBiometricsFace.getService();
+         } catch (java.util.NoSuchElementException e) {
+             // Service doesn't exist or cannot be opened.
+             Slog.w(TAG, "NoSuchElementException", e);
+@@ -436,6 +564,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+ 
+         Slog.d(TAG, "Face HAL ready, HAL ID: " + halId);
+         if (halId != 0) {
++            // vivo 1907N Face Unlock bring-up: register the extended callback too. mDaemon is
++            // always actually the vendor-extended type here (see the getService() call above),
++            // so this cast is safe.
++            try {
++                ((vendor.vivo.hardware.biometrics.face.V2_0.IBiometricsFace) mDaemon)
++                        .setCallback2(mHalResultController);
++            } catch (RemoteException e) {
++                Slog.e(TAG, "Failed to set vivo extended callback for face HAL", e);
++            }
+             scheduleLoadAuthenticatorIds();
+             scheduleInternalCleanup(ActivityManager.getCurrentUser(), null /* callback */);
+             scheduleGetFeature(mSensorId, new Binder(),
+@@ -450,6 +587,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+         return mDaemon;
+     }
+ 
++    // vivo 1907N Face Unlock bring-up (not AOSP): mDaemon is always actually the vendor-extended
++    // type once getDaemon() has connected (see getDaemon() above) - this just gives call sites a
++    // typed accessor instead of repeating the cast/instanceof check everywhere.
++    @Nullable
++    private vendor.vivo.hardware.biometrics.face.V2_0.IBiometricsFace getVivoDaemon() {
++        final IBiometricsFace daemon = getDaemon();
++        return daemon instanceof vendor.vivo.hardware.biometrics.face.V2_0.IBiometricsFace
++                ? (vendor.vivo.hardware.biometrics.face.V2_0.IBiometricsFace) daemon : null;
++    }
++
++    // vivo 1907N Face Unlock bring-up (not AOSP): starts/stops our own capture app/service (see
++    // the Face Unlock bring-up plan, Фаза 3) for the duration of an enroll/authenticate
++    // operation - it opens the camera and feeds frames via scheduleSendCommand() while running.
++    // Deliberately our own small component/protocol, not a port of vivo's proprietary
++    // IFaceUIService binding scheme - we don't need to know that protocol, only the HAL-facing
++    // one this class already implements.
++    private void startFaceCapture() {
++        final Intent intent = new Intent();
++        intent.setComponent(new ComponentName(FACE_CAPTURE_PACKAGE, FACE_CAPTURE_SERVICE_CLASS));
++        try {
++            // vivo 1907N Face Unlock bring-up: FaceCaptureService's own device/vivo/1907N/apps/
++            // .../default-permissions-facecapture.xml (DefaultPermissionGrantPolicy exceptions
++            // mechanism) turned out to only actually run in two cases -
++            // PackageManagerService.onNewUserCreated() (a genuinely new user) or systemReady()
++            // when isPermissionUpgradeNeeded(userId) is true (tied to a build fingerprint/SDK
++            // version bump) - neither applies to this device tree's normal "same build, iterate
++            // and reflash" workflow with an already-existing user 0, so the exceptions file was
++            // silently never evaluated and CAMERA never got granted; confirmed via a real
++            // on-device logcat showing FaceCaptureService's own checkSelfPermission(CAMERA)
++            // failing every time. Fixed by granting it here instead, imperatively, every time -
++            // idempotent (granting an already-granted permission is a harmless no-op) and not
++            // dependent on any first-boot/upgrade timing. system_server holds
++            // GRANT_RUNTIME_PERMISSIONS implicitly, this call needs no extra permission
++            // declaration on Face10's/system_server's side. The default-permissions XML is left
++            // in place too (correct for a genuine first-ever boot with a new user), this is a
++            // belt-and-suspenders fix for the far more common "existing user, new system image"
++            // case this project's own workflow actually exercises.
++            mContext.getPackageManager().grantRuntimePermission(FACE_CAPTURE_PACKAGE,
++                    android.Manifest.permission.CAMERA, UserHandle.of(mCurrentUserId));
++        } catch (Exception e) {
++            Slog.e(TAG, "Failed to grant CAMERA to FaceCaptureService", e);
++        }
++        // vivo 1907N Face Unlock bring-up: hand over whatever preview surface is currently known
++        // (may be null if FaceEnrollPreviewFragment hasn't called setPreviewSurface() yet - it'll
++        // arrive later via a separate re-delivered start, see scheduleSetPreviewSurface()).
++        // EXTRA_PREVIEW_SURFACE is a plain string literal, not a shared constant, because
++        // FaceCaptureService lives in a completely separate app/build module
++        // (device/vivo/1907N/apps/FaceCaptureService) that frameworks/base can't depend on - see
++        // FaceCaptureService.java's own copy of this same key/comment.
++        intent.putExtra("com.android.facecapture.extra.PREVIEW_SURFACE", mPreviewSurface);
++        try {
++            // vivo 1907N Face Unlock bring-up: plain startServiceAsUser() was silently rejected
++            // here with BackgroundServiceStartNotAllowedException - even a system_server-issued
++            // start is subject to the normal "can't start a plain (non-foreground) service for
++            // an app with no foreground state" restriction, and FaceCaptureService has no
++            // foreground state of its own (no activity, launched purely by us). Confirmed via a
++            // real device logcat capture that this meant the service never started at all - no
++            // camera ever opened, no frames ever reached the HAL. startForegroundServiceAsUser()
++            // is exempt from that restriction; FaceCaptureService must promote itself via
++            // startForeground() within 5s of onCreate()/onStartCommand() or the system kills it
++            // for not doing so - see that class.
++            mContext.startForegroundServiceAsUser(intent, UserHandle.CURRENT);
++        } catch (Exception e) {
++            Slog.e(TAG, "Failed to start FaceCaptureService", e);
++        }
++    }
++
++    private void stopFaceCapture() {
++        final Intent intent = new Intent();
++        intent.setComponent(new ComponentName(FACE_CAPTURE_PACKAGE, FACE_CAPTURE_SERVICE_CLASS));
++        try {
++            mContext.stopServiceAsUser(intent, UserHandle.CURRENT);
++        } catch (Exception e) {
++            Slog.e(TAG, "Failed to stop FaceCaptureService", e);
++        }
++    }
++
++    // vivo 1907N Face Unlock bring-up (not AOSP): see FaceManager.setPreviewSurface(). Stores the
++    // surface and, if a capture session is already running (FaceCaptureService started), re-sends
++    // it right away via a re-delivered start Intent - Service.onStartCommand() is called again on
++    // the same running instance, it does not restart the process or the camera.
++    @Override
++    public void scheduleSetPreviewSurface(int sensorId, @Nullable Surface surface) {
++        mHandler.post(() -> {
++            mPreviewSurface = surface;
++            final BaseClientMonitor client = mScheduler.getCurrentClient();
++            if (client instanceof FaceEnrollClient) {
++                startFaceCapture();
++            }
++        });
++    }
++
++    // vivo 1907N Face Unlock bring-up (not AOSP): see ServiceProvider.scheduleGetShareMemoryFd().
++    // Synchronous (not posted to mHandler) since callers need the fd back immediately, same as
++    // every other binder call in this class that returns a value directly.
++    @Override
++    public ParcelFileDescriptor scheduleGetShareMemoryFd(int sensorId, int size) {
++        try {
++            if (mFaceShareMemory == null || mFaceShareMemory.getSize() != size) {
++                if (mFaceShareMemory != null) {
++                    mFaceShareMemory.close();
++                }
++                mFaceShareMemory = SharedMemory.create("vivo-face-capture", size);
++                mSentShareMemoryHandle = false;
++            }
++            return mFaceShareMemory.getFdDup();
++        } catch (ErrnoException | IOException e) {
++            Slog.e(TAG, "Failed to allocate/dup face capture shared memory", e);
++            return null;
++        }
++    }
++
++    // vivo 1907N Face Unlock bring-up (not AOSP): see ServiceProvider.scheduleSendCommand(). The
++    // "param" argument on the underlying HIDL sendCommand() has no counterpart in the
++    // reverse-engineered app-facing call (FaceManager.sendCommand only has cmd/extra/bundle) -
++    // hardcoded to 0 here, matching every observed real call's extra=0 and the absence of any
++    // fourth argument at the Java layer in the decompiled capture app.
++    @Override
++    public void scheduleSendCommand(int sensorId, int cmd, int extra, @NonNull String bundle) {
++        mHandler.post(() -> {
++            final vendor.vivo.hardware.biometrics.face.V2_0.IBiometricsFace daemon =
++                    getVivoDaemon();
++            if (daemon == null) {
++                Slog.w(TAG, "scheduleSendCommand: no vivo daemon available");
++                return;
++            }
++            try {
++                if (!mSentShareMemoryHandle && mFaceShareMemory != null) {
++                    // vivo 1907N Face Unlock bring-up: confirmed on-device (logcat from the
++                    // vendor daemon itself) that sendhandle() was reaching it fine, but its own
++                    // subsequent mmap attempt failed immediately - "sendhandle" / "mapMemory
++                    // Fiald!!" (sic, stock's own typo) logged back-to-back, then every following
++                    // sendCommand's getMemoryData finding "memory is NULL".
++                    //
++                    // Tried changing this call to send a memory (hidl_memory, via
++                    // android.os.HidlMemory) instead of a bare handle, on the theory that the
++                    // daemon's own internal call to
++                    // android::hardware::mapMemory(const hidl_memory&) (confirmed present in the
++                    // binary alongside a literal "ashmem" string) meant the incoming RPC
++                    // parameter itself was hidl_memory-typed - wrong, and worse: confirmed via a
++                    // real system_server crash dump that this broke wire marshalling entirely
++                    // (IllegalArgumentException right inside HwRemoteBinder.transact() - client
++                    // and the fixed, precompiled server binary now disagreed about the
++                    // parameter's wire format, not just what to do with it). Reverted to
++                    // `handle`, which is what actually transacts successfully - the daemon's C++
++                    // code almost certainly builds its own local hidl_memory (hardcoding the
++                    // "ashmem" name itself) from whatever plain handle it receives, rather than
++                    // receiving a hidl_memory directly over the wire.
++                    //
++                    // The size-as-first-int addition (below) predates that detour and was never
++                    // itself confirmed to fix "mapMemory Fiald!!" on its own (that test happened
++                    // to be superseded by the memory-type attempt before being retested in
++                    // isolation) - kept since it's a reasonable native_handle_t convention and
++                    // categorically can't be what's now failing at the transact() layer. The real
++                    // "mapMemory Fiald!!" cause is still open - see FACE_UNLOCK_STATUS.md.
++                    final NativeHandle handle = new NativeHandle(
++                            new FileDescriptor[]{mFaceShareMemory.getFileDescriptor()},
++                            new int[]{(int) mFaceShareMemory.getSize()},
++                            false /* owned - mFaceShareMemory keeps ownership */);
++                    daemon.sendhandle(handle);
++                    mSentShareMemoryHandle = true;
++                }
++                daemon.sendCommand(cmd, extra, 0 /* param */, bundle);
++            } catch (RemoteException e) {
++                Slog.e(TAG, "scheduleSendCommand failed", e);
++            }
++        });
++    }
++
+     @Override
+     public boolean containsSensor(int sensorId) {
+         return mSensorId == sensorId;
+@@ -592,9 +898,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+                     ENROLL_TIMEOUT_SEC, previewSurface, mSensorId);
+ 
+             mScheduler.scheduleClientMonitor(client, new BaseClientMonitor.Callback() {
++                @Override
++                public void onClientStarted(@NonNull BaseClientMonitor clientMonitor) {
++                    // vivo 1907N Face Unlock bring-up (not AOSP) - see startFaceCapture().
++                    mSentShareMemoryHandle = false;
++                    mHalResultController.resetEnrollDedup();
++                    startFaceCapture();
++                }
++
+                 @Override
+                 public void onClientFinished(@NonNull BaseClientMonitor clientMonitor,
+                         boolean success) {
++                    stopFaceCapture();
+                     if (success) {
+                         // Update authenticatorIds
+                         scheduleUpdateActiveUserWithoutHandler(client.getTargetUserId());
+@@ -638,7 +953,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+                     opPackageName, cookie, false /* requireConfirmation */, mSensorId,
+                     isStrongBiometric, statsClient, mLockoutTracker, mUsageStats,
+                     allowBackgroundAuthentication, isKeyguardBypassEnabled);
+-            mScheduler.scheduleClientMonitor(client);
++            mScheduler.scheduleClientMonitor(client, new BaseClientMonitor.Callback() {
++                @Override
++                public void onClientStarted(@NonNull BaseClientMonitor clientMonitor) {
++                    // vivo 1907N Face Unlock bring-up (not AOSP) - see startFaceCapture().
++                    mSentShareMemoryHandle = false;
++                    startFaceCapture();
++                }
++
++                @Override
++                public void onClientFinished(@NonNull BaseClientMonitor clientMonitor,
++                        boolean success) {
++                    stopFaceCapture();
++                }
++            });
+         });
+     }
+ 
+diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/FaceGenerateChallengeClient.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/FaceGenerateChallengeClient.java
+index f418104834e3..639a44113590 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/FaceGenerateChallengeClient.java
++++ b/services/core/java/com/android/server/biometrics/sensors/face/hidl/FaceGenerateChallengeClient.java
+@@ -17,6 +17,7 @@
+ package com.android.server.biometrics.sensors.face.hidl;
+ 
+ import android.annotation.NonNull;
++import android.annotation.Nullable;
+ import android.content.Context;
+ import android.hardware.biometrics.face.V1_0.IBiometricsFace;
+ import android.hardware.face.IFaceServiceReceiver;
+@@ -93,9 +94,19 @@ public class FaceGenerateChallengeClient extends GenerateChallengeClient<IBiomet
+         }
+     }
+ 
+-    private void sendChallengeResult(@NonNull ClientMonitorCallbackConverter receiver,
++    // vivo 1907N Face Unlock bring-up (not AOSP): receiver is @Nullable at the call site now -
++    // see startHalOperation()'s comment for why getListener() (passed in as receiver there) can
++    // legitimately be null (binderDiedInternal() nulls it if the caller's binder dies while this
++    // operation is still queued) - this crashed system_server with an uncaught NPE on a real
++    // device. The AIDL sibling (face/aidl/FaceGenerateChallengeClient) already null-checks its
++    // listener before using it - this HIDL version was simply missing that same guard.
++    private void sendChallengeResult(@Nullable ClientMonitorCallbackConverter receiver,
+             @NonNull Callback ownerCallback) {
+         Preconditions.checkState(mChallengeResult != null, "result not available");
++        if (receiver == null) {
++            ownerCallback.onClientFinished(this, true /* success */);
++            return;
++        }
+         try {
+             receiver.onChallengeGenerated(getSensorId(), getTargetUserId(), mChallengeResult);
+             ownerCallback.onClientFinished(this, true /* success */);
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/UdfpsHelper.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/UdfpsHelper.java
+index 29661d46f328..0c459d82fe27 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/UdfpsHelper.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/UdfpsHelper.java
+@@ -30,8 +30,98 @@ public class UdfpsHelper {
+ 
+     private static final String TAG = "UdfpsHelper";
+ 
++    // Goodix gf9518 (vivo 1907N) optical UDFPS: the vendor HAL blob only implements the base
++    // V2_1 interface, so the V2_3.onFingerDown()/onFingerUp() extension below always fails to
++    // cast and is a no-op on this device - harmless, see below for the real per-touch signaling.
++    //
++    // Panel illumination itself is NOT driven from here: it's owned by SystemUI's
++    // Vivo1907NUdfpsHbmProvider (frameworks/base/packages/SystemUI/src/com/android/systemui/
++    // biometrics/), triggered by the raw touch event same as any other UDFPS device, via the
++    // config_udfpsHbmType/config_udfpsHbmProviderComponent overlay. An earlier version of this
++    // file drove /sys/lcm/oled_hbm directly from system_server, which produced a real (if
++    // imprecisely-timed) global brightness boost but never fixed GF_ERROR_PREPROCESS_FAILED -
++    // turned out stock draws a solid bright circle exactly over the sensor rather than boosting
++    // whatever app content happens to be there, which AOSP's UdfpsView already supports and was
++    // just never wired up for this device (see that file's own comment trail for the fix).
++
++    // Turning HBM on/off alone isn't enough: the base android.hardware.biometrics.fingerprint@2.1
++    // enroll()/authenticate() call never produces a single onAcquired() callback on its own -
++    // confirmed by a real device test (60s of silence, then FINGERPRINT_ERROR_TIMEOUT). A real
++    // Funtouch OS logcat capture (same custom kernel, working fingerprint) showed the vendor
++    // gf9518 daemon blocks in gf_hal_wait_screen_light() after a finger-down IRQ, waiting for the
++    // app to confirm the panel is actually lit before it calls gf_hal_capture_single_image() -
++    // that confirmation comes over a second, separate HIDL interface
++    // (vendor.vivo.hardware.biometrics.fingerprint@3.0::IBiometricsFingerprintExt,
++    // sendCommandWithBundle(cmd, arg0, arg1, bundle)), not the base interface. Command/arg
++    // values below are exactly what stock's FingerprintUI.apk sends, read off that same logcap
++    // capture:
++    //   sendCommandWithBundle(32534, 0, 0, "") -> HAL: gf_hal_app_finger_down
++    //   sendCommandWithBundle(32572, 1, 0, "") -> HAL: gf_hal_screen_light_ready, unblocks
++    //                                              gf_hal_wait_screen_light() and triggers
++    //                                              gf_hal_capture_single_image()
++    //   sendCommandWithBundle(32534, 1, 0, "") -> HAL: gf_hal_app_finger_up, immediately
++    //                                              followed by the real onAcquired() callback
++    private static final int CMD_FINGER_STATE = 32534;
++    private static final int CMD_SCREEN_LIGHT_READY = 32572;
++    private static final long FINGER_DOWN = 0;
++    private static final long FINGER_UP = 1;
++
++    private static vendor.vivo.hardware.biometrics.fingerprint.V3_0.IBiometricsFingerprintExt
++            sVivoFingerprintExt;
++
++    private static synchronized
++            vendor.vivo.hardware.biometrics.fingerprint.V3_0.IBiometricsFingerprintExt
++            getVivoFingerprintExt() {
++        if (sVivoFingerprintExt == null) {
++            try {
++                sVivoFingerprintExt = vendor.vivo.hardware.biometrics.fingerprint.V3_0
++                        .IBiometricsFingerprintExt.getService();
++                if (sVivoFingerprintExt == null) {
++                    Slog.w(TAG, "getVivoFingerprintExt | getService() returned null");
++                } else {
++                    Slog.i(TAG, "getVivoFingerprintExt | connected");
++                }
++            } catch (Throwable t) {
++                Slog.e(TAG, "getVivoFingerprintExt | failed to get service ("
++                        + t.getClass().getName() + "): ", t);
++            }
++        }
++        return sVivoFingerprintExt;
++    }
++
++    private static void sendVivoCommand(int cmd, long arg0, long arg1) {
++        final vendor.vivo.hardware.biometrics.fingerprint.V3_0.IBiometricsFingerprintExt ext =
++                getVivoFingerprintExt();
++        if (ext == null) {
++            Slog.w(TAG, "sendVivoCommand | cmd: " + cmd + " | no vivo fingerprint ext service");
++            return;
++        }
++        try {
++            int result = ext.sendCommandWithBundle(cmd, arg0, arg1, "");
++            Slog.i(TAG, "sendVivoCommand | cmd: " + cmd + " | result: " + result);
++        } catch (Throwable t) {
++            Slog.e(TAG, "sendVivoCommand | cmd: " + cmd + " | " + t.getClass().getName() + ": ",
++                    t);
++        }
++    }
++
++    // Illumination itself is drawn by SystemUI (Vivo1907NUdfpsHbmProvider), a completely
++    // separate process from this one. CMD_SCREEN_LIGHT_READY used to be fired from here
++    // (onFingerDown), immediately off the raw touch, with a blind fixed delay guessing at how
++    // long SystemUI's rendering pipeline needs - every single capture then failed at
++    // GF_ERROR_PREPROCESS_FAILED regardless of the delay's length (tried 0ms and 80ms), confirmed
++    // over 50+ touches, ruling out chance. Root cause: AOSP already has the right primitive for
++    // this - onUiReady() - which UdfpsController only calls after UdfpsView's own HBM-enabled
++    // callback plus config_udfps_illumination_transition_ms actually fires (see
++    // UdfpsController.java's onFingerDown(): onPointerDown() is sent immediately/unconditionally
++    // off the touch, but onUiReady() is genuinely gated on illumination completing). The HIDL
++    // client (FingerprintEnrollClient/FingerprintAuthenticationClient/FingerprintDetectClient)
++    // just stubs onUiReady() as unsupported - CMD_SCREEN_LIGHT_READY is sent from there now
++    // instead, so it fires only once SystemUI confirms the panel is actually lit.
+     public static void onFingerDown(IBiometricsFingerprint daemon, int x, int y, float minor,
+             float major) {
++        sendVivoCommand(CMD_FINGER_STATE, FINGER_DOWN, 0);
++
+         android.hardware.biometrics.fingerprint.V2_3.IBiometricsFingerprint extension =
+                 android.hardware.biometrics.fingerprint.V2_3.IBiometricsFingerprint.castFrom(
+                         daemon);
+@@ -48,6 +138,8 @@ public class UdfpsHelper {
+     }
+ 
+     public static void onFingerUp(IBiometricsFingerprint daemon) {
++        sendVivoCommand(CMD_FINGER_STATE, FINGER_UP, 0);
++
+         android.hardware.biometrics.fingerprint.V2_3.IBiometricsFingerprint extension =
+                 android.hardware.biometrics.fingerprint.V2_3.IBiometricsFingerprint.castFrom(
+                         daemon);
+@@ -63,6 +155,15 @@ public class UdfpsHelper {
+         }
+     }
+ 
++    // The real illumination-confirmed signal - see the comment on onFingerDown() above. Wired to
++    // FingerprintEnrollClient/FingerprintAuthenticationClient/FingerprintDetectClient's
++    // onUiReady(), which SystemUI's UdfpsController only calls after UdfpsHbmProvider's
++    // onHbmEnabled callback (i.e. after Vivo1907NUdfpsHbmProvider.enableHbm() has actually run)
++    // plus a render-settle delay - not off the raw touch event like onFingerDown() is.
++    public static void onUiReady() {
++        sendVivoCommand(CMD_SCREEN_LIGHT_READY, 1, 0);
++    }
++
+     public static boolean isValidAcquisitionMessage(@NonNull Context context,
+             int acquireInfo, int vendorCode) {
+         return FingerprintManager.getAcquiredString(context, acquireInfo, vendorCode) != null;
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/Fingerprint21.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/Fingerprint21.java
+index 94fd8f80f9f8..b5b0b00f2a7a 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/Fingerprint21.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/Fingerprint21.java
+@@ -621,7 +621,8 @@ public class Fingerprint21 implements IHwBinder.DeathRecipient, ServiceProvider
+                     mLazyDaemon, token, id, listener, userId, opPackageName,
+                     mSensorProperties.sensorId, mUdfpsOverlayController, isStrongBiometric,
+                     statsClient);
+-            mScheduler.scheduleClientMonitor(client, mFingerprintStateCallback);
++            mScheduler.scheduleClientMonitor(client,
++                    mFingerprintStateCallback);
+         });
+ 
+         return id;
+@@ -643,7 +644,8 @@ public class Fingerprint21 implements IHwBinder.DeathRecipient, ServiceProvider
+                     mTaskStackListener, mLockoutTracker,
+                     mUdfpsOverlayController, mSidefpsController,
+                     allowBackgroundAuthentication, mSensorProperties);
+-            mScheduler.scheduleClientMonitor(client, mFingerprintStateCallback);
++            mScheduler.scheduleClientMonitor(client,
++                    mFingerprintStateCallback);
+         });
+     }
+ 
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
+index 3058e2508f5f..6af72fc69fda 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
+@@ -237,6 +237,6 @@ class FingerprintAuthenticationClient extends AuthenticationClient<IBiometricsFi
+ 
+     @Override
+     public void onUiReady() {
+-        // Unsupported in HIDL.
++        UdfpsHelper.onUiReady();
+     }
+ }
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintDetectClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintDetectClient.java
+index b854fb300ece..c6cb867fdf6b 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintDetectClient.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintDetectClient.java
+@@ -121,7 +121,7 @@ class FingerprintDetectClient extends AcquisitionClient<IBiometricsFingerprint>
+ 
+     @Override
+     public void onUiReady() {
+-        // Unsupported in HIDL.
++        UdfpsHelper.onUiReady();
+     }
+ 
+     @Override
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintEnrollClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintEnrollClient.java
+index cc50bdfb59ae..120f0fdf6705 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintEnrollClient.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintEnrollClient.java
+@@ -172,6 +172,6 @@ public class FingerprintEnrollClient extends EnrollClient<IBiometricsFingerprint
+ 
+     @Override
+     public void onUiReady() {
+-        // Unsupported in HIDL.
++        UdfpsHelper.onUiReady();
+     }
+ }
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintGenerateChallengeClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintGenerateChallengeClient.java
+index db2f0455a475..df0390207230 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintGenerateChallengeClient.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintGenerateChallengeClient.java
+@@ -48,7 +48,19 @@ public class FingerprintGenerateChallengeClient
+         try {
+             final long challenge = getFreshDaemon().preEnroll();
+             try {
+-                getListener().onChallengeGenerated(getSensorId(), getTargetUserId(), challenge);
++                // vivo 1907N Face Unlock bring-up (not AOSP): getListener() is @Nullable at the
++                // BaseClientMonitor field level (nulled out by binderDiedInternal() if the
++                // caller's binder dies while this operation is still queued) - calling it
++                // unconditionally here crashed system_server with an uncaught NPE on a real
++                // device (the caller, com.android.settings, had just crashed for an unrelated
++                // reason right as this queued operation started). The AIDL sibling
++                // (fingerprint/aidl/FingerprintGenerateChallengeClient) and the base
++                // AcquisitionClient/RemovalClient classes all null-check getListener() before
++                // using it - this HIDL version was simply missing that same guard.
++                final ClientMonitorCallbackConverter listener = getListener();
++                if (listener != null) {
++                    listener.onChallengeGenerated(getSensorId(), getTargetUserId(), challenge);
++                }
+                 mCallback.onClientFinished(this, true /* success */);
+             } catch (RemoteException e) {
+                 Slog.e(TAG, "Remote exception", e);

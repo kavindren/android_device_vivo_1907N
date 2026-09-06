@@ -1,73 +1,98 @@
-# TWRP Device Tree for Vivo V17 Neo (PD1913F)
+# LineageOS 19.1 device tree — vivo V17 Neo (1907N / PD1913F_EX)
 
-![TWRP Version](https://img.shields.io/badge/TWRP-3.7.1-blue.svg)
-![Android Version](https://img.shields.io/badge/Android-12%20(S)-green.svg)
-
-## Device Specifications
-
-| Features| Specifications |
+| | |
 | :--- | :--- |
-| SoC | MediaTek MT6768 Helio P65 |
-| CPU | 2x 2.0 GHz Cortex-A75 & 6x 1.7 GHz Cortex-A55 |
+| SoC | MediaTek MT6768 (Helio P65) |
+| CPU | 2×2.0 GHz Cortex-A75 + 6×1.7 GHz Cortex-A55 |
 | GPU | Mali-G52 MC2 |
-| Memory | 6GB RAM |
-| Android Version | 9.0 (Initial) / 12 (Current) |
-| Release | July 2019 |
+| RAM | 6 GB |
+| Shipped Android | 9 → 12 (Funtouch `SP1A.210812.003`) |
+| LineageOS base | 19.1 (Android 12.1 / API 32) |
 
-## Build Status
+Also builds TWRP (`twrp_1907N-eng`) from the same tree.
 
-- **Working status:** Beta (in development)
-- **TWRP version:** 3.7.1
-- **Base (Manifest):** Android 12.1 (S)
+## Feature status
 
-### Features that DO work:
-* [x] Touchscreen
-* [x] Brightness
-* [x] Vibration
-* [x] Backup (unprotected partitions)
-* [x] ADB / Sideload
-* [x] Partitions mounting (System, Vendor, Product)
-* [x] Data decryption (FBEv1)
+| Works | Broken / partial |
+| :--- | :--- |
+| Boot, RIL (calls/SMS/data), Wi-Fi, BT, GPS, sensors, camera, audio, USB (ADB/MTP), fingerprint (UDFPS), face unlock, FBEv1 decrypt, offline charging | **VoLTE / VoWiFi / IMS** — AP side fully wired but needs an MTK-telephony framework port (`MtkRIL`/`MtkQualifiedNetworksService`); not fixable at device-tree level on A12. IMS toggles appear but never register. |
 
-### Features that DO NOT work / Currently in development:
-* [ ] MTP
+## Building
 
-## Build Instructions
+Needs a LineageOS 19.1 checkout on Arch or Ubuntu.
 
-# WARNING! I am NOT responsible for any damage to your device. Use this TWRP at your own risk!
+### 1. Manifest + sources
 
-To build the image, use Arch Linux (recommended) or Ubuntu.
-
-1. Initialize the manifest repo:
 ```bash
-repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1
+mkdir lineage-19.1 && cd lineage-19.1
+repo init -u https://github.com/LineageOS/android.git -b lineage-19.1 --git-lfs
+mkdir -p .repo/local_manifests
+curl -o .repo/local_manifests/1907N.xml \
+  https://raw.githubusercontent.com/kavindren/android_device_vivo_1907N/lineage-19.1/1907N.xml
+repo sync -c -j$(nproc)
 ```
 
-2. Clone this device tree to `device/vivo/1907N`
+`vendor/vivo/1907N` uses Git LFS for `VivoCamera.apk` — `git lfs install` once beforehand
+(the `--git-lfs` on `repo init` covers it).
 
-3. Launch the build:
+### 2. Out-of-tree patches
+
+UDFPS HBM, Face Unlock, dual-Wi-Fi SoftAP, tethering and USB gadget need patches to platform
+repos:
+
 ```bash
-export ALLOW_MISSING_DEPENDENCIES=true
+device/vivo/1907N/patches/apply-patches.sh
+```
+
+See `patches/README.md`.
+
+### 3. Signing keys
+
+The tree builds with AOSP test-keys out of the box. For a real build, generate your own:
+
+```bash
+mkdir device/vivo/1907N/keys && cd device/vivo/1907N/keys
+for k in releasekey platform shared media networkstack testkey; do
+  ../../../../development/tools/make_key "$k" '/CN=vivo-1907N/'; done
+openssl genrsa -out avb_recovery.pem 4096
+```
+
+`keys/` is git-ignored. `device.mk` / `BoardConfig.mk` auto-detect it.
+
+### 4. Build
+
+```bash
 . build/envsetup.sh
-lunch twrp_1907N-eng
-mka recoveryimage -j$(nproc)
+lunch lineage_1907N-userdebug
+mka bacon            # or: mka bootimage systemimage vendorimage
 ```
 
-## How to flash the image?
-Flashing recovery on Vivo devices can be challenging due to bootloader restrictions. Below are the tested methods:
-1. Use SP Flash Tool with the MT6768 scatter
-2. Unlock the bootloader
+## Flashing
 
-The first option is the easiest one, but there's high chance of bricking it. The `MT6768_Android_Scatter.txt` for V17 Neo / S1 is included in the repository
+The bootloader must be unlocked. On vivo this is non-trivial — three known routes:
 
-The second option is the most interesting one. You actually CAN unlock the bootloader, and there are three ways to do that:
-1. [Rollback to Android 10 firmware, where the `fastboot flashing unlock` command isn't blocked](https://4pda.to/forum/index.php?showtopic=963689&st=440#entry100106035)
-2. [Use special custom fastboot for vivo devices](https://4pda.to/forum/index.php?showtopic=1047450#entry114868014)
-3. [Unlock the bootloader via testpoint and mtkclient](https://4pda.to/forum/index.php?showtopic=1047450&st=1100#entry139919639)
+1. Roll back to Android 10 firmware where `fastboot flashing unlock` still works —
+   <https://4pda.to/forum/index.php?showtopic=963689&st=440#entry100106035>
+2. vivo-specific patched fastboot —
+   <https://4pda.to/forum/index.php?showtopic=1047450#entry114868014>
+3. Testpoint + mtkclient —
+   <https://4pda.to/forum/index.php?showtopic=1047450&st=1100#entry139919639>
 
-I have successfully unlocked the bootloader with the third method. IMHO it has the highest chance of being actually unlocked
+Route 3 is the most reliable. `MT6768_Android_scatter.txt` for SP Flash Tool is in the repo.
+
+Then:
+
+```bash
+fastboot flash boot   out/target/product/1907N/boot.img
+fastboot flash system out/target/product/1907N/system.img
+fastboot flash vendor  out/target/product/1907N/vendor.img
+fastboot -w
+fastboot reboot
+```
 
 ## Credits
-* [TeamWin](https://github.com/TeamWin/Team-Win-Recovery-Project) - For the Recovery Project (TWRP)
-* [Minimal Manifest TWRP](https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp) - For the building environment
-* [4PDA Community](https://4pda.to/forum/index.php?showtopic=1047450) - For bootloader unlock methods and testing
+
+- LineageOS team
+- 4PDA community — bootloader unlock research and testing
+  (<https://4pda.to/forum/index.php?showtopic=1047450>)
+- TeamWin — for the TWRP side of this tree

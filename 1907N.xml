@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <!--
+    LineageOS 19.1 local manifest for the vivo V17 Neo (1907N / PD1913F_EX).
+    Copy to .repo/local_manifests/1907N.xml, then `repo sync`.
+  -->
+  <project name="kavindren/android_device_vivo_1907N"
+           path="device/vivo/1907N"
+           remote="github" revision="lineage-19.1" />
+
+  <project name="kavindren/android_vendor_vivo_1907N"
+           path="vendor/vivo/1907N"
+           remote="github" revision="lineage-19.1" />
+
+  <!-- Kernel: 4.14.336 merge branch. master is pinned at d27b3c4e8. -->
+  <project name="kavindren/android_kernel_vivo_pd1913f"
+           path="kernel/vivo/1907N"
+           remote="github" revision="stable-merge-414336" />
+</manifest>

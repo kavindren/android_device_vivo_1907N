@@ -1,1 +1,10 @@
 *.stock.bak
+
+# Private signing keys — NEVER publish. Each builder generates their own (see README).
+keys/
+
+# Reverse-engineering / bring-up diaries — kept in the maintainer's private archive.
+*_STATUS.md
+FINGERPRINT_ALGORITHM_MAP.md
+sepolicy/POST-ENFORCING-CHECKLIST.md
+sepolicy/README-todo.md
