@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="config_udfpsHbmType">0</integer>
+    <string name="config_udfpsHbmProviderComponent" translatable="false">com.android.systemui.biometrics.Vivo1907NUdfpsHbmProvider</string>
+    <color name="config_udfpsColor">#ff40f8ff</color>
+</resources>

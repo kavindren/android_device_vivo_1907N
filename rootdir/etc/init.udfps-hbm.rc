@@ -1,0 +1,10 @@
+on property:vendor.udfps.hbm_state=1
+    write /sys/lcm/oled_hbm_force_hold 1
+    write /sys/lcm/oled_hbm 4
+
+on property:vendor.udfps.hbm_state=2
+    write /sys/lcm/oled_hbm 4
+
+on property:vendor.udfps.hbm_state=0
+    write /sys/lcm/oled_hbm 5
+    write /sys/lcm/oled_hbm_force_hold 0

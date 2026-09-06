@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="security_settings_face_enroll_introduction_info_title">Keep in mind</string>
+    <string name="security_settings_face_enroll_introduction_info_glasses">Face Unlock works with most glasses and sunglasses, but might not recognize you if you’re wearing something that covers your face</string>
+    <string name="security_settings_face_enroll_introduction_info_looking">Your phone can be unlocked by someone else if you’re not looking directly at it</string>
+    <string name="security_settings_face_enroll_introduction_info_gaze">Require your eyes to be open and looking at the phone to unlock it</string>
+    <string name="security_settings_face_enroll_introduction_how_title">How it works</string>
+    <string name="security_settings_face_enroll_introduction_how_message">Face Unlock uses the front camera to scan your face. It works best in a well-lit place, holding the phone at eye level and a normal arm’s length away.</string>
+    <string name="security_settings_face_enroll_introduction_control_title">You’re in control</string>
+    <string name="security_settings_face_enroll_introduction_control_message">You can remove your face data at any time in Settings. Face Unlock is used only to unlock your phone and authorize actions you approve.</string>
+</resources>

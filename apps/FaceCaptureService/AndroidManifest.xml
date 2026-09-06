@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- vivo 1907N Face Unlock bring-up, Фаза 3 (not AOSP). Package/service names are fixed by
+     Face10.java (frameworks/base/services/core/.../face/hidl/Face10.java), which starts/stops
+     this exact component via a bare Intent - do not rename either. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.android.facecapture">
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- signature-level only (see frameworks/base/core/res/AndroidManifest.xml) - granted by
+         virtue of this app's platform certificate, no privapp-permissions whitelist needed. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC_INTERNAL" />
+    <!-- Required for startForeground()/foregroundServiceType="camera" - see Face10.java's
+         startFaceCapture() for why this must be a foreground service at all (plain
+         startService() gets rejected with BackgroundServiceStartNotAllowedException, confirmed
+         on-device: the service never even started). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <application android:label="FaceCaptureService" android:hasCode="true">
+        <!-- Not exported: only system_server (Face10.java), running as a trusted uid in the
+             same signature/platform trust domain, is meant to start this - not arbitrary
+             third-party apps. -->
+        <service android:name=".FaceCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="camera" />
+    </application>
+</manifest>

@@ -1,0 +1,55 @@
+// vivo 1907N Face Unlock bring-up, Фаза 3 (not AOSP): the capture-side counterpart to the
+// framework wiring added in frameworks/base (Фаза 2, see FaceCaptureService.java's own header
+// comment and device/vivo/1907N/FACE_UNLOCK_STATUS.md for the full protocol/rationale).
+// Package/class names are NOT ours to choose - Face10.java starts/stops this exact component
+// (com.android.facecapture / .FaceCaptureService) via a bare Intent with no extras.
+android_app {
+    name: "FaceCaptureService",
+    srcs: ["src/**/*.java"],
+    manifest: "AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    privileged: true,
+    jni_libs: ["libfacecaptureshm"],
+    // use_embedded_native_libs: true was tried first (keep the .so embedded uncompressed inside
+    // the APK, load directly from there) but System.loadLibrary() failed on-device with
+    // "library libfacecaptureshm.so not found" even though the .so was genuinely present,
+    // uncompressed, at lib/arm64-v8a/ inside the built APK - for a priv-app preinstalled
+    // straight into the system partition (not something PackageInstaller processes), that
+    // embedded-load path doesn't resolve. Left at Soong's default instead, which installs the
+    // .so as a separate file under priv-app/FaceCaptureService/lib/<arch>/ alongside the .apk -
+    // the ordinary pattern used by every other native-code-containing preinstalled system app.
+}
+
+// Raw mmap(2)/munmap(2) via JNI - see facecapture_jni.c's header comment for why this can't be
+// done in pure Java on this AOSP branch (ashmem doesn't support read()/write()/ftruncate(), and
+// the one thing that does work - android.os.SharedMemory's own approach - relies on a
+// core-platform-api-restricted java.nio.DirectByteBuffer constructor no regular app, even
+// platform-signed, can call).
+cc_library_shared {
+    name: "libfacecaptureshm",
+    srcs: ["jni/facecapture_jni.c"],
+    sdk_version: "current",
+    stl: "none",
+    // sdk_version alone doesn't put jni.h on the include path. libnativehelper_compat_libc++
+    // (what other sdk_version-built JNI libs in this tree use, e.g.
+    // cts/hostsidetests/abioverride/app/jni/Android.bp) turned out not visible outside
+    // libnativehelper's own subpackages - jni_headers (libnativehelper/Android.bp) is the
+    // //visibility:public header-only module that actually exists for this, and it's all we
+    // need since we don't call into libnativehelper itself, just need the jni.h declarations
+    // (the actual JNI functions are provided by the JVM/ART at runtime regardless).
+    header_libs: ["jni_headers"],
+}
+
+// USE_BIOMETRIC_INTERNAL only needs the platform certificate match (protectionLevel="signature",
+// not "signature|privileged" - see frameworks/base/core/res/AndroidManifest.xml), so it doesn't
+// need a privapp-permissions whitelist entry. CAMERA is an ordinary dangerous runtime permission
+// though, and this is a headless service with no UI to ever show a grant prompt - pre-grant it
+// via the standard default-permissions mechanism instead (parsed by
+// DefaultPermissionGrantPolicy from /system/etc/default-permissions/*.xml, schema:
+// <exceptions><exception package="..."><permission name="..." fixed=".../></exception></exceptions>).
+prebuilt_etc {
+    name: "default-permissions-facecapture.xml",
+    src: "default-permissions-facecapture.xml",
+    sub_dir: "default-permissions",
+}

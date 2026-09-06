@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- vivo 1907N Face Unlock bring-up, Фаза 3 (not AOSP): FaceCaptureService is a headless
+     service (no launcher UI, ever) that needs CAMERA to open the front camera - there is no
+     user-facing moment to show a runtime permission prompt for it, so pre-grant it here
+     instead, the same mechanism GMS/OEM system services normally use for this exact situation.
+     fixed="false" so the permission still shows up in Settings and a user (or us, later) could
+     revoke it - nothing about this needs to be un-revokable. -->
+<exceptions>
+    <exception package="com.android.facecapture">
+        <permission name="android.permission.CAMERA" fixed="false"/>
+    </exception>
+</exceptions>
