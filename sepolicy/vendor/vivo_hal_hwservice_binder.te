@@ -6,6 +6,16 @@ allow vivo_hal_fingerprint self:netlink_socket { bind create read write };
 allow vivo_hal_fingerprint mobicore_user_device:chr_file { ioctl open read write };
 allow vivo_hal_fingerprint vivo_fp_device:chr_file { ioctl open read write };
 allow vivo_hal_fingerprint fingerprint_vendor_data_file:dir write;
+# Parity with stock vendor_sepolicy.cil: /sys/tee_work affinity nodes, CPU-perf boost
+# (hal_vperf), vivo image-analysis assist, and per-unit optical calibration under persist.
+allow vivo_hal_fingerprint sysfs_fp:file { open read write getattr };
+allow vivo_hal_fingerprint sysfs_fp:dir search;
+allow vivo_hal_fingerprint hal_vperf_hwservice:hwservice_manager find;
+binder_call(vivo_hal_fingerprint, hal_vperf_default)
+allow vivo_hal_fingerprint hal_biometrics_analysis_hwservice:hwservice_manager find;
+binder_call(vivo_hal_fingerprint, fingerprint_analysis)
+allow vivo_hal_fingerprint persist_data_file:dir { search open read getattr };
+allow vivo_hal_fingerprint persist_data_file:file { open read getattr };
 
 allow mtk_hal_c2 hidl_base_hwservice:hwservice_manager add;
 binder_call(mtk_hal_c2, hwservicemanager)
@@ -176,6 +186,9 @@ binder_call(platform_app, mtk_hal_c2)
 binder_call(system_server, mtk_hal_c2)
 
 binder_call(system_server, vivo_hal_fingerprint)
+# UdfpsHelper needs IBiometricsFingerprintExt for the vivo screen-light handshake
+# (sendCommandWithBundle 32534/32572); without it the Goodix HAL blocks in gf_hal_wait_screen_light().
+allow system_server hal_vivofingerprintext_hwservice:hwservice_manager find;
 
 allow hal_bspservice_default proc_cmdline:file getattr;
 

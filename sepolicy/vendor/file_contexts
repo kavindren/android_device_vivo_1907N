@@ -199,6 +199,8 @@
 /data/vendor/engineermode(/.*)?   u:object_r:vendor_em_data_file:s0
 /vgc/fonts(/.*)?      u:object_r:font_datas_file:s0
 /sys/fp_id(/.*)?                    u:object_r:sysfs_fp:s0
+# Goodix TEE work-thread affinity/big-core nodes (stock init.vivo.fingerprint.rc chowns them)
+/sys/tee_work(/.*)?                 u:object_r:sysfs_fp:s0
 /dev/apusys(/.*)?  u:object_r:apusys_device:s0
 /dev/adsp_0(/.*)?    u:object_r:adsp_device:s0
 /dev/adsp_1(/.*)?    u:object_r:adsp_device:s0
