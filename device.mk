@@ -60,6 +60,14 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/fstab.mt6768:$(TARGET_COPY_OUT_RAMDISK)/fstab.mt6768
 
+# Stock Goodix GF9518 configs: factory QC .ini and FingerprintEngineer task XMLs. Nothing in
+# LineageOS references them yet; kept for a possible FingerprintEngineer port.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/prebuilt/fingerprint/goodix_9886_test_delta_sensor_0.ini:$(TARGET_COPY_OUT_SYSTEM)/etc/goodix_9886_test_delta_sensor_0.ini \
+    $(LOCAL_PATH)/prebuilt/fingerprint/icon_pressed_cyan_shadow.png:$(TARGET_COPY_OUT_SYSTEM)/etc/fingerprint/icon_pressed_cyan_shadow.png \
+    $(LOCAL_PATH)/prebuilt/fingerprint/engineer/engineer_task_config_gf9518.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/fingerprint/engineer/engineer_task_config_gf9518.xml \
+    $(LOCAL_PATH)/prebuilt/fingerprint/engineer/after_sale_task_config_gf9518.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/fingerprint/engineer/after_sale_task_config_gf9518.xml
+
 PRODUCT_PACKAGES += \
     vendor_etc_gnss_agps_profiles_conf2_symlink
 
