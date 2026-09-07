@@ -12,6 +12,12 @@ ro.hardware.bbk=PD1913F_EXMA
 ro.vivo.product.overseas=yes
 ro.build.oem.projects=PD1913F_EX
 
+# bspservice verifyOEM compares this against the RPMB "customize" seed field; without it
+# ro.vendor.seed.customize.passed stays "no" and the Goodix fingerprint TA cannot unseal its
+# storage. Also re-derived early by init.vivo-defend.rc. Value from a stock getprop on this unit.
+ro.vivo.oem.name=PD1913F_EX_RU_NULL_NULL
+ro.vivo.oem.support=yes
+
 ro.product.model.bbk=PD1913F_EX
 
 # Debugging

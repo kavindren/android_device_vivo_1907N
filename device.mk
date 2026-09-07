@@ -73,6 +73,9 @@ PRODUCT_PACKAGES += \
     init.udfps-hbm.rc
 
 PRODUCT_PACKAGES += \
+    init.vivo-defend.rc
+
+PRODUCT_PACKAGES += \
     android.hardware.usb.gadget@1.1-service.1907N
 
 PRODUCT_PACKAGES += \

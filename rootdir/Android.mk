@@ -41,3 +41,12 @@ LOCAL_MODULE_CLASS := ETC
 LOCAL_SRC_FILES    := etc/init.udfps-hbm.rc
 LOCAL_MODULE_PATH  := $(TARGET_OUT_VENDOR_ETC)/init
 include $(BUILD_PREBUILT)
+
+# /vendor/etc/init so it runs as vendor_init (permitted to set vendor_vivo_defend_prop).
+include $(CLEAR_VARS)
+LOCAL_MODULE       := init.vivo-defend.rc
+LOCAL_MODULE_TAGS  := optional
+LOCAL_MODULE_CLASS := ETC
+LOCAL_SRC_FILES    := etc/init.vivo-defend.rc
+LOCAL_MODULE_PATH  := $(TARGET_OUT_VENDOR_ETC)/init
+include $(BUILD_PREBUILT)

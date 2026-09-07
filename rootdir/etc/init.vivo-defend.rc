@@ -1,0 +1,14 @@
+# Stock's vendor.vivo.hardware.bspservice rc derives ro.vendor.defend.oem.name from
+# ro.vivo.oem.name in "on early-init", which on LineageOS runs before /system/build.prop is
+# applied, so the derive fails and the prop stays empty. bspservice's verifyOEM() then logs
+# "Device miss oem property", ro.vendor.seed.customize.passed stays "no", and the Goodix
+# fingerprint TA / hardware keymaster lose access to their sealed storage. Set it directly to
+# this model's RPMB "customize" seed value (logged by bspservice as rpmb value=...).
+
+on early-init
+    setprop ro.vendor.defend.oem.name PD1913F_EX_RU_NULL_NULL
+    setprop ro.vendor.defend.hardware.version PD1913F_EXMA
+
+on init
+    setprop ro.vendor.defend.oem.name PD1913F_EX_RU_NULL_NULL
+    setprop ro.vendor.defend.hardware.version PD1913F_EXMA
