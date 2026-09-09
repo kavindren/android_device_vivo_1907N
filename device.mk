@@ -311,3 +311,8 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     FaceCaptureService \
     default-permissions-facecapture.xml
+
+# Lift-to-wake via the vivo raiseup_detect sensor (AOSP pickup gesture can't see it).
+PRODUCT_PACKAGES += \
+    LiftToWake \
+    privapp-permissions-lifttowake.xml

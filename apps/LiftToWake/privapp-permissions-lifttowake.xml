@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <privapp-permissions package="org.lineageos.lifttowake">
+        <permission name="android.permission.DEVICE_POWER" />
+    </privapp-permissions>
+</permissions>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- vivo 1907N lift-to-wake. Headless persistent platform app - no UI, no boot
+     receiver, no foreground-service notification; AMS starts persistent apps
+     early on boot. Only relevant for a platform-signed system app. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lineageos.lifttowake">
+
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- signature|privileged: satisfied by the platform certificate (signature)
+         + privileged:true and privapp-permissions-lifttowake.xml (privileged). -->
+    <uses-permission android:name="android.permission.DEVICE_POWER" />
+
+    <application
+        android:name=".LiftToWakeApp"
+        android:label="Lift to wake"
+        android:allowBackup="false"
+        android:persistent="true"
+        android:hasCode="true" />
+</manifest>

@@ -1,0 +1,25 @@
+// vivo 1907N lift-to-wake (not AOSP). AOSP's "Lift to check phone" (DozeSensors)
+// hard-codes Sensor.TYPE_PICK_UP_GESTURE (25); this device only exposes the vivo
+// private android.sensor.raiseup_detect (type 66538, wake-up / one-shot /
+// special-trigger). This headless system service watches that sensor while the
+// screen is off and wakes the device on a raise. Toggle:
+//   settings put system lift_to_wake 0   (default 1)
+android_app {
+    name: "LiftToWake",
+    srcs: ["src/**/*.java"],
+    manifest: "AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    privileged: true,
+    optimize: {
+        enabled: false,
+    },
+}
+
+// DEVICE_POWER is signature|privileged - needs a privapp-permissions allowlist
+// entry even with the platform certificate.
+prebuilt_etc {
+    name: "privapp-permissions-lifttowake.xml",
+    src: "privapp-permissions-lifttowake.xml",
+    sub_dir: "permissions",
+}
