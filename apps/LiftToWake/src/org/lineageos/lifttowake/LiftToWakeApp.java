@@ -8,8 +8,10 @@
  * screen is off and wake on a raise.
  *
  * Runs as a persistent platform app (started early by AMS, no boot receiver,
- * no foreground-service notification). Toggle:
- *   settings put system lift_to_wake 0        (default: 1 = on)
+ * no foreground-service notification). Gated on the same setting as the AOSP
+ * "Lift to check phone" toggle (Settings > Display > Lock screen), i.e.
+ * Settings.Secure.doze_pick_up_gesture. Manual:
+ *   settings put secure doze_pick_up_gesture 0   (0 = off, default when unset: on)
  */
 package org.lineageos.lifttowake;
 
@@ -37,7 +39,8 @@ public class LiftToWakeApp extends Application {
     private static final String TAG = "LiftToWake";
     private static final String RAISEUP_STRING_TYPE = "android.sensor.raiseup_detect";
     private static final int RAISEUP_INT_TYPE = 66538;
-    private static final String SETTING = "lift_to_wake";
+    // Same key the AOSP "Lift to check phone" toggle writes.
+    private static final String SETTING = Settings.Secure.DOZE_PICK_UP_GESTURE;
 
     private SensorManager mSensorManager;
     private PowerManager mPowerManager;
@@ -128,7 +131,7 @@ public class LiftToWakeApp extends Application {
         registerReceiver(mScreenReceiver, f);
 
         getContentResolver().registerContentObserver(
-                Settings.System.getUriFor(SETTING), false, mSettingObserver);
+                Settings.Secure.getUriFor(SETTING), false, mSettingObserver);
 
         updateState();
     }
@@ -148,7 +151,9 @@ public class LiftToWakeApp extends Application {
 
     private boolean readSetting() {
         final ContentResolver cr = getContentResolver();
-        return Settings.System.getInt(cr, SETTING, 1) != 0;
+        // Match AOSP AmbientDisplayConfiguration.pickupGestureEnabled(): default
+        // on when the key has never been written.
+        return Settings.Secure.getInt(cr, SETTING, 1) != 0;
     }
 
     private synchronized void updateState() {
