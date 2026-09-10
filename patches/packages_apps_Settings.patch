@@ -1,32 +1,16 @@
 diff --git a/res/layout/face_enroll_education.xml b/res/layout/face_enroll_education.xml
-index 2a78f999eb..6071c5ae2b 100644
+index 2a78f999eb..859fde90cc 100644
 --- a/res/layout/face_enroll_education.xml
 +++ b/res/layout/face_enroll_education.xml
-@@ -60,13 +60,33 @@
+@@ -60,13 +60,17 @@
                  app:lottie_loop="true"
                  app:lottie_speed="1.5" />
  
-+            <!-- vivo 1907N Face Unlock bring-up (not AOSP): android:background dropped - it drew
-+                 the same face icon a second time, underneath/overlapping
-+                 FaceEducationAnimationDrawable's own copy of it (now set as this ImageView's
-+                 src via setImageDrawable() in FaceEnrollEducation.java, sized/centered properly
-+                 within the drawable's own onBoundsChange logic) - confirmed on a real device as
-+                 two overlapping faces, one correctly sized and one stretched (the background
-+                 drawable, with no aspect-ratio-aware sizing of its own under wrap_content). See
-+                 FaceEducationAnimationDrawable's doc comment for why this view exists at all.
-+
-+                 layout_height was match_parent, inheriting this FrameLayout's own wrap_content
-+                 resolution - which is NOT driven by this (match_parent) child, but by
-+                 illustration_default's own measurement. IllustrationVideoView.onMeasure() derives
-+                 its height from an internal `aspectRatio` field that starts at 1.0 and is only
-+                 ever updated once real video metadata loads - on this device the video never
-+                 plays at all (see the class doc comment), so that field stays stuck. Confirmed on
-+                 a real device: this collapsed the whole illustration area down to a sliver, which
-+                 made FaceEducationAnimationDrawable's own Math.min(bounds.width(),
-+                 bounds.height()) square (correct now that it IS square, see that class) collapse
-+                 to a near-zero radius - all the orbiting particles crammed into one blob. Fixed
-+                 height, matching illustration_lottie's own authored 440dp for this same slot,
-+                 decouples this from the broken video view's measurement entirely. -->
++            <!-- vivo 1907N Face Unlock bring-up (not AOSP): android:background dropped (drew the
++                 face icon twice, see FaceEducationAnimationDrawable). layout_height fixed at
++                 440dp (matching illustration_lottie's own size for this slot) instead of
++                 match_parent - it was inheriting this FrameLayout's wrap_content resolution,
++                 which the broken illustration_default video view collapses to near-zero. -->
              <ImageView
                  android:id="@+id/illustration_accessibility"
 -                android:layout_width="wrap_content"
@@ -42,30 +26,15 @@ index 2a78f999eb..6071c5ae2b 100644
  
 diff --git a/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java b/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java
 new file mode 100644
-index 0000000000..6f2caabd69
+index 0000000000..365ef329b4
 --- /dev/null
 +++ b/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java
-@@ -0,0 +1,126 @@
+@@ -0,0 +1,104 @@
 +/*
-+ * vivo 1907N Face Unlock bring-up (not AOSP).
-+ *
-+ * The "how Face Unlock works" screen (FaceEnrollEducation) is supposed to show an animated
-+ * illustration, but neither of AOSP's own two options actually has real content in this open
-+ * source tree: res/raw/face_education.mp4 fails to play on this device (a genuine low-level
-+ * MediaPlayer/mediaserver error, "MediaPlayer error (1, -2147483648)", confirmed via a real
-+ * device log - not something worth chasing blind on a from-scratch device tree), and its
-+ * supposed Lottie fallback (res/raw/face_education_lottie.json) turned out to be a 0-byte empty
-+ * file - the same kind of unfinished AOSP placeholder as the empty strings this device tree
-+ * already had to fill in elsewhere (see FaceEnrollIntroduction's string overlay). Google's real
-+ * Pixel-specific assets for this screen were evidently never open-sourced, same story as those
-+ * strings.
-+ *
-+ * This draws a real, working alternative instead: the static face icon AOSP already ships and
-+ * uses correctly elsewhere on this same screen (R.drawable.face_enroll_icon_large, used for the
-+ * accessibility variant of this illustration) plus the same animated "particle" dots already
-+ * used successfully on the enrolling screen (ParticleCollection, see
-+ * FaceEnrollAnimationDrawable) - reusing a working, already-in-tree visual language instead of
-+ * inventing a new one from scratch or hand-authoring Lottie/video content blind.
++ * vivo 1907N Face Unlock bring-up (not AOSP): AOSP's own illustration for this screen has no real
++ * content in this tree (face_education.mp4 fails to play, the Lottie fallback is a 0-byte
++ * placeholder), so this draws an alternative from assets already used elsewhere: the static face
++ * icon plus the same ParticleCollection dots the enrolling screen uses.
 + */
 +package com.android.settings.biometrics.face;
 +
@@ -109,15 +78,8 @@ index 0000000000..6f2caabd69
 +        final int top = bounds.top + (bounds.height() - iconSize) / 2;
 +        mFaceIcon.setBounds(left, top, left + iconSize, top + iconSize);
 +
-+        // AnimationParticle.drawDot() computes independent x/y orbit radii from whatever Rect
-+        // it's given (w = bounds.right-centerX-border, h = bounds.bottom-centerY-border) -
-+        // that's only a circle if bounds is square. On the real enrolling screen
-+        // (FaceEnrollAnimationDrawable) that holds because its host view (FaceSquareTextureView)
-+        // is forced square in onMeasure(); this screen's host ImageView
-+        // (face_enroll_education.xml's illustration_accessibility) is match_parent width x
-+        // wrap_content height, not square, so passing `bounds` straight through drew flattened,
-+        // egg-shaped orbits instead of circles (confirmed on-device). Same fix shape as the icon
-+        // sizing above: a centered square sub-rect instead of the raw (non-square) bounds.
++        // AnimationParticle.drawDot() only draws a true circle if given square bounds - same fix
++        // shape as the icon sizing above, a centered square sub-rect instead of the raw bounds.
 +        final int ringSize = Math.min(bounds.width(), bounds.height());
 +        final int ringLeft = bounds.left + (bounds.width() - ringSize) / 2;
 +        final int ringTop = bounds.top + (bounds.height() - ringSize) / 2;
@@ -410,10 +372,10 @@ index 6509d4e6e2..87ab8c7026 100644
      }
  }
 diff --git a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
-index 853ca7c40c..67277cb6cd 100644
+index 853ca7c40c..bb92f82fa7 100644
 --- a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
 +++ b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
-@@ -17,53 +17,52 @@
+@@ -17,53 +17,40 @@
  package com.android.settings.biometrics.face;
  
  import android.app.settings.SettingsEnums;
@@ -451,23 +413,11 @@ index 853ca7c40c..67277cb6cd 100644
   * Fragment that contains the logic for showing and controlling the camera preview, circular
   * overlay, as well as the enrollment animations.
 + *
-+ * vivo 1907N Face Unlock bring-up (not AOSP): this fragment used to open the front camera itself
-+ * via Camera2, but that conflicted with FaceCaptureService (device/vivo/1907N/apps/
-+ * FaceCaptureService/) also wanting the same camera - Camera2 only allows one client per camera
-+ * device at all, foreground-Activity-vs-foreground-Service priority doesn't change that, it just
-+ * changes which client wins (confirmed on-device: this fragment's own session always won,
-+ * leaving FaceCaptureService with a permanent CAMERA_IN_USE and no frames ever reaching the
-+ * vendor HAL). FaceCaptureService is the only camera owner now; this fragment just hands it a
-+ * Surface (via FaceManager.setPreviewSurface(), a device-specific, non-AOSP FaceManager method)
-+ * and FaceCaptureService draws each frame it already captures for the HAL into that Surface too -
-+ * see FaceCaptureService.renderPreviewFrame(). This also incidentally fixes an old visual bug
-+ * where a strip of un-masked camera image was visible below the circular cutout: the old
-+ * Camera2-direct path used a Matrix transform to scale the (non-square) preview stream to cover
-+ * this square view, and the containing layout has clipChildren="false" (for the particle
-+ * animations, which are meant to draw slightly outside the circle) - so the scaled-up texture
-+ * content overflowed past the square's own bounds too. FaceCaptureService's Canvas-based
-+ * drawing is naturally clipped to the Surface's own buffer bounds, so that overflow can't happen
-+ * here regardless of the source frame's aspect ratio.
++ * vivo 1907N Face Unlock bring-up (not AOSP): this fragment doesn't open the camera itself -
++ * Camera2 only allows one client per device, and FaceCaptureService (device/vivo/1907N/apps/
++ * FaceCaptureService/) needs it too. This fragment just hands FaceCaptureService a Surface (via
++ * FaceManager.setPreviewSurface(), non-AOSP) and it draws each captured frame into it - see
++ * FaceCaptureService.renderPreviewFrame().
   */
  public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          implements BiometricEnrollSidecar.Listener {
@@ -493,7 +443,7 @@ index 853ca7c40c..67277cb6cd 100644
      private ParticleCollection.Listener mListener;
  
      // View used to contain the circular cutout and enrollment animation drawable
-@@ -75,6 +74,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -75,6 +62,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
      // Texture used for showing the camera preview
      private FaceSquareTextureView mTextureView;
  
@@ -505,7 +455,7 @@ index 853ca7c40c..67277cb6cd 100644
      // Listener sent to the animation drawable
      private final ParticleCollection.Listener mAnimationListener
              = new ParticleCollection.Listener() {
-@@ -90,18 +94,42 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -90,18 +82,30 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          @Override
          public void onSurfaceTextureAvailable(
                  SurfaceTexture surfaceTexture, int width, int height) {
@@ -521,22 +471,10 @@ index 853ca7c40c..67277cb6cd 100644
 -            configureTransform(width, height);
 +            Log.i(TAG, "onSurfaceTextureSizeChanged " + width + "x" + height
 +                    + " (last sent " + mLastSentWidth + "x" + mLastSentHeight + ")");
-+            // vivo 1907N Face Unlock bring-up: re-sends a fresh Surface (not just a buffer-size
-+            // tweak on the old one) whenever the size genuinely changes - see mLastSentWidth/
-+            // mLastSentHeight. An earlier version of this method just called
-+            // setDefaultBufferSize() on the existing SurfaceTexture without re-sending, on the
-+            // theory that the same cross-process Surface stays usable across a buffer-size
-+            // change - confirmed WRONG on-device: a real size change partway through enrollment
-+            // (the error/hint TextView becoming visible shifts the layout, genuinely resizing
-+            // this square TextureView, not just the initial-layout settling burst this guard was
-+            // originally written for) left the live preview visually frozen on the last frame
-+            // from before the resize, even though enrollment progress kept advancing normally
-+            // underneath - the size change desynced FaceCaptureService's already-held Surface
-+            // (drawn into cross-process via Canvas, not through Camera2's own buffer
-+            // renegotiation) from the TextureView's new buffer queue. Re-sending is safe now
-+            // that scheduleSetPreviewSurface() only re-triggers startFaceCapture() (not a costly
-+            // chain) - the mLastSentWidth/Height guard below still exists to skip the *actually
-+            // identical, repeated* calls from the initial layout-settling burst.
++            // Re-sends a fresh Surface (not just setDefaultBufferSize() on the old one) whenever
++            // the size genuinely changes - a mid-enrollment resize (e.g. a hint TextView appearing)
++            // desyncs FaceCaptureService's already-held Surface otherwise, freezing the preview.
++            // The guard below just skips identical repeats from initial layout settling.
 +            if (width <= 0 || height <= 0 || (width == mLastSentWidth
 +                    && height == mLastSentHeight)) {
 +                return;
@@ -551,7 +489,7 @@ index 853ca7c40c..67277cb6cd 100644
              return true;
          }
  
-@@ -111,74 +139,6 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -111,74 +115,6 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          }
      };
  
@@ -626,7 +564,7 @@ index 853ca7c40c..67277cb6cd 100644
      @Override
      public int getMetricsCategory() {
          return SettingsEnums.FACE_ENROLL_PREVIEW;
-@@ -196,7 +156,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -196,7 +132,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          mAnimationDrawable = new FaceEnrollAnimationDrawable(getContext(), mAnimationListener);
          mCircleView.setImageDrawable(mAnimationDrawable);
  
@@ -635,7 +573,7 @@ index 853ca7c40c..67277cb6cd 100644
      }
  
      @Override
-@@ -204,11 +164,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -204,11 +140,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          super.onResume();
  
          // When the screen is turned off and turned back on, the SurfaceTexture is already
@@ -651,7 +589,7 @@ index 853ca7c40c..67277cb6cd 100644
          } else {
              mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
          }
-@@ -217,7 +177,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -217,7 +153,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
      @Override
      public void onPause() {
          super.onPause();
@@ -660,7 +598,7 @@ index 853ca7c40c..67277cb6cd 100644
      }
  
      @Override
-@@ -240,106 +200,32 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -240,106 +176,32 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
      }
  
      /**
