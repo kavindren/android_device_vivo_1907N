@@ -1082,3 +1082,19 @@ index db2f0455a475..df0390207230 100644
                  mCallback.onClientFinished(this, true /* success */);
              } catch (RemoteException e) {
                  Slog.e(TAG, "Remote exception", e);
+diff --git a/services/core/java/com/android/server/power/Notifier.java b/services/core/java/com/android/server/power/Notifier.java
+index f62bea945f51..b6f669cc9540 100644
+--- a/services/core/java/com/android/server/power/Notifier.java
++++ b/services/core/java/com/android/server/power/Notifier.java
+@@ -874,7 +874,10 @@ public class Notifier {
+     }
+ 
+     private void showChargingStopped(@UserIdInt int userId, boolean wireless) {
+-        playChargingStartedFeedback(userId, wireless);
++        // vivo 1907N (not vivo-specific, upstream LOS bug - e41ae0716f67 "power: Extend custom
++        // charging sounds"): this called playChargingStartedFeedback() unconditionally, playing
++        // the charging-STARTED vibration/sound on unplug too. There's no separate "charging
++        // stopped" sound setting in AOSP, so that was never intentional - just don't play it.
+         mSuspendBlocker.release();
+     }
+ 
