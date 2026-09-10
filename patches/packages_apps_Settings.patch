@@ -29,10 +29,10 @@ index 2a78f999eb..b76f6cdf35 100644
  
 diff --git a/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java b/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java
 new file mode 100644
-index 0000000000..ef2a3b4ed5
+index 0000000000..6f2caabd69
 --- /dev/null
 +++ b/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java
-@@ -0,0 +1,111 @@
+@@ -0,0 +1,126 @@
 +/*
 + * vivo 1907N Face Unlock bring-up (not AOSP).
 + *
@@ -96,9 +96,24 @@ index 0000000000..ef2a3b4ed5
 +        final int top = bounds.top + (bounds.height() - iconSize) / 2;
 +        mFaceIcon.setBounds(left, top, left + iconSize, top + iconSize);
 +
++        // AnimationParticle.drawDot() computes independent x/y orbit radii from whatever Rect
++        // it's given (w = bounds.right-centerX-border, h = bounds.bottom-centerY-border) -
++        // that's only a circle if bounds is square. On the real enrolling screen
++        // (FaceEnrollAnimationDrawable) that holds because its host view (FaceSquareTextureView)
++        // is forced square in onMeasure(); this screen's host ImageView
++        // (face_enroll_education.xml's illustration_accessibility) is match_parent width x
++        // wrap_content height, not square, so passing `bounds` straight through drew flattened,
++        // egg-shaped orbits instead of circles (confirmed on-device). Same fix shape as the icon
++        // sizing above: a centered square sub-rect instead of the raw (non-square) bounds.
++        final int ringSize = Math.min(bounds.width(), bounds.height());
++        final int ringLeft = bounds.left + (bounds.width() - ringSize) / 2;
++        final int ringTop = bounds.top + (bounds.height() - ringSize) / 2;
++        final Rect ringBounds =
++                new Rect(ringLeft, ringTop, ringLeft + ringSize, ringTop + ringSize);
++
 +        // No-op listener - this is a looping preview animation on a tutorial screen, not a real
 +        // enrollment session, so there's no "enrolled" event to react to here.
-+        mParticleCollection = new ParticleCollection(mContext, () -> { }, bounds,
++        mParticleCollection = new ParticleCollection(mContext, () -> { }, ringBounds,
 +                BORDER_BOUNDS);
 +
 +        if (mTimeAnimator == null) {
