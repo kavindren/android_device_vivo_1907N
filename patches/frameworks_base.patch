@@ -393,7 +393,7 @@ index 77e431c81192..467e3e532198 100644
 +    }
  }
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
-index e957794372aa..10186f8ffbef 100644
+index e957794372aa..82f25c1700b3 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 @@ -21,7 +21,9 @@ import android.annotation.Nullable;
@@ -507,14 +507,22 @@ index e957794372aa..10186f8ffbef 100644
              mHandler.post(() -> {
                  final CharSequence name = FaceUtils.getLegacyInstance(mSensorId)
                          .getUniqueName(mContext, userId);
-@@ -208,6 +274,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -208,6 +274,28 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          @Override
          public void onAcquired(long deviceId, int userId, int acquiredInfo,
                  int vendorCode) {
-+            // vivo 1907N Face Unlock bring-up: unlike onEnrollResult(), this fires on every single
-+            // frame (~80-100ms) and was posting to mHandler unthrottled, congesting the same
-+            // main-thread queue scheduleSetPreviewSurface() uses. Throttled by time rather than
-+            // value equality - see mLastAcquiredForwardUptimeMs's comment for why.
++            // vivo 1907N Face Unlock bring-up: the vendor daemon never stops calling this on its
++            // own, even well after an enroll operation is genuinely done and its camera feed is
++            // closed - confirmed via a real device log showing it still firing every ~150ms, 40+
++            // seconds after remaining==0, which starved mHandler (the same queue [Finishing]'s own
++            // Runnable is posted to in BiometricScheduler) long enough to delay it that whole time.
++            // Stop forwarding once mEnrollFinished (see onEnrollResult()), same reasoning as that
++            // guard - not just throttled, but actually silenced once we know it's just noise.
++            if (mEnrollFinished) {
++                return;
++            }
++            // vivo 1907N Face Unlock bring-up: fires every frame (~80-100ms); throttled by time
++            // rather than value equality since acquiredInfo/vendorCode differ almost every call.
 +            final boolean valueChanged =
 +                    acquiredInfo != mLastAcquiredInfo || vendorCode != mLastAcquiredVendorCode;
 +            final long now = android.os.SystemClock.uptimeMillis();
@@ -528,7 +536,7 @@ index e957794372aa..10186f8ffbef 100644
              mHandler.post(() -> {
                  final BaseClientMonitor client = mScheduler.getCurrentClient();
                  if (!(client instanceof AcquisitionClient)) {
-@@ -327,6 +407,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -327,6 +415,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  }
              });
          }
@@ -547,7 +555,7 @@ index e957794372aa..10186f8ffbef 100644
      }
  
      @VisibleForTesting
-@@ -409,7 +501,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -409,7 +509,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  + mScheduler.getCurrentClient());
  
          try {
@@ -563,7 +571,7 @@ index e957794372aa..10186f8ffbef 100644
          } catch (java.util.NoSuchElementException e) {
              // Service doesn't exist or cannot be opened.
              Slog.w(TAG, "NoSuchElementException", e);
-@@ -436,6 +535,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -436,6 +543,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
  
          Slog.d(TAG, "Face HAL ready, HAL ID: " + halId);
          if (halId != 0) {
@@ -579,7 +587,7 @@ index e957794372aa..10186f8ffbef 100644
              scheduleLoadAuthenticatorIds();
              scheduleInternalCleanup(ActivityManager.getCurrentUser(), null /* callback */);
              scheduleGetFeature(mSensorId, new Binder(),
-@@ -450,6 +558,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -450,6 +566,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          return mDaemon;
      }
  
@@ -755,7 +763,7 @@ index e957794372aa..10186f8ffbef 100644
      @Override
      public boolean containsSensor(int sensorId) {
          return mSensorId == sensorId;
-@@ -592,9 +869,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -592,9 +877,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      ENROLL_TIMEOUT_SEC, previewSurface, mSensorId);
  
              mScheduler.scheduleClientMonitor(client, new BaseClientMonitor.Callback() {
@@ -774,7 +782,7 @@ index e957794372aa..10186f8ffbef 100644
                      if (success) {
                          // Update authenticatorIds
                          scheduleUpdateActiveUserWithoutHandler(client.getTargetUserId());
-@@ -638,7 +924,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -638,7 +932,24 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      opPackageName, cookie, false /* requireConfirmation */, mSensorId,
                      isStrongBiometric, statsClient, mLockoutTracker, mUsageStats,
                      allowBackgroundAuthentication, isKeyguardBypassEnabled);
@@ -782,8 +790,12 @@ index e957794372aa..10186f8ffbef 100644
 +            mScheduler.scheduleClientMonitor(client, new BaseClientMonitor.Callback() {
 +                @Override
 +                public void onClientStarted(@NonNull BaseClientMonitor clientMonitor) {
-+                    // vivo 1907N Face Unlock bring-up (not AOSP) - see startFaceCapture().
++                    // vivo 1907N Face Unlock bring-up (not AOSP) - see startFaceCapture(). Also
++                    // resets mEnrollFinished/onAcquired's throttle state (see onAcquired()) so a
++                    // stale mEnrollFinished=true left over from a prior enrollment can't silence
++                    // this authentication's own onAcquired hints.
 +                    mSentShareMemoryHandle = false;
++                    mHalResultController.resetEnrollDedup();
 +                    startFaceCapture();
 +                }
 +
