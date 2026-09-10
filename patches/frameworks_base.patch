@@ -393,7 +393,7 @@ index 77e431c81192..467e3e532198 100644
 +    }
  }
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
-index e957794372aa..82f25c1700b3 100644
+index e957794372aa..03fd234292ea 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 @@ -21,7 +21,9 @@ import android.annotation.Nullable;
@@ -465,7 +465,7 @@ index e957794372aa..82f25c1700b3 100644
          /**
           * Interface to sends results to the HalResultController's owner.
           */
-@@ -167,8 +200,41 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -167,8 +200,47 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
              mCallback = callback;
          }
  
@@ -497,6 +497,11 @@ index e957794372aa..82f25c1700b3 100644
 +            // repeats, and once we've genuinely seen one remaining==0 stop forwarding entirely
 +            // (later rounds are the same degenerate loop, and re-forwarding them re-triggers
 +            // onClientFinished() on an already-finished operation).
++            // vivo 1907N Face Unlock bring-up: diagnostic only, tracking down a reported
++            // post-enroll unresponsiveness bug.
++            Slog.i(TAG, "onEnrollResult ENTER remaining=" + remaining
++                    + " mEnrollFinished=" + mEnrollFinished
++                    + " mLastEnrollRemaining=" + mLastEnrollRemaining);
 +            if (mEnrollFinished || remaining == mLastEnrollRemaining) {
 +                return;
 +            }
@@ -504,10 +509,11 @@ index e957794372aa..82f25c1700b3 100644
 +            if (remaining == 0) {
 +                mEnrollFinished = true;
 +            }
++            Slog.i(TAG, "onEnrollResult POSTING remaining=" + remaining);
              mHandler.post(() -> {
                  final CharSequence name = FaceUtils.getLegacyInstance(mSensorId)
                          .getUniqueName(mContext, userId);
-@@ -208,6 +274,28 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -208,6 +280,33 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          @Override
          public void onAcquired(long deviceId, int userId, int acquiredInfo,
                  int vendorCode) {
@@ -518,6 +524,10 @@ index e957794372aa..82f25c1700b3 100644
 +            // Runnable is posted to in BiometricScheduler) long enough to delay it that whole time.
 +            // Stop forwarding once mEnrollFinished (see onEnrollResult()), same reasoning as that
 +            // guard - not just throttled, but actually silenced once we know it's just noise.
++            // vivo 1907N Face Unlock bring-up: diagnostic only, tracking down a reported
++            // post-enroll unresponsiveness bug.
++            Slog.i(TAG, "onAcquired ENTER acquiredInfo=" + acquiredInfo + " vendorCode="
++                    + vendorCode + " mEnrollFinished=" + mEnrollFinished);
 +            if (mEnrollFinished) {
 +                return;
 +            }
@@ -533,10 +543,11 @@ index e957794372aa..82f25c1700b3 100644
 +            mLastAcquiredInfo = acquiredInfo;
 +            mLastAcquiredVendorCode = vendorCode;
 +            mLastAcquiredForwardUptimeMs = now;
++            Slog.i(TAG, "onAcquired POSTING");
              mHandler.post(() -> {
                  final BaseClientMonitor client = mScheduler.getCurrentClient();
                  if (!(client instanceof AcquisitionClient)) {
-@@ -327,6 +415,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -327,6 +426,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  }
              });
          }
@@ -555,7 +566,7 @@ index e957794372aa..82f25c1700b3 100644
      }
  
      @VisibleForTesting
-@@ -409,7 +509,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -409,7 +520,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  + mScheduler.getCurrentClient());
  
          try {
@@ -571,7 +582,7 @@ index e957794372aa..82f25c1700b3 100644
          } catch (java.util.NoSuchElementException e) {
              // Service doesn't exist or cannot be opened.
              Slog.w(TAG, "NoSuchElementException", e);
-@@ -436,6 +543,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -436,6 +554,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
  
          Slog.d(TAG, "Face HAL ready, HAL ID: " + halId);
          if (halId != 0) {
@@ -587,7 +598,7 @@ index e957794372aa..82f25c1700b3 100644
              scheduleLoadAuthenticatorIds();
              scheduleInternalCleanup(ActivityManager.getCurrentUser(), null /* callback */);
              scheduleGetFeature(mSensorId, new Binder(),
-@@ -450,6 +566,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -450,6 +577,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          return mDaemon;
      }
  
@@ -763,7 +774,7 @@ index e957794372aa..82f25c1700b3 100644
      @Override
      public boolean containsSensor(int sensorId) {
          return mSensorId == sensorId;
-@@ -592,9 +877,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -592,9 +888,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      ENROLL_TIMEOUT_SEC, previewSurface, mSensorId);
  
              mScheduler.scheduleClientMonitor(client, new BaseClientMonitor.Callback() {
@@ -782,7 +793,7 @@ index e957794372aa..82f25c1700b3 100644
                      if (success) {
                          // Update authenticatorIds
                          scheduleUpdateActiveUserWithoutHandler(client.getTargetUserId());
-@@ -638,7 +932,24 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -638,7 +943,24 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      opPackageName, cookie, false /* requireConfirmation */, mSensorId,
                      isStrongBiometric, statsClient, mLockoutTracker, mUsageStats,
                      allowBackgroundAuthentication, isKeyguardBypassEnabled);
