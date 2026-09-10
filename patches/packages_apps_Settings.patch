@@ -1,8 +1,8 @@
 diff --git a/res/layout/face_enroll_education.xml b/res/layout/face_enroll_education.xml
-index 2a78f999eb..b76f6cdf35 100644
+index 2a78f999eb..6071c5ae2b 100644
 --- a/res/layout/face_enroll_education.xml
 +++ b/res/layout/face_enroll_education.xml
-@@ -60,13 +60,20 @@
+@@ -60,13 +60,33 @@
                  app:lottie_loop="true"
                  app:lottie_speed="1.5" />
  
@@ -13,13 +13,26 @@ index 2a78f999eb..b76f6cdf35 100644
 +                 within the drawable's own onBoundsChange logic) - confirmed on a real device as
 +                 two overlapping faces, one correctly sized and one stretched (the background
 +                 drawable, with no aspect-ratio-aware sizing of its own under wrap_content). See
-+                 FaceEducationAnimationDrawable's doc comment for why this view exists at all. -->
++                 FaceEducationAnimationDrawable's doc comment for why this view exists at all.
++
++                 layout_height was match_parent, inheriting this FrameLayout's own wrap_content
++                 resolution - which is NOT driven by this (match_parent) child, but by
++                 illustration_default's own measurement. IllustrationVideoView.onMeasure() derives
++                 its height from an internal `aspectRatio` field that starts at 1.0 and is only
++                 ever updated once real video metadata loads - on this device the video never
++                 plays at all (see the class doc comment), so that field stays stuck. Confirmed on
++                 a real device: this collapsed the whole illustration area down to a sliver, which
++                 made FaceEducationAnimationDrawable's own Math.min(bounds.width(),
++                 bounds.height()) square (correct now that it IS square, see that class) collapse
++                 to a near-zero radius - all the orbiting particles crammed into one blob. Fixed
++                 height, matching illustration_lottie's own authored 440dp for this same slot,
++                 decouples this from the broken video view's measurement entirely. -->
              <ImageView
                  android:id="@+id/illustration_accessibility"
 -                android:layout_width="wrap_content"
 -                android:layout_height="wrap_content"
 +                android:layout_width="match_parent"
-+                android:layout_height="match_parent"
++                android:layout_height="440dp"
                  android:layout_gravity="center"
 -                android:visibility="invisible"
 -                android:background="@drawable/face_enroll_icon_large"/>
