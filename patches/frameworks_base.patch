@@ -393,7 +393,7 @@ index 77e431c81192..467e3e532198 100644
 +    }
  }
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
-index e957794372aa..6f87cffb0eb5 100644
+index e957794372aa..f94264f712a0 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 @@ -21,7 +21,9 @@ import android.annotation.Nullable;
@@ -475,7 +475,7 @@ index e957794372aa..6f87cffb0eb5 100644
  
          HalResultController(int sensorId, @NonNull Context context, @NonNull Handler handler,
                  @NonNull BiometricScheduler scheduler, @NonNull LockoutHalImpl lockoutTracker,
-@@ -167,8 +203,77 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -167,8 +203,84 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
              mCallback = callback;
          }
  
@@ -493,7 +493,14 @@ index e957794372aa..6f87cffb0eb5 100644
 +        void resetEnrollDedup() {
 +            mLastEnrollRemaining = -1;
 +            mEnrollFinished = false;
++            mLastAcquiredInfo = Integer.MIN_VALUE;
++            mLastAcquiredVendorCode = Integer.MIN_VALUE;
 +        }
++
++        // vivo 1907N Face Unlock bring-up (not AOSP): see onAcquired()'s comment. Same dedup
++        // idiom as mLastEnrollRemaining above, reset alongside it.
++        private int mLastAcquiredInfo = Integer.MIN_VALUE;
++        private int mLastAcquiredVendorCode = Integer.MIN_VALUE;
 +
          @Override
          public void onEnrollResult(long deviceId, int faceId, int userId, int remaining) {
@@ -553,7 +560,34 @@ index e957794372aa..6f87cffb0eb5 100644
              mHandler.post(() -> {
                  final CharSequence name = FaceUtils.getLegacyInstance(mSensorId)
                          .getUniqueName(mContext, userId);
-@@ -327,6 +432,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -208,6 +320,26 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+         @Override
+         public void onAcquired(long deviceId, int userId, int acquiredInfo,
+                 int vendorCode) {
++            // vivo 1907N Face Unlock bring-up: unlike onEnrollResult() (deduped above), this was
++            // never throttled - the vendor daemon calls it on every single processed camera frame
++            // (~every 80-100ms), continuously for the whole capture, and every call used to post
++            // unconditionally to mHandler (the same main-thread queue scheduleSetPreviewSurface()
++            // posts to). Confirmed via a real device log: 50 "Slow dispatch"/"Slow delivery"
++            // warnings on system_server's main thread packed into one ~10.6s enroll session with
++            // no gaps, and zero onFaceAlgorithmResult/onEnrollResult log lines in that same
++            // window to account for them - onAcquired is the only other candidate at that rate.
++            // A preview-surface update queued behind that pile-up (e.g. from the hint TextView
++            // appearing and resizing the TextureView, see FaceEnrollPreviewFragment's
++            // onSurfaceTextureSizeChanged()) doesn't get processed until the flood finally lets
++            // up, which in practice is not until capture is essentially done - matching the
++            // reported symptom exactly (live preview freezes early, enrollment still completes).
++            // Dedupe identical consecutive (acquiredInfo, vendorCode) repeats, same idiom as
++            // mLastEnrollRemaining - genuine transitions (a hint appearing/changing) still post.
++            if (acquiredInfo == mLastAcquiredInfo && vendorCode == mLastAcquiredVendorCode) {
++                return;
++            }
++            mLastAcquiredInfo = acquiredInfo;
++            mLastAcquiredVendorCode = vendorCode;
+             mHandler.post(() -> {
+                 final BaseClientMonitor client = mScheduler.getCurrentClient();
+                 if (!(client instanceof AcquisitionClient)) {
+@@ -327,6 +459,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  }
              });
          }
@@ -572,7 +606,7 @@ index e957794372aa..6f87cffb0eb5 100644
      }
  
      @VisibleForTesting
-@@ -350,6 +467,10 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -350,6 +494,10 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
              mDaemon = null;
              mCurrentUserId = UserHandle.USER_NULL;
          });
@@ -583,7 +617,7 @@ index e957794372aa..6f87cffb0eb5 100644
  
          try {
              ActivityManager.getService().registerUserSwitchObserver(mUserSwitchObserver, TAG);
-@@ -409,7 +530,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -409,7 +557,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  + mScheduler.getCurrentClient());
  
          try {
@@ -599,7 +633,7 @@ index e957794372aa..6f87cffb0eb5 100644
          } catch (java.util.NoSuchElementException e) {
              // Service doesn't exist or cannot be opened.
              Slog.w(TAG, "NoSuchElementException", e);
-@@ -436,6 +564,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -436,6 +591,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
  
          Slog.d(TAG, "Face HAL ready, HAL ID: " + halId);
          if (halId != 0) {
@@ -615,7 +649,7 @@ index e957794372aa..6f87cffb0eb5 100644
              scheduleLoadAuthenticatorIds();
              scheduleInternalCleanup(ActivityManager.getCurrentUser(), null /* callback */);
              scheduleGetFeature(mSensorId, new Binder(),
-@@ -450,6 +587,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -450,6 +614,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          return mDaemon;
      }
  
@@ -791,7 +825,7 @@ index e957794372aa..6f87cffb0eb5 100644
      @Override
      public boolean containsSensor(int sensorId) {
          return mSensorId == sensorId;
-@@ -592,9 +898,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -592,9 +925,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      ENROLL_TIMEOUT_SEC, previewSurface, mSensorId);
  
              mScheduler.scheduleClientMonitor(client, new BaseClientMonitor.Callback() {
@@ -810,7 +844,7 @@ index e957794372aa..6f87cffb0eb5 100644
                      if (success) {
                          // Update authenticatorIds
                          scheduleUpdateActiveUserWithoutHandler(client.getTargetUserId());
-@@ -638,7 +953,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -638,7 +980,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      opPackageName, cookie, false /* requireConfirmation */, mSensorId,
                      isStrongBiometric, statsClient, mLockoutTracker, mUsageStats,
                      allowBackgroundAuthentication, isKeyguardBypassEnabled);
