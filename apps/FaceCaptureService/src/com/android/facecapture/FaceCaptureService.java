@@ -179,8 +179,7 @@ public class FaceCaptureService extends Service {
     // ever having more than one render in flight at a time under sustained CPU pressure.
     private final byte[] mPreviewNv21Buffer = new byte[NV21_SIZE];
     private final AtomicBoolean mPreviewRenderInFlight = new AtomicBoolean(false);
-    // vivo 1907N Face Unlock bring-up (not AOSP): diagnostic only, logs on transitions rather
-    // than every frame - tracking down a reported live-preview freeze mid-enrollment.
+    // Diagnostic state - logged on transitions only, not per frame.
     private boolean mLastPreviewSurfaceUsable;
     private int mRenderedFrameCount;
     private int mImageAvailableCount;
@@ -377,13 +376,7 @@ public class FaceCaptureService extends Service {
         }
     }
 
-    // vivo 1907N Face Unlock bring-up (not AOSP): diagnostic only - setRepeatingRequest() was
-    // previously called with a null CaptureCallback, so we had zero camera2-level feedback about
-    // what happens during a reported live-preview freeze. Two device captures already confirmed
-    // onImageAvailable() itself goes completely silent for the whole freeze (not just our own
-    // render path) - this callback exists to find out whether that's an AE/AF convergence stall
-    // (CONTROL_AE_STATE/CONTROL_AF_STATE stuck in a "searching"-type state) or the driver
-    // reporting outright capture failures during that same window.
+    // Diagnostic CaptureCallback - logs AE/AF state transitions and capture failures.
     private int mLastAeState = -1;
     private int mLastAfState = -1;
     private final CameraCaptureSession.CaptureCallback mCaptureCallback =
@@ -453,10 +446,7 @@ public class FaceCaptureService extends Service {
         if (!mCapturing.get()) {
             return;
         }
-        // vivo 1907N Face Unlock bring-up (not AOSP): diagnostic heartbeat, every 10th raw camera
-        // callback - separate from renderPreviewFrame()'s own heartbeat, to tell apart "the camera
-        // itself stopped delivering frames" from "frames keep arriving but rendering into the
-        // preview Surface specifically stalls" during the reported freeze.
+        // Diagnostic heartbeat, every 10th raw camera callback.
         mImageAvailableCount++;
         if (mImageAvailableCount % 10 == 0) {
             Log.i(TAG, "onImageAvailable: callback #" + mImageAvailableCount);
@@ -548,9 +538,7 @@ public class FaceCaptureService extends Service {
             }
             rawFrame.recycle();
             frame.recycle();
-            // vivo 1907N Face Unlock bring-up (not AOSP): diagnostic heartbeat, every 10th
-            // successful render - proves rendering is still actually happening (or silently
-            // stopped) without spamming on every frame.
+            // Diagnostic heartbeat, every 10th successful render.
             mRenderedFrameCount++;
             if (mRenderedFrameCount % 10 == 0) {
                 Log.i(TAG, "renderPreviewFrame: rendered #" + mRenderedFrameCount);
