@@ -176,6 +176,10 @@ public class FaceCaptureService extends Service {
     // ever having more than one render in flight at a time under sustained CPU pressure.
     private final byte[] mPreviewNv21Buffer = new byte[NV21_SIZE];
     private final AtomicBoolean mPreviewRenderInFlight = new AtomicBoolean(false);
+    // vivo 1907N Face Unlock bring-up (not AOSP): diagnostic only, logs on transitions rather
+    // than every frame - tracking down a reported live-preview freeze mid-enrollment.
+    private boolean mLastPreviewSurfaceUsable;
+    private int mRenderedFrameCount;
 
     // vivo 1907N Face Unlock bring-up (not AOSP): front camera's CameraCharacteristics.
     // SENSOR_ORIENTATION, read once in openCamera(). The sensor is physically mounted rotated
@@ -220,6 +224,9 @@ public class FaceCaptureService extends Service {
         // getParcelableExtra(String, Class) needs API 33 - this branch targets API 32.
         mPreviewSurface = intent == null ? null
                 : intent.getParcelableExtra(EXTRA_PREVIEW_SURFACE);
+        Log.i(TAG, "onStartCommand: capturing=" + mCapturing.get() + " previewSurface="
+                + mPreviewSurface + " valid="
+                + (mPreviewSurface != null && mPreviewSurface.isValid()));
         if (mFaceManager == null) {
             Log.e(TAG, "onStartCommand: no FaceManager, stopping");
             stopSelf();
@@ -426,7 +433,13 @@ public class FaceCaptureService extends Service {
     // just a ~460KB memcpy, cheap enough to do inline on mCameraHandler.
     private void maybeQueuePreviewFrame() {
         Surface surface = mPreviewSurface;
-        if (surface == null || !surface.isValid()) {
+        final boolean usable = surface != null && surface.isValid();
+        if (usable != mLastPreviewSurfaceUsable) {
+            Log.i(TAG, "maybeQueuePreviewFrame: surface usability changed to " + usable
+                    + " surface=" + surface);
+            mLastPreviewSurfaceUsable = usable;
+        }
+        if (!usable) {
             return;
         }
         mPreviewFrameCounter++;
@@ -482,6 +495,13 @@ public class FaceCaptureService extends Service {
             }
             rawFrame.recycle();
             frame.recycle();
+            // vivo 1907N Face Unlock bring-up (not AOSP): diagnostic heartbeat, every 10th
+            // successful render - proves rendering is still actually happening (or silently
+            // stopped) without spamming on every frame.
+            mRenderedFrameCount++;
+            if (mRenderedFrameCount % 10 == 0) {
+                Log.i(TAG, "renderPreviewFrame: rendered #" + mRenderedFrameCount);
+            }
         } catch (Exception e) {
             // Broad on purpose: Surface.lockCanvas() throws the checked
             // Surface.OutOfResourcesException, and the surface can also be torn down
