@@ -1,6 +1,6 @@
 hidl_interface {
     name: "vendor.vivo.hardware.biometrics.fingerprint@3.0",
-    root: "vendor.vivo.hardware",
+    root: "vendor.vivo.hardware.biometrics",
     srcs: [
         "IBiometricsFingerprintExt.hal",
         "IBiometricsFingerprintClientCallbackExt.hal",

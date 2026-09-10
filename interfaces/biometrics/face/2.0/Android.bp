@@ -1,6 +1,6 @@
 hidl_interface {
     name: "vendor.vivo.hardware.biometrics.face@2.0",
-    root: "vendor.vivo.hardware",
+    root: "vendor.vivo.hardware.biometrics",
     srcs: [
         "IBiometricsFace.hal",
         "IBiometricsFaceClientCallback.hal",

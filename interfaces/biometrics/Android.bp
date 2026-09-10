@@ -1,0 +1,12 @@
+// vivo 1907N vendor biometrics HIDL interfaces.
+//
+// Reverse-engineered from stock Funtouch's vendor.vivo.hardware.biometrics.* interface
+// libraries (method signatures + declaration order recovered from the BpHw*/BnHw* symbol
+// tables of vendor.vivo.hardware.biometrics.face@2.0.so and .fingerprint@3.0.so). The
+// out-of-tree frameworks/base Face Unlock + UDFPS patches depend on the generated -java
+// stubs.
+
+hidl_package_root {
+    name: "vendor.vivo.hardware.biometrics",
+    path: "device/vivo/1907N/interfaces/biometrics",
+}
