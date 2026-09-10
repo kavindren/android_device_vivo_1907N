@@ -74,7 +74,10 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.face.FaceManager;
 import android.media.Image;
 import android.media.ImageReader;
@@ -374,6 +377,45 @@ public class FaceCaptureService extends Service {
         }
     }
 
+    // vivo 1907N Face Unlock bring-up (not AOSP): diagnostic only - setRepeatingRequest() was
+    // previously called with a null CaptureCallback, so we had zero camera2-level feedback about
+    // what happens during a reported live-preview freeze. Two device captures already confirmed
+    // onImageAvailable() itself goes completely silent for the whole freeze (not just our own
+    // render path) - this callback exists to find out whether that's an AE/AF convergence stall
+    // (CONTROL_AE_STATE/CONTROL_AF_STATE stuck in a "searching"-type state) or the driver
+    // reporting outright capture failures during that same window.
+    private int mLastAeState = -1;
+    private int mLastAfState = -1;
+    private final CameraCaptureSession.CaptureCallback mCaptureCallback =
+            new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
+                TotalCaptureResult result) {
+            Integer ae = result.get(CaptureResult.CONTROL_AE_STATE);
+            Integer af = result.get(CaptureResult.CONTROL_AF_STATE);
+            int aeState = ae != null ? ae : -1;
+            int afState = af != null ? af : -1;
+            if (aeState != mLastAeState || afState != mLastAfState) {
+                Log.i(TAG, "onCaptureCompleted: AE_STATE " + mLastAeState + " -> " + aeState
+                        + ", AF_STATE " + mLastAfState + " -> " + afState);
+                mLastAeState = aeState;
+                mLastAfState = afState;
+            }
+        }
+
+        @Override
+        public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request,
+                CaptureFailure failure) {
+            Log.w(TAG, "onCaptureFailed: reason=" + failure.getReason()
+                    + " wasImageCaptured=" + failure.wasImageCaptured());
+        }
+
+        @Override
+        public void onCaptureSequenceAborted(CameraCaptureSession session, int sequenceId) {
+            Log.w(TAG, "onCaptureSequenceAborted: sequenceId=" + sequenceId);
+        }
+    };
+
     private void startCaptureSession() {
         if (mCameraDevice == null) return;
         try {
@@ -388,7 +430,7 @@ public class FaceCaptureService extends Service {
                             mCaptureSession = session;
                             try {
                                 session.setRepeatingRequest(
-                                        requestBuilder.build(), null, mCameraHandler);
+                                        requestBuilder.build(), mCaptureCallback, mCameraHandler);
                             } catch (Exception e) {
                                 Log.e(TAG, "Failed to start repeating capture request", e);
                                 stopSelf();
