@@ -410,10 +410,10 @@ index 6509d4e6e2..87ab8c7026 100644
      }
  }
 diff --git a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
-index 853ca7c40c..7edbee7334 100644
+index 853ca7c40c..67277cb6cd 100644
 --- a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
 +++ b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
-@@ -17,53 +17,51 @@
+@@ -17,53 +17,52 @@
  package com.android.settings.biometrics.face;
  
  import android.app.settings.SettingsEnums;
@@ -435,6 +435,7 @@ index 853ca7c40c..7edbee7334 100644
 -import android.util.Size;
 -import android.util.TypedValue;
  import android.view.Surface;
++import android.util.Log;
  import android.view.TextureView;
  import android.view.View;
  import android.widget.ImageView;
@@ -492,7 +493,7 @@ index 853ca7c40c..7edbee7334 100644
      private ParticleCollection.Listener mListener;
  
      // View used to contain the circular cutout and enrollment animation drawable
-@@ -75,6 +73,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -75,6 +74,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
      // Texture used for showing the camera preview
      private FaceSquareTextureView mTextureView;
  
@@ -504,11 +505,12 @@ index 853ca7c40c..7edbee7334 100644
      // Listener sent to the animation drawable
      private final ParticleCollection.Listener mAnimationListener
              = new ParticleCollection.Listener() {
-@@ -90,18 +93,38 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -90,18 +94,42 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          @Override
          public void onSurfaceTextureAvailable(
                  SurfaceTexture surfaceTexture, int width, int height) {
 -            openCamera(width, height);
++            Log.i(TAG, "onSurfaceTextureAvailable " + width + "x" + height);
 +            sendPreviewSurface(surfaceTexture, width, height);
          }
  
@@ -517,6 +519,8 @@ index 853ca7c40c..7edbee7334 100644
                  SurfaceTexture surfaceTexture, int width, int height) {
 -            // Shouldn't be called, but do this for completeness.
 -            configureTransform(width, height);
++            Log.i(TAG, "onSurfaceTextureSizeChanged " + width + "x" + height
++                    + " (last sent " + mLastSentWidth + "x" + mLastSentHeight + ")");
 +            // vivo 1907N Face Unlock bring-up: re-sends a fresh Surface (not just a buffer-size
 +            // tweak on the old one) whenever the size genuinely changes - see mLastSentWidth/
 +            // mLastSentHeight. An earlier version of this method just called
@@ -542,11 +546,12 @@ index 853ca7c40c..7edbee7334 100644
  
          @Override
          public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
++            Log.i(TAG, "onSurfaceTextureDestroyed");
 +            clearPreviewSurface();
              return true;
          }
  
-@@ -111,74 +134,6 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -111,74 +139,6 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          }
      };
  
@@ -621,7 +626,7 @@ index 853ca7c40c..7edbee7334 100644
      @Override
      public int getMetricsCategory() {
          return SettingsEnums.FACE_ENROLL_PREVIEW;
-@@ -196,7 +151,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -196,7 +156,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          mAnimationDrawable = new FaceEnrollAnimationDrawable(getContext(), mAnimationListener);
          mCircleView.setImageDrawable(mAnimationDrawable);
  
@@ -630,7 +635,7 @@ index 853ca7c40c..7edbee7334 100644
      }
  
      @Override
-@@ -204,11 +159,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -204,11 +164,11 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
          super.onResume();
  
          // When the screen is turned off and turned back on, the SurfaceTexture is already
@@ -646,7 +651,7 @@ index 853ca7c40c..7edbee7334 100644
          } else {
              mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
          }
-@@ -217,7 +172,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -217,7 +177,7 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
      @Override
      public void onPause() {
          super.onPause();
@@ -655,12 +660,18 @@ index 853ca7c40c..7edbee7334 100644
      }
  
      @Override
-@@ -240,106 +195,26 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
+@@ -240,106 +200,32 @@ public class FaceEnrollPreviewFragment extends InstrumentedPreferenceFragment
      }
  
      /**
 -     * Sets up member variables related to camera.
--     */
++     * vivo 1907N Face Unlock bring-up (not AOSP): builds a {@link Surface} from this fragment's
++     * own TextureView and hands it to FaceCaptureService (via Face10.java) to render into. The
++     * buffer size is set to exactly the (square) view's own size - no aspect-ratio-driven Matrix
++     * scaling needed here at all, FaceCaptureService's own Canvas draw does the
++     * cover-scale-and-center itself, already clipped to this exact size (see that class's
++     * drawFrameCovering()).
+      */
 -    private void setUpCameraOutputs() {
 -        try {
 -            for (String cameraId : mCameraManager.getCameraIdList()) {
@@ -702,13 +713,7 @@ index 853ca7c40c..7edbee7334 100644
 -
 -    /**
 -     * Chooses the optimal resolution for the camera to open.
-+     * vivo 1907N Face Unlock bring-up (not AOSP): builds a {@link Surface} from this fragment's
-+     * own TextureView and hands it to FaceCaptureService (via Face10.java) to render into. The
-+     * buffer size is set to exactly the (square) view's own size - no aspect-ratio-driven Matrix
-+     * scaling needed here at all, FaceCaptureService's own Canvas draw does the
-+     * cover-scale-and-center itself, already clipped to this exact size (see that class's
-+     * drawFrameCovering()).
-      */
+-     */
 -    private Size chooseOptimalSize(Size[] choices) {
 -        for (int i = 0; i < choices.length; i++) {
 -            if (choices[i].getHeight() == MAX_PREVIEW_HEIGHT
@@ -732,6 +737,8 @@ index 853ca7c40c..7edbee7334 100644
 -        if (mTextureView == null) {
 +    private void sendPreviewSurface(SurfaceTexture surfaceTexture, int width, int height) {
 +        if (mFaceManager == null || surfaceTexture == null || width <= 0 || height <= 0) {
++            Log.w(TAG, "sendPreviewSurface: skipped, faceManager=" + mFaceManager
++                    + " texture=" + surfaceTexture + " " + width + "x" + height);
              return;
          }
 -
@@ -758,7 +765,10 @@ index 853ca7c40c..7edbee7334 100644
 -        transform.postTranslate(tx.getFloat(), ty.getFloat());
 -        mTextureView.setTransform(transform);
 +        surfaceTexture.setDefaultBufferSize(width, height);
-+        mFaceManager.setPreviewSurface(SENSOR_ID, new Surface(surfaceTexture));
++        final Surface surface = new Surface(surfaceTexture);
++        Log.i(TAG, "sendPreviewSurface: " + width + "x" + height + " surface=" + surface
++                + " valid=" + surface.isValid());
++        mFaceManager.setPreviewSurface(SENSOR_ID, surface);
 +        mLastSentWidth = width;
 +        mLastSentHeight = height;
      }
@@ -772,6 +782,7 @@ index 853ca7c40c..7edbee7334 100644
 -            mCameraDevice.close();
 -            mCameraDevice = null;
 +    private void clearPreviewSurface() {
++        Log.i(TAG, "clearPreviewSurface");
 +        if (mFaceManager != null) {
 +            mFaceManager.setPreviewSurface(SENSOR_ID, null);
          }
