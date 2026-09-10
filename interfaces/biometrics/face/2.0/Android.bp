@@ -1,0 +1,13 @@
+hidl_interface {
+    name: "vendor.vivo.hardware.biometrics.face@2.0",
+    root: "vendor.vivo.hardware",
+    srcs: [
+        "IBiometricsFace.hal",
+        "IBiometricsFaceClientCallback.hal",
+    ],
+    interfaces: [
+        "android.hardware.biometrics.face@1.0",
+        "android.hidl.base@1.0",
+    ],
+    gen_java: true,
+}

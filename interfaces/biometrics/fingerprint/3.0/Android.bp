@@ -1,0 +1,12 @@
+hidl_interface {
+    name: "vendor.vivo.hardware.biometrics.fingerprint@3.0",
+    root: "vendor.vivo.hardware",
+    srcs: [
+        "IBiometricsFingerprintExt.hal",
+        "IBiometricsFingerprintClientCallbackExt.hal",
+    ],
+    interfaces: [
+        "android.hidl.base@1.0",
+    ],
+    gen_java: true,
+}

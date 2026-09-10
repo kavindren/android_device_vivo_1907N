@@ -1,0 +1,20 @@
+package vendor.vivo.hardware.biometrics.face@2.0;
+
+import android.hardware.biometrics.face@1.0;
+
+/**
+ * Vivo's extension of android.hardware.biometrics.face@1.0::IBiometricsFaceClientCallback.
+ * Adds one method; the rest are inherited from @1.0. Reverse engineered from stock's
+ * BpHwBiometricsFaceClientCallback / BnHwBiometricsFaceClientCallback symbols.
+ */
+interface IBiometricsFaceClientCallback
+        extends android.hardware.biometrics.face@1.0::IBiometricsFaceClientCallback {
+    /**
+     * Fired by the vendor face algorithm with its own result/progress codes. Parameter
+     * meanings are opaque (command / result / extra); the framework logs them and, on the
+     * relevant codes, treats the callback like an acquired/progress hint. From
+     * BpHwBiometricsFaceClientCallback::_hidl_onFaceAlgorithmResult.
+     */
+    oneway onFaceAlgorithmResult(uint64_t deviceId, uint32_t command, uint32_t result,
+        uint32_t extra, string message);
+};

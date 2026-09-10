@@ -1,0 +1,12 @@
+package vendor.vivo.hardware.biometrics.fingerprint@3.0;
+
+/**
+ * Callback for IBiometricsFingerprintExt. Reverse engineered from
+ * BpHwBiometricsFingerprintClientCallbackExt::_hidl_onCommandResponseWithBundle. The
+ * LineageOS UDFPS path never registers one; the type exists so setNotify()'s signature
+ * resolves and the generated -java compiles.
+ */
+interface IBiometricsFingerprintClientCallbackExt {
+    oneway onCommandResponseWithBundle(uint64_t deviceId, uint32_t param1, uint32_t param2,
+        uint32_t param3, string bundle);
+};

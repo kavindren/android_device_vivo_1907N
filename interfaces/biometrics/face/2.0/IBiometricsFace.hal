@@ -1,0 +1,33 @@
+package vendor.vivo.hardware.biometrics.face@2.0;
+
+import android.hardware.biometrics.face@1.0;
+import IBiometricsFaceClientCallback;
+
+/**
+ * Vivo's extension of android.hardware.biometrics.face@1.0::IBiometricsFace, reverse
+ * engineered from stock Funtouch's vendor.vivo.hardware.biometrics.face@2.0.so
+ * (BpHwBiometricsFace / BnHwBiometricsFace symbol tables). Only the three methods declared
+ * here are new; everything else is inherited unchanged from @1.0. Declaration order is
+ * significant - it fixes the HIDL transaction codes stock's @2.0-service expects.
+ */
+interface IBiometricsFace extends android.hardware.biometrics.face@1.0::IBiometricsFace {
+    /**
+     * Registers a @2.0 client callback: setCallback() plus the ability to also receive
+     * onFaceAlgorithmResult(). Blocking; returns a deviceId like setCallback() does.
+     */
+    setCallback2(IBiometricsFaceClientCallback clientCallback)
+        generates (android.hardware.biometrics.face@1.0::OptionalUint64 result);
+
+    /**
+     * Per-frame control channel the framework drives during enroll/authenticate. Blocking
+     * (not oneway). cmdId/param1/param2/data are opaque and forwarded verbatim to the
+     * vendor face algorithm; the values used come from stock's FaceService.
+     */
+    sendCommand(uint32_t cmdId, int32_t param1, int32_t param2, string data);
+
+    /**
+     * Hands the vendor daemon a shared-memory handle (the NV21 preview-frame buffer), once
+     * per enroll/authenticate session, before that session's first sendCommand().
+     */
+    sendhandle(handle handleData);
+};

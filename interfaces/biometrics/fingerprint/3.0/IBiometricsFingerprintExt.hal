@@ -1,0 +1,31 @@
+package vendor.vivo.hardware.biometrics.fingerprint@3.0;
+
+import IBiometricsFingerprintClientCallbackExt;
+
+/**
+ * Vivo's fingerprint extension interface, registered alongside the standard
+ * android.hardware.biometrics.fingerprint@2.1 service (the -service-gf9518 binary hosts
+ * both). Standalone - extends only IBase. Reverse engineered from stock's
+ * vendor.vivo.hardware.biometrics.fingerprint@3.0.so (BpHwBiometricsFingerprintExt symbol
+ * table). Method order is significant: it fixes the transaction codes stock expects.
+ */
+interface IBiometricsFingerprintExt {
+    /**
+     * Registers the Ext callback. The LineageOS UDFPS path never calls this (it only sends
+     * commands), but stock's service implements it and its position here keeps
+     * sendCommandWithBundle() on the transaction code stock expects.
+     */
+    setNotify(IBiometricsFingerprintClientCallbackExt clientCallback)
+        generates (uint64_t deviceId);
+
+    /**
+     * Screen-light handshake for optical UDFPS capture. Observed sequence (values are what
+     * stock's FingerprintUI sends):
+     *   sendCommandWithBundle(32534, 0, 0, "")  -> gf_hal_app_finger_down
+     *   sendCommandWithBundle(32572, 1, 0, "")  -> gf_hal_screen_light_ready (unblocks capture)
+     *   sendCommandWithBundle(32534, 1, 0, "")  -> gf_hal_app_finger_up
+     * Blocking; returns the HAL's status code.
+     */
+    sendCommandWithBundle(uint32_t cmdId, uint64_t param1, uint64_t param2, string bundle)
+        generates (int32_t result);
+};
