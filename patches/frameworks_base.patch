@@ -393,7 +393,7 @@ index 77e431c81192..467e3e532198 100644
 +    }
  }
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
-index e957794372aa..f8c49158accf 100644
+index e957794372aa..10186f8ffbef 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 @@ -21,7 +21,9 @@ import android.annotation.Nullable;
@@ -465,14 +465,12 @@ index e957794372aa..f8c49158accf 100644
          /**
           * Interface to sends results to the HalResultController's owner.
           */
-@@ -167,8 +200,90 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -167,8 +200,41 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
              mCallback = callback;
          }
  
-+        // vivo 1907N Face Unlock bring-up (not AOSP): see onEnrollResult()'s comment. Reset via
-+        // resetEnrollDedup(), called from scheduleEnroll()'s onClientStarted alongside
-+        // mSentShareMemoryHandle - stale state left over from a previous session could otherwise
-+        // suppress the whole next one.
++        // vivo 1907N Face Unlock bring-up (not AOSP): see onEnrollResult(). Reset per-session via
++        // resetEnrollDedup(), called from scheduleEnroll()'s onClientStarted.
 +        private int mLastEnrollRemaining = -1;
 +        private boolean mEnrollFinished;
 +
@@ -484,103 +482,39 @@ index e957794372aa..f8c49158accf 100644
 +            mLastAcquiredForwardUptimeMs = 0;
 +        }
 +
-+        // vivo 1907N Face Unlock bring-up (not AOSP): see onAcquired()'s comment.
++        // vivo 1907N Face Unlock bring-up (not AOSP): see onAcquired(). Time-throttled rather than
++        // deduped by value - acquiredInfo/vendorCode differ almost every frame in practice, so
++        // equality dedup alone doesn't reduce the forward rate.
 +        private int mLastAcquiredInfo = Integer.MIN_VALUE;
 +        private int mLastAcquiredVendorCode = Integer.MIN_VALUE;
 +        private long mLastAcquiredForwardUptimeMs;
-+        // Real device measurement (two full enroll sessions, before/after the exact-value dedup
-+        // below existed): 48-50 "Slow dispatch" warnings either way, no measurable drop from
-+        // deduping - acquiredInfo/vendorCode evidently differ on nearly every single frame (a
-+        // continuous quality/confidence signal, not a discrete repeated state), so equality-based
-+        // dedup alone almost never actually triggers. A time throttle works regardless of whether
-+        // the values differ. ~6-7/s is still far more than a human can perceive as distinct hint
-+        // updates, well below the raw ~10-12/s camera rate.
 +        private static final long ACQUIRED_FORWARD_MIN_INTERVAL_MS = 150;
 +
          @Override
          public void onEnrollResult(long deviceId, int faceId, int userId, int remaining) {
 +            // vivo 1907N Face Unlock bring-up: the vendor daemon calls this on nearly every
-+            // processed camera frame (~every 80-100ms). Two distinct problems, found via two
-+            // rounds of real device logs (see FACE_UNLOCK_STATUS.md):
-+            //
-+            // 1. It sometimes repeats the same "remaining" value on consecutive calls (a real
-+            //    but minor effect - only ~12% of calls in a real session). mLastEnrollRemaining
-+            //    dedupes these.
-+            //
-+            // 2. The much bigger effect: after a full 5-sample round reaches remaining==0, the
-+            //    daemon just keeps going and starts ANOTHER round from remaining==5 - confirmed
-+            //    the enrolled face is already usable after the very first round (a real
-+            //    unlock succeeded in an earlier test), so every subsequent round is pure
-+            //    unwanted extra work from our bridge's perspective. Each round's genuinely
-+            //    novel remaining values (5,4,3,2,1,0 again) all sail past the dedup above since
-+            //    they're never literally IDENTICAL to the immediately preceding call - so this
-+            //    is a separate guard. Confirmed via a real device log that forwarding every
-+            //    round's calls into EnrollClient.onEnrollResult() calls
-+            //    mCallback.onClientFinished() again on an already-finished operation each time -
-+            //    BiometricSchedulerOperation logs "[Finished / destroy]" repeatedly (4 times in
-+            //    one captured session) without the scheduler actually advancing to the next
-+            //    queued operation until much later, and the whole time AOSP's EnrollClient
-+            //    (stock, unmodified) is vibrating and doing other per-call work on every one of
-+            //    these calls - confirmed via the same log showing ~130-150ms "Slow dispatch"
-+            //    warnings on system_server's main thread essentially back-to-back for the whole
-+            //    session, and the user reporting the device stops responding to hardware buttons
-+            //    while a capture session is running. mEnrollFinished stops forwarding entirely
-+            //    once we've genuinely seen one remaining==0 for this session, regardless of what
-+            //    the daemon keeps sending afterwards.
++            // frame and loops back to remaining=5 after reaching 0 instead of stopping - dedupe
++            // repeats, and once we've genuinely seen one remaining==0 stop forwarding entirely
++            // (later rounds are the same degenerate loop, and re-forwarding them re-triggers
++            // onClientFinished() on an already-finished operation).
 +            if (mEnrollFinished || remaining == mLastEnrollRemaining) {
 +                return;
 +            }
 +            mLastEnrollRemaining = remaining;
 +            if (remaining == 0) {
 +                mEnrollFinished = true;
-+                // vivo 1907N Face Unlock bring-up: this used to also call mStopCaptureCallback
-+                // (killing FaceCaptureService's camera) synchronously right here, on the theory
-+                // that the framework's own onClientFinished() -> stopFaceCapture() path could take
-+                // "minutes" to run (true in an earlier, unthrottled-onAcquired round - see
-+                // 9bf85c8) and the vendor daemon's own remaining==0 was authoritative on its own.
-+                // Confirmed via a real device log this was WRONG in general: remaining==0 fired at
-+                // T, FaceCaptureService's camera closed 11ms later (mPreviewSurface -> null in
-+                // onDestroy()), and the framework's real completion ([Finishing] success: true)
-+                // didn't happen until ~5.5s and ~5 more full 5->0 rounds later - the vendor daemon
-+                // kept looping, starved of fresh frames the whole time (its own onEnrollResult
-+                // cycling through the same values is degenerate behavior from a dead camera feed,
-+                // not genuine progress), which is exactly the reported "live preview freezes but
-+                // the scan somehow still finishes" symptom. This device's real completion
-+                // apparently needs more than one round; stopping the camera on the vendor's first
-+                // remaining==0 cuts the feed the framework is still relying on. Now that onAcquired
-+                // is throttled (9bf85c8), the framework's own path should no longer need minutes -
-+                // let stopFaceCapture() run only from the standard onClientFinished() callback
-+                // (already wired in scheduleEnroll()/scheduleAuthenticate() below), whenever the
-+                // scheduler is actually done.
 +            }
              mHandler.post(() -> {
                  final CharSequence name = FaceUtils.getLegacyInstance(mSensorId)
                          .getUniqueName(mContext, userId);
-@@ -208,6 +323,37 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -208,6 +274,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          @Override
          public void onAcquired(long deviceId, int userId, int acquiredInfo,
                  int vendorCode) {
-+            // vivo 1907N Face Unlock bring-up: unlike onEnrollResult() (deduped above), this was
-+            // never throttled - the vendor daemon calls it on every single processed camera frame
-+            // (~every 80-100ms), continuously for the whole capture, and every call used to post
-+            // unconditionally to mHandler (the same main-thread queue scheduleSetPreviewSurface()
-+            // posts to). Confirmed via a real device log: 48-50 "Slow dispatch"/"Slow delivery"
-+            // warnings on system_server's main thread packed into one ~10-12s enroll session with
-+            // no gaps, and zero onFaceAlgorithmResult/onEnrollResult log lines in that same
-+            // window to account for them - onAcquired is the only other candidate at that rate.
-+            // A preview-surface update queued behind that pile-up (e.g. from the hint TextView
-+            // appearing and resizing the TextureView, see FaceEnrollPreviewFragment's
-+            // onSurfaceTextureSizeChanged()) doesn't get processed until the flood finally lets
-+            // up, which in practice is not until capture is essentially done - matching the
-+            // reported symptom exactly (live preview freezes early, enrollment still completes).
-+            //
-+            // First tried an exact-value dedup (same idiom as mLastEnrollRemaining) - confirmed
-+            // via two more real device sessions that it made no measurable difference (still
-+            // 48-50 warnings), meaning acquiredInfo/vendorCode evidently differ on nearly every
-+            // frame rather than repeating - not the same shape of problem onEnrollResult had.
-+            // Switched to a time throttle instead (forwards immediately on any genuine value
-+            // change, otherwise at most once per ACQUIRED_FORWARD_MIN_INTERVAL_MS), which caps
-+            // the forward rate regardless of whether the values themselves repeat.
++            // vivo 1907N Face Unlock bring-up: unlike onEnrollResult(), this fires on every single
++            // frame (~80-100ms) and was posting to mHandler unthrottled, congesting the same
++            // main-thread queue scheduleSetPreviewSurface() uses. Throttled by time rather than
++            // value equality - see mLastAcquiredForwardUptimeMs's comment for why.
 +            final boolean valueChanged =
 +                    acquiredInfo != mLastAcquiredInfo || vendorCode != mLastAcquiredVendorCode;
 +            final long now = android.os.SystemClock.uptimeMillis();
@@ -594,7 +528,7 @@ index e957794372aa..f8c49158accf 100644
              mHandler.post(() -> {
                  final BaseClientMonitor client = mScheduler.getCurrentClient();
                  if (!(client instanceof AcquisitionClient)) {
-@@ -327,6 +473,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -327,6 +407,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  }
              });
          }
@@ -613,7 +547,7 @@ index e957794372aa..f8c49158accf 100644
      }
  
      @VisibleForTesting
-@@ -409,7 +567,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -409,7 +501,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  + mScheduler.getCurrentClient());
  
          try {
@@ -629,7 +563,7 @@ index e957794372aa..f8c49158accf 100644
          } catch (java.util.NoSuchElementException e) {
              // Service doesn't exist or cannot be opened.
              Slog.w(TAG, "NoSuchElementException", e);
-@@ -436,6 +601,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -436,6 +535,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
  
          Slog.d(TAG, "Face HAL ready, HAL ID: " + halId);
          if (halId != 0) {
@@ -645,7 +579,7 @@ index e957794372aa..f8c49158accf 100644
              scheduleLoadAuthenticatorIds();
              scheduleInternalCleanup(ActivityManager.getCurrentUser(), null /* callback */);
              scheduleGetFeature(mSensorId, new Binder(),
-@@ -450,6 +624,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -450,6 +558,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          return mDaemon;
      }
  
@@ -821,7 +755,7 @@ index e957794372aa..f8c49158accf 100644
      @Override
      public boolean containsSensor(int sensorId) {
          return mSensorId == sensorId;
-@@ -592,9 +935,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -592,9 +869,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      ENROLL_TIMEOUT_SEC, previewSurface, mSensorId);
  
              mScheduler.scheduleClientMonitor(client, new BaseClientMonitor.Callback() {
@@ -840,7 +774,7 @@ index e957794372aa..f8c49158accf 100644
                      if (success) {
                          // Update authenticatorIds
                          scheduleUpdateActiveUserWithoutHandler(client.getTargetUserId());
-@@ -638,7 +990,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -638,7 +924,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      opPackageName, cookie, false /* requireConfirmation */, mSensorId,
                      isStrongBiometric, statsClient, mLockoutTracker, mUsageStats,
                      allowBackgroundAuthentication, isKeyguardBypassEnabled);
