@@ -180,6 +180,7 @@ public class FaceCaptureService extends Service {
     // than every frame - tracking down a reported live-preview freeze mid-enrollment.
     private boolean mLastPreviewSurfaceUsable;
     private int mRenderedFrameCount;
+    private int mImageAvailableCount;
 
     // vivo 1907N Face Unlock bring-up (not AOSP): front camera's CameraCharacteristics.
     // SENSOR_ORIENTATION, read once in openCamera(). The sensor is physically mounted rotated
@@ -410,8 +411,18 @@ public class FaceCaptureService extends Service {
         if (!mCapturing.get()) {
             return;
         }
+        // vivo 1907N Face Unlock bring-up (not AOSP): diagnostic heartbeat, every 10th raw camera
+        // callback - separate from renderPreviewFrame()'s own heartbeat, to tell apart "the camera
+        // itself stopped delivering frames" from "frames keep arriving but rendering into the
+        // preview Surface specifically stalls" during the reported freeze.
+        mImageAvailableCount++;
+        if (mImageAvailableCount % 10 == 0) {
+            Log.i(TAG, "onImageAvailable: callback #" + mImageAvailableCount);
+        }
         Image image = reader.acquireLatestImage();
         if (image == null) {
+            Log.w(TAG, "onImageAvailable: acquireLatestImage returned null (#"
+                    + mImageAvailableCount + ")");
             return;
         }
         try {
