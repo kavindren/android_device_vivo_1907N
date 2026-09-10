@@ -4,6 +4,8 @@
     LineageOS 19.1 local manifest for the vivo V17 Neo (1907N / PD1913F_EX).
     Copy to .repo/local_manifests/1907N.xml, then `repo sync`.
   -->
+  <remote name="github" fetch="https://github.com/" />
+
   <project name="kavindren/android_device_vivo_1907N"
            path="device/vivo/1907N"
            remote="github" revision="lineage-19.1" />
