@@ -393,7 +393,7 @@ index 77e431c81192..467e3e532198 100644
 +    }
  }
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
-index e957794372aa..ca63bdc5f190 100644
+index e957794372aa..f8c49158accf 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 @@ -21,7 +21,9 @@ import android.annotation.Nullable;
@@ -465,24 +465,10 @@ index e957794372aa..ca63bdc5f190 100644
          /**
           * Interface to sends results to the HalResultController's owner.
           */
-@@ -151,6 +184,9 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
-         @Nullable private Callback mCallback;
-         @NonNull private final LockoutHalImpl mLockoutTracker;
-         @NonNull private final LockoutResetDispatcher mLockoutResetDispatcher;
-+        // vivo 1907N Face Unlock bring-up (not AOSP): see onEnrollResult()'s mEnrollFinished
-+        // comment and setStopCaptureCallback()'s call site in the Face10 constructor.
-+        @Nullable private Runnable mStopCaptureCallback;
- 
-         HalResultController(int sensorId, @NonNull Context context, @NonNull Handler handler,
-                 @NonNull BiometricScheduler scheduler, @NonNull LockoutHalImpl lockoutTracker,
-@@ -167,8 +203,93 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -167,8 +200,90 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
              mCallback = callback;
          }
  
-+        void setStopCaptureCallback(@NonNull Runnable stopCaptureCallback) {
-+            mStopCaptureCallback = stopCaptureCallback;
-+        }
-+
 +        // vivo 1907N Face Unlock bring-up (not AOSP): see onEnrollResult()'s comment. Reset via
 +        // resetEnrollDedup(), called from scheduleEnroll()'s onClientStarted alongside
 +        // mSentShareMemoryHandle - stale state left over from a previous session could otherwise
@@ -547,29 +533,30 @@ index e957794372aa..ca63bdc5f190 100644
 +            mLastEnrollRemaining = remaining;
 +            if (remaining == 0) {
 +                mEnrollFinished = true;
-+                // vivo 1907N Face Unlock bring-up: called directly, right here, synchronously on
-+                // whatever thread the HIDL callback arrived on - NOT via mHandler.post() and NOT
-+                // relying on the standard mCallback.onClientFinished() -> stopFaceCapture() path
-+                // triggered later from within the mHandler.post() Runnable below. Confirmed via a
-+                // real device log that that path can take minutes to actually run:
-+                // BiometricSchedulerOperation logged "[Finished / destroy]" immediately, but
-+                // BiometricScheduler's own "[Finishing]" (the point where our onClientFinished
-+                // callback and therefore stopFaceCapture() actually fires) didn't happen until
-+                // 2m48s later - the whole time, FaceCaptureService kept running (confirmed via
-+                // its notification only getting cancelled at that same late moment) and the
-+                // vendor daemon kept calling onAcquired() (never throttled - only onEnrollResult
-+                // is) continuously, which is consistent with what was saturating system_server's
-+                // main thread that whole time. Calling stopFaceCapture() immediately here, from
-+                // the actual moment of completion rather than from wherever the framework's own
-+                // scheduler eventually gets around to it, cuts that off right away.
-+                if (mStopCaptureCallback != null) {
-+                    mStopCaptureCallback.run();
-+                }
++                // vivo 1907N Face Unlock bring-up: this used to also call mStopCaptureCallback
++                // (killing FaceCaptureService's camera) synchronously right here, on the theory
++                // that the framework's own onClientFinished() -> stopFaceCapture() path could take
++                // "minutes" to run (true in an earlier, unthrottled-onAcquired round - see
++                // 9bf85c8) and the vendor daemon's own remaining==0 was authoritative on its own.
++                // Confirmed via a real device log this was WRONG in general: remaining==0 fired at
++                // T, FaceCaptureService's camera closed 11ms later (mPreviewSurface -> null in
++                // onDestroy()), and the framework's real completion ([Finishing] success: true)
++                // didn't happen until ~5.5s and ~5 more full 5->0 rounds later - the vendor daemon
++                // kept looping, starved of fresh frames the whole time (its own onEnrollResult
++                // cycling through the same values is degenerate behavior from a dead camera feed,
++                // not genuine progress), which is exactly the reported "live preview freezes but
++                // the scan somehow still finishes" symptom. This device's real completion
++                // apparently needs more than one round; stopping the camera on the vendor's first
++                // remaining==0 cuts the feed the framework is still relying on. Now that onAcquired
++                // is throttled (9bf85c8), the framework's own path should no longer need minutes -
++                // let stopFaceCapture() run only from the standard onClientFinished() callback
++                // (already wired in scheduleEnroll()/scheduleAuthenticate() below), whenever the
++                // scheduler is actually done.
 +            }
              mHandler.post(() -> {
                  final CharSequence name = FaceUtils.getLegacyInstance(mSensorId)
                          .getUniqueName(mContext, userId);
-@@ -208,6 +329,37 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -208,6 +323,37 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          @Override
          public void onAcquired(long deviceId, int userId, int acquiredInfo,
                  int vendorCode) {
@@ -607,7 +594,7 @@ index e957794372aa..ca63bdc5f190 100644
              mHandler.post(() -> {
                  final BaseClientMonitor client = mScheduler.getCurrentClient();
                  if (!(client instanceof AcquisitionClient)) {
-@@ -327,6 +479,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -327,6 +473,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  }
              });
          }
@@ -626,18 +613,7 @@ index e957794372aa..ca63bdc5f190 100644
      }
  
      @VisibleForTesting
-@@ -350,6 +514,10 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
-             mDaemon = null;
-             mCurrentUserId = UserHandle.USER_NULL;
-         });
-+        // vivo 1907N Face Unlock bring-up (not AOSP): see onEnrollResult()'s mEnrollFinished
-+        // comment for why this needs to happen immediately rather than through the normal
-+        // BaseClientMonitor.Callback.onClientFinished() -> stopFaceCapture() path.
-+        mHalResultController.setStopCaptureCallback(this::stopFaceCapture);
- 
-         try {
-             ActivityManager.getService().registerUserSwitchObserver(mUserSwitchObserver, TAG);
-@@ -409,7 +577,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -409,7 +567,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  + mScheduler.getCurrentClient());
  
          try {
@@ -653,7 +629,7 @@ index e957794372aa..ca63bdc5f190 100644
          } catch (java.util.NoSuchElementException e) {
              // Service doesn't exist or cannot be opened.
              Slog.w(TAG, "NoSuchElementException", e);
-@@ -436,6 +611,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -436,6 +601,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
  
          Slog.d(TAG, "Face HAL ready, HAL ID: " + halId);
          if (halId != 0) {
@@ -669,7 +645,7 @@ index e957794372aa..ca63bdc5f190 100644
              scheduleLoadAuthenticatorIds();
              scheduleInternalCleanup(ActivityManager.getCurrentUser(), null /* callback */);
              scheduleGetFeature(mSensorId, new Binder(),
-@@ -450,6 +634,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -450,6 +624,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          return mDaemon;
      }
  
@@ -845,7 +821,7 @@ index e957794372aa..ca63bdc5f190 100644
      @Override
      public boolean containsSensor(int sensorId) {
          return mSensorId == sensorId;
-@@ -592,9 +945,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -592,9 +935,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      ENROLL_TIMEOUT_SEC, previewSurface, mSensorId);
  
              mScheduler.scheduleClientMonitor(client, new BaseClientMonitor.Callback() {
@@ -864,7 +840,7 @@ index e957794372aa..ca63bdc5f190 100644
                      if (success) {
                          // Update authenticatorIds
                          scheduleUpdateActiveUserWithoutHandler(client.getTargetUserId());
-@@ -638,7 +1000,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -638,7 +990,20 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                      opPackageName, cookie, false /* requireConfirmation */, mSensorId,
                      isStrongBiometric, statsClient, mLockoutTracker, mUsageStats,
                      allowBackgroundAuthentication, isKeyguardBypassEnabled);
