@@ -16,4 +16,17 @@
   <project name="kavindren/android_kernel_vivo_pd1913f"
            path="kernel/vivo/1907N"
            remote="github" revision="stable-merge-414336" />
+
+  <!--
+    Common MediaTek SELinux policy pulled in by device/vivo/1907N/BoardConfig.mk.
+    LineageOS's own android_device_mediatek_sepolicy_vndr only has branches from
+    lineage-20 onward; for lineage-19.1 (Android 12) MT6768 device trees the
+    community convention (used by Redmi-MT6768's merlinx/lava/mt6768-common
+    lineage-19.1 trees) is to pull the StatiXOS fork's "sc" branch instead.
+  -->
+  <remote name="statix" fetch="https://github.com/StatiXOS" />
+  <project path="device/mediatek/sepolicy_vndr"
+           name="android_device_mediatek_sepolicy_vndr"
+           remote="statix"
+           revision="sc" />
 </manifest>
