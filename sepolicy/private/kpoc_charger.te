@@ -1,0 +1,11 @@
+# vivo 1907N (not stock): TEMPORARY, diagnostic-only. kpoc_charger hangs with a black screen
+# during power-off charging boot and neither pstore (overwritten by any subsequent boot) nor
+# tombstones (no crash - it's a genuine hang) explained why. A separate monitor service
+# (kpoc_charger_monitor.sh, seclabel u:r:init:s0 - see its own .rc) samples the real kpoc_charger
+# process's /proc/<pid>/wchan+stack+status into a log on /data, which survives reboots unlike the
+# ring-buffer console-ramoops. The real kpoc_charger binary/service itself is untouched. Remove
+# this whole file once the real bug is found.
+allow init system_data_root_file:dir { search write add_name };
+allow init kpoc_charger_debug_file:file create_file_perms;
+type kpoc_charger_debug_file, file_type, data_file_type, core_data_file_type;
+type_transition init system_data_root_file:file kpoc_charger_debug_file;

@@ -20,6 +20,7 @@
 /(system_ext|system/system_ext)/bin/aee_dumpstate_v2      u:object_r:dumpstate_exec:s0
 /vgc(/.*)?                  u:object_r:oemfs:s0
 /dyn(/.*)?  u:object_r:system_file:s0
+/data/kpoc_charger_debug\.log                       u:object_r:kpoc_charger_debug_file:s0
 /data/.fs_init_info                                u:object_r:vivo_data_file:s0
 /data/.fs_init_info.txt                            u:object_r:vivo_data_file:s0
 /data/.fs_init_info_detail.txt                     u:object_r:vivo_data_file:s0
