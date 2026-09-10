@@ -3,6 +3,7 @@
 /system/bin/newfs_msdos		u:object_r:fsck_exec:s0
 /system/bin/mediaserver64                       u:object_r:mediaserver_exec:s0
 /system/bin/mediaserverwrapper                  u:object_r:mediaserverwrapper_exec:s0
+/system/bin/kpoc_charger                        u:object_r:charger_exec:s0
 /system/apex/apex\.test/bin/surfaceflinger            u:object_r:surfaceflinger_exec:s0
 /system/apex/apex\.test/bin/apex_test_preInstallHook  u:object_r:apex_test_prepostinstall_exec:s0
 /system/apex/apex\.test/bin/apex_test_postInstallHook u:object_r:apex_test_prepostinstall_exec:s0

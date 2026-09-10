@@ -23,6 +23,10 @@ ro.product.model.bbk=PD1913F_EX
 # Debugging
 ro.debuggable=1
 
+# Kernel power-off charging UI (kpoc_charger) - default matches stock, which shows the full
+# charging animation with percentage rather than just the static logo.
+persist.vivo.charge.logo=0
+
 # USB ConfigFS & MediaTek Controller
 sys.usb.controller=musb-hdrc
 sys.usb.configfs=1
