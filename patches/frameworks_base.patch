@@ -146,35 +146,248 @@ index 4bf9a740f971..5d0bf0fbad29 100644
      private final List<SensorLocationInternal> mSensorLocations;
  
      public FingerprintSensorPropertiesInternal(int sensorId,
-diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
-index 8533f356d67a..2bbb6daae9b4 100644
---- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
-+++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
-@@ -1023,6 +1023,13 @@ public class UdfpsController implements DozeReceiver {
-         mFingerprintManager.onPointerDown(mSensorProps.sensorId, x, y, minor, major);
-         Trace.endAsyncSection("UdfpsController.e2e.onPointerDown", 0);
-         Trace.beginAsyncSection("UdfpsController.e2e.startIllumination", 0);
-+        // Force this overlay window to full brightness for the duration of illumination - this
-+        // device's optical sensor needs more light than the drawn circle's color alone
-+        // provides, and unlike a raw vendor sysfs write, screenBrightness is the standard
-+        // per-window Android brightness-override API (goes through the normal
-+        // SurfaceFlinger/display HAL path, no vendor sepolicy boundary to cross).
-+        mCoreLayoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
-+        mWindowManager.updateViewLayout(mView, mCoreLayoutParams);
-         mView.startIllumination(() -> {
-             mFingerprintManager.onUiReady(mSensorProps.sensorId);
-             Trace.endAsyncSection("UdfpsController.e2e.startIllumination", 0);
-@@ -1051,6 +1058,10 @@ public class UdfpsController implements DozeReceiver {
-         if (mView.isIlluminationRequested()) {
-             mView.stopIllumination();
-         }
-+        // Restore normal (system-controlled) brightness - see the matching override in
-+        // onFingerDown().
-+        mCoreLayoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
-+        mWindowManager.updateViewLayout(mView, mCoreLayoutParams);
+diff --git a/packages/SystemUI/res/drawable-nodpi/udfps_illuminator_vivo.png b/packages/SystemUI/res/drawable-nodpi/udfps_illuminator_vivo.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..c45b9aed54cab947c5b1a65600af75a5e8ece877
+GIT binary patch
+literal 8569
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
+index 71e33a699934..1a706238c31d 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
+@@ -23,6 +23,7 @@ import android.graphics.drawable.Drawable;
+ import android.graphics.Canvas;
+ import android.graphics.Paint;
+ import android.graphics.PixelFormat;
++import android.graphics.Rect;
+ import android.graphics.RectF;
+ import android.util.AttributeSet;
+ import android.util.Log;
+@@ -59,6 +60,15 @@ public class UdfpsSurfaceView extends SurfaceView implements SurfaceHolder.Callb
+ 
+     private Drawable mUdfpsIconPressed;
+ 
++    // This device's optical sensor is calibrated (factory illuminationmode/preprocessing) to a
++    // specific cyan radial-gradient illuminator pattern, not a flat fill - recovered by dumping
++    // the decoded illuminatorBitmap straight out of stock com.vivo.fingerprintui's ashmem-backed
++    // Bitmap allocations (com.android.server.biometrics.sensors.fingerprint.hidl.IconPolicy /
++    // libvivo_servers.so decode it from an encrypted asset we don't have the cipher for, but the
++    // decoded pixels are what actually matters here). Falls back to the flat AOSP oval fill if
++    // this drawable is ever missing (e.g. on a build for a different device/sensor).
++    @Nullable private final Drawable mIlluminatorBitmap;
++
+     public UdfpsSurfaceView(Context context, AttributeSet attrs) {
+         super(context, attrs);
+ 
+@@ -78,6 +88,7 @@ public class UdfpsSurfaceView extends SurfaceView implements SurfaceHolder.Callb
+         mSensorPaint.setStyle(Paint.Style.FILL);
+ 
+         mUdfpsIconPressed = context.getDrawable(R.drawable.udfps_icon_pressed);
++        mIlluminatorBitmap = context.getDrawable(R.drawable.udfps_illuminator_vivo);
      }
  
-     private void updateTouchListener() {
+     @Override public void surfaceCreated(SurfaceHolder holder) {
+@@ -141,14 +152,20 @@ public class UdfpsSurfaceView extends SurfaceView implements SurfaceHolder.Callb
+         Canvas canvas = null;
+         try {
+             canvas = mHolder.lockCanvas();
+-            mUdfpsIconPressed.setBounds(
++            Rect bounds = new Rect(
+                     Math.round(sensorRect.left),
+                     Math.round(sensorRect.top),
+                     Math.round(sensorRect.right),
+                     Math.round(sensorRect.bottom)
+             );
++            if (mIlluminatorBitmap != null) {
++                mIlluminatorBitmap.setBounds(bounds);
++                mIlluminatorBitmap.draw(canvas);
++            } else {
++                canvas.drawOval(sensorRect, mSensorPaint);
++            }
++            mUdfpsIconPressed.setBounds(bounds);
+             mUdfpsIconPressed.draw(canvas);
+-            canvas.drawOval(sensorRect, mSensorPaint);
+         } finally {
+             // Make sure the surface is never left in a bad state.
+             if (canvas != null) {
 diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/Vivo1907NUdfpsHbmProvider.java b/packages/SystemUI/src/com/android/systemui/biometrics/Vivo1907NUdfpsHbmProvider.java
 new file mode 100644
 index 000000000000..534122da0628
