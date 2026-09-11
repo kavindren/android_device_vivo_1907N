@@ -3,4 +3,17 @@
     <integer name="config_udfpsHbmType">0</integer>
     <string name="config_udfpsHbmProviderComponent" translatable="false">com.android.systemui.biometrics.Vivo1907NUdfpsHbmProvider</string>
     <color name="config_udfpsColor">#ff40f8ff</color>
+
+    <!-- AOSP's default (280, see frameworks/base/packages/SystemUI/res/values/config.xml) is a
+         raw pixel value (despite its "in dp" comment - integer resources aren't density-scaled)
+         sized for Pixel-class screens with plenty of room below the sensor. Our sensor sits at
+         y=2100 on a 2340px-tall panel - only 145px of clearance to the bottom edge. The enroll
+         overlay window is sized 2*sensorRadius + 2*this value; with the AOSP default that window
+         overflows the bottom of the screen by 135px, and WindowManager clamps the whole window
+         (position AND its content, including the illumination dot drawn inside it) back
+         on-screen - shifting the real touch/illumination target 135px above the physical sensor.
+         Confirmed empirically: measured illumination dot center at (540, 1965) instead of the
+         configured (540, 2100) with the AOSP default. 130 leaves a small safety margin under the
+         145px hard limit. -->
+    <integer name="config_udfpsEnrollProgressBar">130</integer>
 </resources>
