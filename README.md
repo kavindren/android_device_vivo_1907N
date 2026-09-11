@@ -50,7 +50,7 @@ The tree builds with AOSP test-keys out of the box. For a real build, generate y
 
 ```bash
 mkdir device/vivo/1907N/keys && cd device/vivo/1907N/keys
-for k in releasekey platform shared media networkstack testkey; do
+for k in releasekey platform shared media networkstack testkey verity sdk_sandbox bluetooth; do
   ../../../../development/tools/make_key "$k" '/CN=vivo-1907N/'; done
 openssl genrsa -out avb_recovery.pem 4096
 ```

@@ -11,8 +11,6 @@ type fingerprint_analysis_exec, exec_type, vendor_file_type, file_type;
 type fingerprint_analysis, domain;
 init_daemon_domain(fingerprint_analysis)
 
-type getgameserver_exec, exec_type, vendor_file_type, file_type;
-type getgameserver, domain;
 init_daemon_domain(getgameserver)
 
 type hal_bbkts_default_exec, exec_type, vendor_file_type, file_type;
@@ -89,8 +87,6 @@ type hal_vperf_default_exec, exec_type, vendor_file_type, file_type;
 type hal_vperf_default, domain;
 init_daemon_domain(hal_vperf_default)
 
-type mtk_hal_c2_exec, exec_type, vendor_file_type, file_type;
-type mtk_hal_c2, domain;
 init_daemon_domain(mtk_hal_c2)
 hal_server_domain(mtk_hal_c2, hal_codec2)
 hal_client_domain(mtk_hal_c2, hal_codec2)
@@ -109,6 +105,4 @@ type vivo_em_svr_vendor_exec, exec_type, vendor_file_type, file_type;
 type vivo_em_svr_vendor, domain;
 init_daemon_domain(vivo_em_svr_vendor)
 
-type chipinfo_exec, exec_type, vendor_file_type, file_type;
-type chipinfo, domain;
 init_daemon_domain(chipinfo)

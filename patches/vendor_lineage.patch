@@ -1,0 +1,16 @@
+diff --git a/config/BoardConfigKernel.mk b/config/BoardConfigKernel.mk
+index 4c2a268d..8ebe93a4 100644
+--- a/config/BoardConfigKernel.mk
++++ b/config/BoardConfigKernel.mk
+@@ -165,6 +165,11 @@ ifneq ($(KERNEL_NO_GCC), true)
+     endif
+ 
+     KERNEL_MAKE_FLAGS += CPATH="/usr/include:/usr/include/x86_64-linux-gnu" HOSTLDFLAGS="-L/usr/lib/x86_64-linux-gnu -L/usr/lib64 -fuse-ld=lld"
++    # scripts/Makefile.host's cmd_host-csingle (fixdep et al.) doesn't use HOSTLDFLAGS at
++    # all - only host-cmulti/host-cshlib do - so a clang toolchain with no bundled bfd `ld`
++    # fails building fixdep ("Executable ld doesn't exist") unless -fuse-ld=lld is passed via
++    # HOSTCFLAGS instead. 1907N-specific; see los-1907N/vivo BoardConfig.mk notes.
++    KERNEL_MAKE_FLAGS += HOSTCFLAGS="-fuse-ld=lld"
+ 
+     ifeq ($(KERNEL_ARCH),arm64)
+         # Add 32-bit GCC to PATH so that arm-linux-androidkernel-as is available for CONFIG_COMPAT_VDSO

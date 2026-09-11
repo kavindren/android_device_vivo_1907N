@@ -104,11 +104,27 @@ TARGET_KERNEL_HEADER_ARCH := arm64
 TARGET_KERNEL_SOURCE := kernel/vivo/1907N
 TARGET_KERNEL_CONFIG := pd1913f_defconfig
 
+# NOTE: BoardConfigKernel.mk's own KERNEL_MAKE_FLAGS (used by the vendor/lineage
+# "generated_kernel_includes" Soong genrule, i.e. `make headers_install`) needs a matching
+# HOSTCFLAGS="-fuse-ld=lld" fix for the same reason as TARGET_KERNEL_ADDITIONAL_FLAGS below -
+# appending it here from device/vivo/1907N/BoardConfig.mk did NOT take effect (not yet
+# understood why), so the real fix lives directly in vendor/lineage/config/BoardConfigKernel.mk
+# instead, applied as patches/vendor_lineage.patch (run patches/apply-patches.sh after every
+# fresh repo sync, same as the other 6 out-of-tree patches).
 include vendor/lineage/config/BoardConfigKernel.mk
 
-TARGET_KERNEL_CLANG_VERSION := r383902
+TARGET_KERNEL_CLANG_VERSION := r450784d
 KERNEL_LD := LD=ld.lld
-TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS="-fcolor-diagnostics -Wno-unused-function -Wno-unused-variable -march=armv8.2-a -mtune=cortex-a55" LOCALVERSION=-kavindren
+# scripts/Makefile.host's cmd_host-csingle (used for fixdep) doesn't pull in HOSTLDFLAGS at
+# all - only host-cmulti/host-cshlib do. The clang toolchain LOS20 bundles ships no bfd `ld`,
+# so fixdep's build fails ("Executable ld doesn't exist") unless the linker choice is passed
+# via HOSTCFLAGS instead, which cmd_host-csingle does use.
+# -integrated-as: the Makefile above unconditionally appends -no-integrated-as when clang is
+# used, so clang emits .s text for the ancient bundled aarch64-linux-android-4.9 GNU `as` to
+# consume - which chokes on newer clang-14 assembly syntax ("junk at end of line" in
+# init/calibrate.c and presumably others). KCFLAGS is appended last by kbuild, so this
+# re-enables clang's own integrated assembler instead, sidestepping the old `as` entirely.
+TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS="-fcolor-diagnostics -Wno-unused-function -Wno-unused-variable -march=armv8.2-a -mtune=cortex-a55 -integrated-as" LOCALVERSION=-kavindren HOSTCFLAGS="-fuse-ld=lld"
 
 BOARD_CUSTOM_DTBIMG_MK := $(DEVICE_PATH)/dtbimg.mk
 
