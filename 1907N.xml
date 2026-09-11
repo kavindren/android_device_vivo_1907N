@@ -1,38 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
   <!--
-    LineageOS 19.1 local manifest for the vivo V17 Neo (1907N / PD1913F_EX).
+    LineageOS 20 local manifest for the vivo V17 Neo (1907N / PD1913F_EX).
     Copy to .repo/local_manifests/1907N.xml, then `repo sync`.
+
+    Manifest superproject branch is "lineage-20.0" (repo init -b lineage-20.0) - note the
+    ".0", unlike most component repos below which just use "lineage-20".
   -->
   <!-- remote "github" is already defined by LineageOS's own default.xml (fetch=".."
        resolves to https://github.com/), reused here - redefining it makes repo init
        fail with "remote github already exists with different attributes". -->
   <project name="kavindren/android_device_vivo_1907N"
            path="device/vivo/1907N"
-           remote="github" revision="lineage-19.1" />
+           remote="github" revision="lineage-20" />
 
   <project name="kavindren/android_vendor_vivo_1907N"
            path="vendor/vivo/1907N"
-           remote="github" revision="lineage-19.1" />
+           remote="github" revision="lineage-20" />
 
-  <!-- Kernel: 4.14.336 merge branch. master is pinned at d27b3c4e8.
+  <!-- Kernel: still 4.14.336 (stable-merge-414336's content, branched as lineage-20) - no
+       kernel major-version bump needed for LOS 20 on MT6768, see the
+       vivo-source-mirror-kernels session memory (mt6768-dev carries Redmi Note 9/Redmi 9,
+       same chip, all the way to lineage-22.2 on kernel 4.14.320; ours is 4.14.336).
        sync-s: pull the KernelSU-Next submodule (drivers/kernelsu -> ../KernelSU-Next/kernel);
        without it `make pd1913f_defconfig` dies on "can't open drivers/kernelsu/Kconfig". -->
   <project name="kavindren/android_kernel_vivo_pd1913f"
            path="kernel/vivo/1907N"
-           remote="github" revision="stable-merge-414336"
+           remote="github" revision="lineage-20"
            sync-s="true" />
 
   <!--
     Common MediaTek SELinux policy pulled in by device/vivo/1907N/BoardConfig.mk.
-    LineageOS's own android_device_mediatek_sepolicy_vndr only has branches from
-    lineage-20 onward; for lineage-19.1 (Android 12) MT6768 device trees the
-    community convention (used by Redmi-MT6768's merlinx/lava/mt6768-common
-    lineage-19.1 trees) is to pull the StatiXOS fork's "sc" branch instead.
+    Unlike lineage-19.1 (which had to use the StatiXOS community fork's "sc" branch, since
+    upstream LineageOS/android_device_mediatek_sepolicy_vndr had no branch before
+    lineage-20), LOS 20 can use the real upstream repo directly - it has a genuine
+    lineage-20 branch now.
   -->
-  <remote name="statix" fetch="https://github.com/StatiXOS" />
   <project path="device/mediatek/sepolicy_vndr"
-           name="android_device_mediatek_sepolicy_vndr"
-           remote="statix"
-           revision="sc" />
+           name="LineageOS/android_device_mediatek_sepolicy_vndr"
+           remote="github"
+           revision="lineage-20" />
 </manifest>
