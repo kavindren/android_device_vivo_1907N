@@ -162,3 +162,5 @@ get_prop(rild, vendor_vgc_prop)
 dontaudit gmscore_app debug_mtk_gpud_prop:file r_file_perms;
 
 get_prop(epdg_wod, radio_prop)
+
+get_prop(hal_drm_widevine, ro_vendor_mtk_trustonic_tee_prop)
