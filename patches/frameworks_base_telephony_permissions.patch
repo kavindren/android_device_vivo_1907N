@@ -1,0 +1,27 @@
+diff --git a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
+index d69247743840..87e1a0a58bbc 100644
+--- a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
++++ b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
+@@ -193,6 +193,22 @@ public final class TelephonyPermissions {
+         return false;
+     }
+ 
++    /**
++     * Check whether the given subscription is associated with the given user.
++     *
++     * LineageOS's telephony/common (this file) doesn't implement per-user subscription
++     * association (a multi-user/enterprise AOSP feature), but packages/services/Telephony's
++     * lineage-20.0/21.0 branches already call this expecting it to exist. Since this device
++     * class doesn't restrict subscriptions by user, always allow - equivalent to the
++     * pre-this-check behavior.
++     *
++     * @return {@code true} - always, on a build with no per-user subscription restriction.
++     */
++    public static boolean checkSubscriptionAssociatedWithUser(Context context, int subId,
++            UserHandle callingUserHandle) {
++        return true;
++    }
++
+     /**
+      * Check whether the app with the given pid/uid can read phone state, or has carrier
+      * privileges on any active subscription.
