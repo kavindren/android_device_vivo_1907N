@@ -1,3 +1,4 @@
+type nfc_vendor_data_file, file_type, data_file_type;
 type vendor_em_data_file, file_type, data_file_type;
 type vivo_sar_sensor, dev_type;
 type aiservice_res_data_file, file_type, vendor_file_type;
