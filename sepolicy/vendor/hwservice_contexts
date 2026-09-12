@@ -18,7 +18,6 @@ vendor.vivo.hardware.configstore::IVivoConfigStore              u:object_r:hal_v
 vendor.factory.hardware.vivoem::IVivoEm                         u:object_r:hal_vivoem_hwservice:s0
 vendor.vivo.hardware.vperf::IVPerf                              u:object_r:hal_vperf_hwservice:s0
 vendor.vivo.hardware.wifi.hostapd::IVivoHostapd                 u:object_r:hal_vivohostapd_hwservice:s0
-vendor.mediatek.hardware.composer_ext::IComposerExt              u:object_r:hal_composer_ext_hwservice:s0
 vendor.factory.hardware.vivoatcmd::IVivoAtcmd                    u:object_r:hal_vivoatcmd_hwservice:s0
 vendor.nxp.nxpnfclegacy::INxpNfcLegacy                          u:object_r:hal_nfc_hwservice:s0
 vendor.vivo.hardware.biometrics.fingerprint::IBiometricsFingerprintExt  u:object_r:hal_vivofingerprintext_hwservice:s0
