@@ -1,0 +1,42 @@
+diff --git a/Android.bp b/Android.bp
+index a716600..eff5914 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -63,8 +63,11 @@ cc_library_shared {
+ cc_library_shared {
+     name: "android.hardware.gnss-V1-ndk_platform",
+     shared_libs: ["android.hardware.gnss-V1-ndk"],
+-    system_ext_specific: true,
+-    vendor_available: true,
++    // vivo/1907N: this device's own stock android.hardware.gnss-service.mediatek is a vendor-
++    // partition prebuilt that needs this exact filename in ITS linker namespace, which can only
++    // see /vendor/lib(64) (and /odm), not /system_ext - system_ext_specific here meant the file
++    // was unreachable to it. vendor-only install instead of system_ext+vendor_available.
++    vendor: true,
+ }
+ 
+ cc_library_shared {
+@@ -133,8 +136,9 @@ cc_library_shared {
+ cc_library_shared {
+     name: "android.hardware.power-V2-ndk_platform",
+     shared_libs: ["android.hardware.power-V2-ndk"],
+-    system_ext_specific: true,
+-    vendor_available: true,
++    // vivo/1907N: vendor.mediatek.hardware.mtkpower@1.0-service needs this in its own vendor-
++    // partition linker namespace - see the gnss-V1-ndk_platform comment above.
++    vendor: true,
+ }
+ 
+ cc_library_shared {
+@@ -182,8 +186,9 @@ cc_library_shared {
+ cc_library_shared {
+     name: "android.hardware.vibrator-V2-ndk_platform",
+     shared_libs: ["android.hardware.vibrator-V2-ndk"],
+-    system_ext_specific: true,
+-    vendor_available: true,
++    // vivo/1907N: android.hardware.vibrator-service.mediatek needs this in its own vendor-
++    // partition linker namespace - see the gnss-V1-ndk_platform comment above.
++    vendor: true,
+ }
+ 
+ cc_library_shared {
