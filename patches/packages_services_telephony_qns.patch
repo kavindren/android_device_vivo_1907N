@@ -1,0 +1,33 @@
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 6a97246fe..f3bc33ab9 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -585,6 +585,28 @@
+             </intent-filter>
+         </service>
+ 
++        <!-- vivo 1907N IMS bring-up: AccessNetworksManager falls back to a legacy (no dedicated
++             IWLAN service) mode whenever config_qualified_networks_service_package resolves to
++             no bound service - which is silently the case here, since AOSP itself never ships a
++             concrete QualifiedNetworksService and this device's own config_qualified_networks_
++             service_class is empty too (confirmed identical to stock - the class name is meant
++             to be found by this manifest's own intent-filter, not the resource string). Without
++             it, com.mediatek.ims's network requests for the IMS capability never get answered
++             and the "ims" APN never activates, so SIP registration never has anything to
++             register over - confirmed via a live boot+call capture (zero SETUP_DATA_CALL for
++             the ims APN, zero sipRegInfoInd) cross-checked against a real stock Funtouch log
++             (both mediatek-telephony-common.jar, byte-identical to stock, already ships
++             com.mediatek.internal.telephony.dataconnection.MtkQualifiedNetworksService as a
++             PRODUCT_BOOT_JARS class - it was just never registered to receive this intent).
++             Class itself needs no device-tree change; only this manifest entry was missing. -->
++        <service android:name="com.mediatek.internal.telephony.dataconnection.MtkQualifiedNetworksService"
++            android:exported="true"
++            android:permission="android.permission.BIND_TELEPHONY_QUALIFIED_NETWORKS_SERVICE" >
++            <intent-filter>
++                <action android:name="android.telephony.data.QualifiedNetworksService" />
++            </intent-filter>
++        </service>
++
+         <activity
+             android:name=".settings.RadioInfo"
+             android:label="@string/phone_info_label"
