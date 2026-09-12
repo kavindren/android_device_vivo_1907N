@@ -72,4 +72,23 @@
     <integer translatable="false" name="config_brightness_ramp_rate_fast">450</integer>
 
     <bool name="config_useDevInputEventForAudioJack">true</bool>
+
+    <!-- vivo 1907N IMS bring-up: WWAN (cellular) DataService/NetworkService already resolve to
+         com.android.phone via AOSP's own defaults (config_telephony.xml), which is why
+         CellularDataService already worked. WLAN (IWLAN/VoWiFi) has no AOSP default at all -
+         these four are the exact values from stock's real framework-res.apk (decoded from the
+         real device, not guessed), pointing at the same mediatek-telephony-common.jar classes
+         we already ship byte-identical to stock as PRODUCT_BOOT_JARS - see the matching
+         <service> entries added to packages/services/Telephony's AndroidManifest.xml. Without
+         these, DataServiceManager/AccessNetworksManager can never bind an IWLAN data or network
+         service, so VoWiFi can never come up - and per the user's own description of stock's
+         actual behavior, VoLTE here apparently never registers cold either; it bootstraps via a
+         real VoWiFi registration (connect wifi, wait for the icon, disconnect) which then
+         survives the handover back to cellular. If that's really how this carrier/device
+         combination works, IWLAN plumbing isn't a separate "later" feature - it may be required
+         to get ANY IMS registration at all. -->
+    <string name="config_wlan_data_service_class" translatable="false">com.mediatek.internal.telephony.dataconnection.IwlanDataService</string>
+    <string name="config_wlan_data_service_package" translatable="false">com.android.phone</string>
+    <string name="config_wlan_network_service_class" translatable="false">com.mediatek.internal.telephony.IWlanNetworkService</string>
+    <string name="config_wlan_network_service_package" translatable="false">com.android.phone</string>
 </resources>

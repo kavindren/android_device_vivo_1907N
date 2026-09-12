@@ -1,11 +1,36 @@
 diff --git a/AndroidManifest.xml b/AndroidManifest.xml
-index 6a97246fe..f3bc33ab9 100644
+index 6a97246fe..96fd4f1b6 100644
 --- a/AndroidManifest.xml
 +++ b/AndroidManifest.xml
-@@ -585,6 +585,28 @@
+@@ -585,6 +585,53 @@
              </intent-filter>
          </service>
  
++        <!-- vivo 1907N IMS bring-up: the IWLAN counterparts to CellularNetworkService/
++             CellularDataService above - needed for VoWiFi specifically (DataServiceManager
++             binds these by explicit package+class from config_wlan_data_service_package/class,
++             see the matching overlay in device/vivo/1907N/overlay/.../config.xml, not by this
++             intent-filter alone the way QualifiedNetworksService is). Per the user's own
++             account, even on real stock this device/carrier combination apparently never
++             registers VoLTE cold - it bootstraps via a real VoWiFi registration first (connect
++             wifi, wait for the icon, disconnect), which then survives the handover back to
++             cellular. If true, this pair may be required for ANY IMS registration here, not
++             just WFC specifically. -->
++        <service android:name="com.mediatek.internal.telephony.IWlanNetworkService"
++            android:exported="true"
++            android:permission="android.permission.BIND_TELEPHONY_NETWORK_SERVICE" >
++            <intent-filter>
++                <action android:name="android.telephony.NetworkService" />
++            </intent-filter>
++        </service>
++        <service android:name="com.mediatek.internal.telephony.dataconnection.IwlanDataService"
++            android:exported="true"
++            android:permission="android.permission.BIND_TELEPHONY_DATA_SERVICE" >
++            <intent-filter>
++                <action android:name="android.telephony.data.DataService" />
++            </intent-filter>
++        </service>
++
 +        <!-- vivo 1907N IMS bring-up: AccessNetworksManager falls back to a legacy (no dedicated
 +             IWLAN service) mode whenever config_qualified_networks_service_package resolves to
 +             no bound service - which is silently the case here, since AOSP itself never ships a
