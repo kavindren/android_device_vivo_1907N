@@ -1,3 +1,9 @@
+# hal_atci is a vivo-custom HAL name (AT command interface), not an AOSP one - has to be
+# self-declared via hal_attribute() before hal_client_domain() can reference hal_atci_client.
+# Wasn't caught before switching to upstream sepolicy_vndr; not sure what made this compile
+# previously (possibly something in the StatiXOS "sc" fork we no longer use).
+hal_attribute(atci)
+
 type atcid_vendor_exec, exec_type, vendor_file_type, file_type;
 type atcid_vendor, domain;
 init_daemon_domain(atcid_vendor)
