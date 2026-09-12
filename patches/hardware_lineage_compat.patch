@@ -1,5 +1,5 @@
 diff --git a/Android.bp b/Android.bp
-index a716600..eff5914 100644
+index a716600..f757625 100644
 --- a/Android.bp
 +++ b/Android.bp
 @@ -63,8 +63,11 @@ cc_library_shared {
@@ -36,6 +36,18 @@ index a716600..eff5914 100644
 -    vendor_available: true,
 +    // vivo/1907N: android.hardware.vibrator-service.mediatek needs this in its own vendor-
 +    // partition linker namespace - see the gnss-V1-ndk_platform comment above.
++    vendor: true,
+ }
+ 
+ cc_library_shared {
+@@ -196,8 +201,9 @@ cc_library_shared {
+ cc_library_shared {
+     name: "android.system.keystore2-V1-ndk_platform",
+     shared_libs: ["android.system.keystore2-V1-ndk"],
+-    system_ext_specific: true,
+-    vendor_available: true,
++    // vivo/1907N: wpa_supplicant (via libkeystore-engine-wifi-hidl.so) needs this in its own
++    // vendor-partition linker namespace - see the gnss-V1-ndk_platform comment above.
 +    vendor: true,
  }
  
