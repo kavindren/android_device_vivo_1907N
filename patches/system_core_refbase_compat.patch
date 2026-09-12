@@ -1,0 +1,31 @@
+diff --git a/libutils/RefBase.cpp b/libutils/RefBase.cpp
+index 4ddac3d2e..86488a8e1 100644
+--- a/libutils/RefBase.cpp
++++ b/libutils/RefBase.cpp
+@@ -445,8 +445,24 @@ void RefBase::incStrongRequireStrong(const void* id) const {
+     refs->addStrongRef(id);
+     const int32_t c = refs->mStrong.fetch_add(1, std::memory_order_relaxed);
+ 
+-    LOG_ALWAYS_FATAL_IF(c <= 0 || c == INITIAL_STRONG_VALUE,
+-                        "incStrongRequireStrong() called on %p which isn't already owned", refs);
++    // vivo/1907N: c == INITIAL_STRONG_VALUE was LOG_ALWAYS_FATAL_IF (hard abort). Several
++    // closed-source MTK vendor blobs (libaalservice.so's AALService, libmtkcam_device3_app.so's
++    // AppStreamMgr::CallbackHandler) call Thread::run() on `this` from inside their own
++    // constructor - a real bug (no sp<> has ever wrapped the object yet, so it's still at
++    // INITIAL_STRONG_VALUE), but one that was apparently silent/non-fatal on LOS19.1/Android
++    // 12's older libutils.so, since these exact blobs worked fine there. This specific case is
++    // exactly what incStrong() (the non-"RequireStrong" sibling, a few lines up) already handles
++    // safely by design - do the same instead of aborting, so unfixable closed-source blobs keep
++    // working. A genuinely negative/over-released count (c <= 0, not equal to
++    // INITIAL_STRONG_VALUE) is a different, more dangerous class of bug and stays fatal.
++    LOG_ALWAYS_FATAL_IF(c <= 0 && c != INITIAL_STRONG_VALUE,
++                        "incStrongRequireStrong() called on %p too many times", refs);
++    if (c == INITIAL_STRONG_VALUE) {
++        int32_t old __unused =
++                refs->mStrong.fetch_sub(INITIAL_STRONG_VALUE, std::memory_order_relaxed);
++        ALOG_ASSERT(old > INITIAL_STRONG_VALUE, "0x%x too small", old);
++        refs->mBase->onFirstRef();
++    }
+ #if PRINT_REFS
+     ALOGD("incStrong (requiring strong) of %p from %p: cnt=%d\n", this, id, c);
+ #endif
