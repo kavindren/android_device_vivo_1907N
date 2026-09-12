@@ -166,6 +166,16 @@ binder_call(atcid_vendor, hwservicemanager)
 allow atcid_vendor vendor_shell_exec:file execute_no_trans;
 
 # --- vendor_shell ---
+# LOS20 bring-up: explicit `seclabel u:r:vendor_shell:s0` on a service (init.vivo.fingerprint.rc's
+# vivo-fingerprint-sh, init.vivo.nfc.rc's vivo-nfc-sh, the gf9518 restart-counter script) needs
+# init itself to be allowed to transition into that domain - a real, distinct permission from
+# whatever lets other processes exec their way into vendor_shell via the normal file-based
+# vendor_shell_exec route. Confirmed via a real /cache logcat capture: "avc: denied { transition }
+# ... scontext=u:r:init:s0 tcontext=u:r:vendor_shell:s0 tclass=process" - this is what was still
+# causing status 127 even after fixing the vivo-fingerprint-sh_exec file-read permission below.
+# Same pattern AOSP itself uses for init's own explicit-seclabel case (system/sepolicy/private/
+# init.te: "allow init su:process transition;").
+allow init vendor_shell:process transition;
 allow vendor_shell vendor_file:file execute_no_trans;
 allow vendor_shell sysfs:file { getattr open read };
 # LOS20 bring-up: vivo-fingerprint-sh_exec is its own distinct type (device/vivo/1907N/sepolicy/
