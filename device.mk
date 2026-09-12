@@ -57,8 +57,14 @@ PRODUCT_PACKAGES += \
 PRODUCT_SOONG_NAMESPACES += \
     $(LOCAL_PATH)
 
+# persist.sys.usb.config=mtp,adb below is the same bring-up rationale as PRODUCT_ADB_KEYS:
+# without it, USB enumerates as MTP-only by default and adb is unreachable until Developer
+# Options > USB debugging is toggled once via touch - not reliably possible while diagnosing a
+# boot-time hang. It's a regular (not read-only) property, so this default only takes effect
+# before it's ever explicitly written; any later toggle in Settings overrides it as normal.
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
-    sys.usb.controller=musb-hdrc
+    sys.usb.controller=musb-hdrc \
+    persist.sys.usb.config=mtp,adb
 
 PRODUCT_PACKAGES += \
     fstab.mt6768
