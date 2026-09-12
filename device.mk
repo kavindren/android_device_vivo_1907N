@@ -228,9 +228,14 @@ $(call inherit-product-if-exists, vendor/vivo/1907N/1907N-vendor.mk)
 PRODUCT_PACKAGES += \
     TetheringWifiRegexOverlay
 
-PRODUCT_PACKAGES += \
-    FaceCaptureService \
-    default-permissions-facecapture.xml
+# TEMPORARILY DISABLED for LOS20: FaceCaptureService calls FaceManager.getShareMemoryFd()/
+# sendCommand() added by our frameworks/base patch (patches/frameworks_base.patch), which
+# doesn't apply cleanly against LOS20's newer FaceManager.java yet (see patches/README.md -
+# deferred until after basic boot works, per the same plan as the Settings Face Unlock UI
+# patch). Re-enable once that patch is rebased.
+#PRODUCT_PACKAGES += \
+#    FaceCaptureService \
+#    default-permissions-facecapture.xml
 
 # Lift-to-wake via the vivo raiseup_detect sensor (AOSP pickup gesture can't see it).
 PRODUCT_PACKAGES += \
