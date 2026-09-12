@@ -94,7 +94,12 @@ allow hal_vperf_default hal_vperf_hwservice:hwservice_manager { add find };
 allow hal_vperf_default hidl_base_hwservice:hwservice_manager add;
 binder_call(hal_vperf_default, hwservicemanager)
 allow hal_vperf_default mtk_hal_power:binder call;
-allow hal_vperf_default mtk_hal_power_hwservice:hwservice_manager find;
+# sepolicy_vndr's hwservice_contexts maps vendor.mediatek.hardware.mtkpower::IMtkPerf (and
+# IMtkPower) to hal_power_hwservice, not mtk_hal_power_hwservice - that type is declared in
+# sepolicy_vndr's hwservice.te but no longer used by any hwservice_contexts entry there, so this
+# rule was a silent no-op (missed during the sepolicy_vndr dedup - see los-1907N-los20-port
+# session memory).
+allow hal_vperf_default hal_power_hwservice:hwservice_manager find;
 
 # --- hal_vivoconfigstore_default ---
 allow hal_vivoconfigstore_default hal_vivoconfigstore_hwservice:hwservice_manager { add find };

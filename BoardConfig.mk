@@ -230,15 +230,6 @@ TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
 
 BOARD_VNDK_VERSION := current
 
-# Several stock MTK vendor HAL blobs (e.g. vendor.mediatek.hardware.mtkpower@1.0-service, which
-# hangs PowerManagerService/boot forever if missing - see los-1907N-los20-port session memory)
-# are prebuilt against Android 12's old AIDL "ndk_platform" backend naming
-# (android.hardware.<x>-V<n>-ndk_platform.so), which Soong stopped building by default once the
-# "ndk" backend itself became VNDK-stable and absorbed that role. This flag makes Soong also
-# build+install the legacy -ndk_platform-suffixed libs for every frozen AIDL version, purely for
-# these old blobs to link against - see build/make/core/soong_config.mk.
-NEED_AIDL_NDK_PLATFORM_BACKEND := true
-
 -include vendor/vivo/1907N/BoardConfigVendor.mk
 
 BOARD_ROOT_EXTRA_FOLDERS := system_root
