@@ -168,6 +168,14 @@ allow atcid_vendor vendor_shell_exec:file execute_no_trans;
 # --- vendor_shell ---
 allow vendor_shell vendor_file:file execute_no_trans;
 allow vendor_shell sysfs:file { getattr open read };
+# LOS20 bring-up: vivo-fingerprint-sh_exec is its own distinct type (device/vivo/1907N/sepolicy/
+# vendor/vivo_custom_hal_stubs.te), not literally vendor_file - merely sharing the
+# vendor_file_type attribute does not pull in rules written for the concrete vendor_file type.
+# Without this, `sh /vendor/bin/init.vivo.fingerprint.sh` (invoked from init.vivo.fingerprint.rc,
+# now running as vendor_shell via its own seclabel fix) can't open/read the script at all and
+# exits with status 127 - confirmed via a real /cache dmesg capture, no avc denial logged
+# (silently dontaudit'd somewhere in this attribute chain).
+allow vendor_shell vivo-fingerprint-sh_exec:file r_file_perms;
 
 allow mtk_hal_power proc_perfmgr:file ioctl;
 allow mtk_hal_power cpu_dma_latency_device:chr_file { open write };
