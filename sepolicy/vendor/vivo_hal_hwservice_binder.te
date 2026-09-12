@@ -176,6 +176,16 @@ allow atcid_vendor vendor_shell_exec:file execute_no_trans;
 # Same pattern AOSP itself uses for init's own explicit-seclabel case (system/sepolicy/private/
 # init.te: "allow init su:process transition;").
 allow init vendor_shell:process transition;
+# LOS20 bring-up: the explicit-seclabel transition above is necessary but not sufficient - AOSP's
+# init.te also grants these three alongside "transition" for its own su-domain case. Without them
+# init still starts the service (transition itself is allowed) but three more denials get logged
+# on every start: { noatsecure } (don't clear the ptrace/AT_SECURE-relevant execve state across
+# the transition), { rlimitinh } and { siginh } (inherit rlimits/pending-signal state across
+# exec). Confirmed via a real /cache logcat capture on every vendor_shell-seclabeled service's
+# start (vivo-fingerprint-sh, vivo-nfc-sh, gf9518-restart-counter-sh) - non-fatal (init proceeds
+# with kernel defaults either way), found opportunistically while diagnosing something else, kept
+# because it's a real remaining gap in the same fix.
+allow init vendor_shell:process { noatsecure rlimitinh siginh };
 allow vendor_shell vendor_file:file execute_no_trans;
 allow vendor_shell sysfs:file { getattr open read };
 # LOS20 bring-up: vivo-fingerprint-sh_exec is its own distinct type (device/vivo/1907N/sepolicy/
