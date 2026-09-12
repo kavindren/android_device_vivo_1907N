@@ -187,6 +187,10 @@ persist.vendor.vivo.dota_info5 u:object_r:vendor_vivo_defend_prop:s0
 vendor.vivo.gnss.agps.    u:object_r:vendor_vgnss_prop:s0
 
 persist.vendor.camera.  u:object_r:vendor_camera_mtk_prop:s0
+# camerahalserver hard-aborts (SIGABRT) if this setprop call itself fails - real crash, found via
+# live adb logcat, not just a benign denial. No persist. prefix like the entry above, so it
+# needs its own rule; mtk_hal_camera can already set_prop(vendor_camera_mtk_prop).
+vendor.camera.crcError  u:object_r:vendor_camera_mtk_prop:s0
 
 # vivo wanglimin add for JIO_SUBSIDYLOCK begin
 
