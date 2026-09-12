@@ -1,0 +1,23 @@
+diff --git a/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java b/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
+index 23d913cba733..0290f1508212 100644
+--- a/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
++++ b/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
+@@ -161,7 +161,17 @@ public final class UsbPortHidl implements UsbPortHal {
+ 
+     static boolean isServicePresent(IndentingPrintWriter pw) {
+         try {
+-            IUsb.getService(true);
++            // getService(true) (retry=true) blocks/retries forever if the HAL is declared but
++            // never actually registers - this device has no android.hardware.usb@1.0-service at
++            // all, so hwservicemanager just keeps lazy-HAL-retrying it every second, and this
++            // "presence check" never returns. That permanently hangs the calling thread
++            // (system_server's "android.display" HandlerThread, via UsbService$Lifecycle.
++            // onBootPhase()'s CompletableFuture.join() -> UsbPortManager construction), which is
++            // exactly what Android's own Watchdog then kills every boot (see
++            // los-1907N-los20-port session memory). connectToProxy() below already correctly
++            // uses the non-retrying getService() for the real connection; this presence check
++            // must too.
++            IUsb.getService();
+         } catch (NoSuchElementException e) {
+             logAndPrintException(pw, "connectToProxy: usb hidl hal service not found.", e);
+             return false;
