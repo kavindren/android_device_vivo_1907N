@@ -1,6 +1,3 @@
-type vendor_mtk_ctl_muxreport-daemon_prop, property_type, vendor_property_type;
-type vendor_mtk_ctl_ril-daemon-mtk_prop, property_type, vendor_property_type;
-type vendor_mtk_ctl_ril-proxy_prop, property_type, vendor_property_type;
 type vendor_vgc_prop, property_type, vendor_property_type;
 type vendor_fuelsummary_prop, property_type, vendor_property_type;
 type framework_svadump_prop, property_type, vendor_property_type;
