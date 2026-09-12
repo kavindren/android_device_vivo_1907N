@@ -12,6 +12,12 @@ PRODUCT_SHIPPING_API_LEVEL := 28
 
 PRODUCT_SET_DEBUGFS_RESTRICTIONS := false
 
+# Pre-authorize kavindren's own adb key (userdebug/eng only, honored by build/make/core/
+# product_config.mk) so adb works immediately on first boot without needing to tap through
+# the RSA authorization dialog on-screen - useful during bring-up when the UI itself may hang
+# or crash-loop before that dialog can be reached/tapped.
+PRODUCT_ADB_KEYS := $(LOCAL_PATH)/kavindren.adbkey.pub
+
 # Device-specific signing keys (keys/, git-ignored). Falls back to AOSP test-keys when a
 # fresh checkout has no keys/ — see patches/../README. Generate your own with
 # development/tools/make_key for a real build.
