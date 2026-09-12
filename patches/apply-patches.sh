@@ -20,10 +20,12 @@ BASE_FILE="$HERE/BASE"
 
 names=(frameworks_base packages_apps_Settings packages_modules_Connectivity \
        packages_modules_Wifi system_core bootable_recovery vendor_lineage sepolicy_vndr \
-       frameworks_base_telephony_permissions hardware_lineage_compat)
+       frameworks_base_telephony_permissions hardware_lineage_compat \
+       frameworks_base_storagemanager_compat)
 paths=(frameworks/base packages/apps/Settings packages/modules/Connectivity \
        packages/modules/Wifi system/core bootable/recovery vendor/lineage \
-       device/mediatek/sepolicy_vndr frameworks/base hardware/lineage/compat)
+       device/mediatek/sepolicy_vndr frameworks/base hardware/lineage/compat \
+       frameworks/base)
 
 fail=0
 for i in "${!names[@]}"; do
