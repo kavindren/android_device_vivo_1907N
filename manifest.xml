@@ -545,6 +545,17 @@
         </interface>
         <fqname>@1.1::INvram/default</fqname>
     </hal>
+    <!-- vendor.mediatek.hardware.pq@2.2-service (pq-2-2) SIGABRTs on startup on LOS20
+         (incStrongRequireStrong() bug in libaalservice.so, see the pq-2-2.rc "disabled" +
+         los-1907N-los20-port session memory) and crash-loops forever. Merely marking the
+         service "disabled" wasn't enough - hwservicemanager's lazy-HAL mechanism
+         (ctl.interface_start) restarts even a disabled service the moment some client's
+         getService() call for it blocks-and-retries, which happens ONLY because this HAL is
+         listed here - and that client (something in system_server's "android.display" handler
+         thread, most likely DisplayManagerService's color/PQ pipeline) then hangs forever
+         waiting on a service that can never stay up, until Android's own Watchdog kills
+         system_server. Removing the manifest entry makes getService() fail immediately instead
+         of blocking, since the interface is no longer "expected" per VINTF.
     <hal format="hidl">
         <name>vendor.mediatek.hardware.pq</name>
         <transport>hwbinder</transport>
@@ -555,6 +566,7 @@
         </interface>
         <fqname>@2.13::IPictureQuality/default</fqname>
     </hal>
+    -->
     <hal format="hidl">
         <name>vendor.mediatek.hardware.videotelephony</name>
         <transport>hwbinder</transport>
