@@ -2,10 +2,10 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="security_settings_face_enroll_introduction_info_title">Учтите</string>
     <string name="security_settings_face_enroll_introduction_info_glasses">Фейсконтроль работает с большинством очков и солнцезащитных очков, но может не распознать вас, если лицо чем-то закрыто</string>
-    <string name="security_settings_face_enroll_introduction_info_looking">Телефон может разблокировать кто-то другой, если вы не смотрите прямо на экран</string>
-    <string name="security_settings_face_enroll_introduction_info_gaze">Требовать, чтобы глаза были открыты и направлены на телефон для разблокировки</string>
+    <string name="security_settings_face_enroll_introduction_info_looking" product="default">Телефон может разблокировать кто-то другой, если вы не смотрите прямо на экран</string>
+    <string name="security_settings_face_enroll_introduction_info_gaze" product="default">Требовать, чтобы глаза были открыты и направлены на телефон для разблокировки</string>
     <string name="security_settings_face_enroll_introduction_how_title">Как это работает</string>
-    <string name="security_settings_face_enroll_introduction_how_message">Фейсконтроль использует фронтальную камеру для сканирования лица. Лучше всего работает при хорошем освещении, если держать телефон на уровне глаз на обычном расстоянии вытянутой руки.</string>
+    <string name="security_settings_face_enroll_introduction_how_message" product="default">Фейсконтроль использует фронтальную камеру для сканирования лица. Лучше всего работает при хорошем освещении, если держать телефон на уровне глаз на обычном расстоянии вытянутой руки.</string>
     <string name="security_settings_face_enroll_introduction_control_title">Вы всё контролируете</string>
-    <string name="security_settings_face_enroll_introduction_control_message">Данные лица можно удалить в любой момент в настройках. Фейсконтроль используется только для разблокировки телефона и подтверждения действий, которые вы одобряете.</string>
+    <string name="security_settings_face_enroll_introduction_control_message" product="default">Данные лица можно удалить в любой момент в настройках. Фейсконтроль используется только для разблокировки телефона и подтверждения действий, которые вы одобряете.</string>
 </resources>
