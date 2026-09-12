@@ -1,207 +1,110 @@
 # video c2 log property
-vendor.mtk.c2   u:object_r:vendor_mtk_c2_log_prop:s0
 
 # Telephony Sensitive property
-persist.vendor.radio.ls1icid                  u:object_r:vendor_mtk_telephony_sensitive_prop:s0
-persist.vendor.radio.ls2icid                  u:object_r:vendor_mtk_telephony_sensitive_prop:s0
-persist.vendor.radio.ls3icid                  u:object_r:vendor_mtk_telephony_sensitive_prop:s0
-persist.vendor.radio.ls4icid                  u:object_r:vendor_mtk_telephony_sensitive_prop:s0
-persist.vendor.mtk.provision.mccmnc.          u:object_r:vendor_mtk_telephony_sensitive_prop:s0
-persist.vendor.radio.ss.hashed_last_iccid1    u:object_r:vendor_mtk_telephony_sensitive_prop:s0
-persist.vendor.radio.ss.hashed_last_iccid2    u:object_r:vendor_mtk_telephony_sensitive_prop:s0
-persist.vendor.radio.ss.hashed_last_iccid3    u:object_r:vendor_mtk_telephony_sensitive_prop:s0
-persist.vendor.radio.ss.hashed_last_iccid4    u:object_r:vendor_mtk_telephony_sensitive_prop:s0
 
 # change thermal config
 
-vendor.debug.sf.validate_separate u:object_r:vendor_mtk_graphics_hwc_validate_separate_prop:s0
 
 # MTK GMS
-ro.vendor.soc u:object_r:vendor_mtk_soc_prop:s0
 
 # mtk pq
-ro.vendor.mtk_appgamepq_support    u:object_r:vendor_mtk_pq_ro_prop:s0
-ro.vendor.mtk_gamehdr_support      u:object_r:vendor_mtk_pq_ro_prop:s0
-ro.vendor.pq.                      u:object_r:vendor_mtk_pq_ro_prop:s0
 
-ro.vendor.pref_scale_enable_cfg      u:object_r:vendor_mtk_default_prop:s0
-ro.vendor.mtk_flight_mode_power_off_md  u:object_r:vendor_mtk_default_prop:s0
 
 # MTK App feature
-ro.vendor.net.upload.mark.default u:object_r:vendor_mtk_app_prop:s0
 
 # Wi-Fi Hotspot
-ro.vendor.wifi.sap.concurrent.iface u:object_r:vendor_mtk_wifi_hotspot_prop:s0
 
 # Wi-Fi HAL
-vendor.wlan.firmware.version u:object_r:vendor_mtk_wifi_hal_prop:s0
-vendor.wlan.driver.version u:object_r:vendor_mtk_wifi_hal_prop:s0
 
 # mtk gbe
-vendor.performance.gbe u:object_r:vendor_mtk_gbe_prop:s0
 
 # config no bt consys chip
-ro.vendor.bluetooth.noconsyschip u:object_r:vendor_mtk_default_prop:s0
 
 # mtk gpu property
-vendor.debug.gpu.  u:object_r:vendor_mtk_gpu_prop:s0
-vendor.mali.config u:object_r:vendor_mtk_gpu_prop:s0
-ro.vendor.game_aisr_enable u:object_r:vendor_mtk_gpu_prop:s0
-ro.vendor.mtk.gpu. u:object_r:vendor_mtk_gpu_prop:s0
 
 # mtk hwc property
-ro.vendor.composer_version u:object_r:vendor_mtk_default_prop:s0
 
 #============= mtk sensor property ==============
-ro.vendor.init.sensor.rc u:object_r:vendor_mtk_sensor_prop:s0
-ro.vendor.mtk.sensor.support u:object_r:vendor_mtk_sensor_prop:s0
-ro.vendor.mag.calibration.in.sensorhub u:object_r:vendor_mtk_sensor_prop:s0
-ro.vendor.fusion.algorithm.in.sensorhub u:object_r:vendor_mtk_sensor_prop:s0
 
-vendor.bluetooth.ldac.abr u:object_r:vendor_mtk_default_prop:s0
 
 # input resample latency property
-ro.vendor.input.resample_latency_ms u:object_r:vendor_mtk_input_resample_latency_prop:s0
 
 # allow input report rate property
-ro.vendor.input.touch_report_rate u:object_r:vendor_mtk_input_report_rate_prop:s0
 
 # video property
-vendor.mtkomx.color.convert u:object_r:vendor_mtk_video_prop:s0
 
-ro.vendor.bluetooth.bt_multidevice_perform u:object_r:vendor_mtk_default_prop:s0
 
 # factory mode property
-persist.vendor.factory. u:object_r:vendor_mtk_factory_prop:s0
-vendor.mtk.factory.start u:object_r:vendor_mtk_factory_start_prop:s0
 
-vendor.all.modules.ready u:object_r:vendor_mtk_device_prop:s0
 
-ro.vendor.wlan.standalone.log u:object_r:vendor_mtk_default_prop:s0
 
 #=============mtk eara==============
-vendor.performance.frs u:object_r:vendor_mtk_frs_prop:s0
 
 # mtkperf powerhal memory property
-vendor.sys.vm.      u:object_r:vendor_mtk_vm_prop:s0
 
 # mediaserver support 64-bit
-ro.vendor.mtk_prefer_64bit_proc u:object_r:vendor_mtk_prefer64_prop:s0
 
 #=============mtk bt property====================
-ro.vendor.bluetooth.a2dp_aac_vbr.is_disabled           u:object_r:vendor_mtk_bt_aac_vbr_prop:s0
-persist.vendor.bluetooth.leaudio_mode                  u:object_r:vendor_mtk_default_prop:s0
-persist.vendor.bluetooth.a2dp_src_sink_both_enable     u:object_r:vendor_mtk_default_prop:s0
-persist.vendor.bluetooth.blemesh_enable                u:object_r:vendor_mtk_default_prop:s0
-persist.vendor.bluetooth.mtk_bt_consumer_feature       u:object_r:vendor_mtk_default_prop:s0
-persist.vendor.bluetooth.fw_log_switch                 u:object_r:vendor_mtk_default_prop:s0
 
-vendor.bluetooth.performance. u:object_r:vendor_mtk_bt_perf_prop:s0
 
 # display debug log property
-persist.vendor.debug.hwc.log     u:object_r:vendor_mtk_hwc_debug_log_prop:s0
-vendor.debug.hwc.                u:object_r:vendor_mtk_hwc_debug_log_prop:s0
-vendor.dp.log.enable             u:object_r:vendor_mtk_mdp_debug_log_prop:s0
-vendor.dp.frameChange.disable    u:object_r:vendor_mtk_mdp_debug_log_prop:s0
 
 # neuropilot flag
-ro.vendor.neuropilot.flag u:object_r:vendor_mtk_neuropilot_flag_prop:s0
 
-vendor.rpmb.ready u:object_r:vendor_mtk_rpmb_ready_prop:s0
 
 # customer log path
-ro.vendor.customer_logpath u:object_r:vendor_mtk_default_prop:s0
 
 # android log much detect
 
-persist.vendor.vonr_setting_support u:object_r:vendor_mtk_vonr_support_prop:s0
 
-persist.vendor.mtk.vonr.force.enable u:object_r:vendor_mtk_vonr_force_prop:s0
 
 # vt operator property
-vendor.vt. u:object_r:vendor_mtk_vendor_vt_prop:s0
 
 # TrustKernel add
-ro.vendor.trustkernel. u:object_r:vendor_mtk_trustkernel_tee_prop:s0
 
 # IMS property
-persist.vendor.ims.simulate       u:object_r:vendor_mtk_ims_prop:s0
-ro.vendor.mtk_ims_notification    u:object_r:vendor_mtk_ims_prop:s0
 
 # CTA property
 
-vendor.boostfwk.log.enable      u:object_r:vendor_mtk_boostfwk_log_prop:s0
-vendor.boostfwk.scrollidentify.option  u:object_r:vendor_mtk_boostfwk_scrollidentify_prop:s0
-vendor.boostfwk.display60       u:object_r:vendor_mtk_boostfwk_display60_prop:s0
 
-ro.vendor.mtk_dx_hdcp_support u:object_r:vendor_mtk_dx_hdcp_support_prop:s0
 
 # game server property
-vendor.netdagent.gameserver u:object_r:vendor_mtk_netdagent_gameserver_prop:s0
 
 # relevant property
-ro.vendor.mtk_fast_charging_support u:object_r:vendor_mtk_fast_charging_support_prop:s0
 
 # NFC related property
-vendor.nfc.nfcstackp.enable         u:object_r:vendor_mtk_nfc_nfcstackp_enable_prop:s0
 
 # MTK operator property
 
-persist.vendor.md_c2k_cap_dep_check u:object_r:vendor_mtk_md_c2k_cap_dep_check_prop:s0
 
 # fm 50khz support
 
-ro.vendor.mtk_video_hevc_enc_support  u:object_r:vendor_mtk_camera_prop:s0
-ro.vendor.hdr10plus.enable            u:object_r:vendor_mtk_camera_prop:s0
 
-ro.vendor.mtk_skip_pkg_file           u:object_r:vendor_mtk_pms_prop:s0
 
 # wfd hybrid encode property
 
-vendor.mtk.secure.venc.alive u:object_r:vendor_mtk_secure_venc_prop:s0
 
 # TEE property
-ro.vendor.mtk_trustkernel_tee_support u:object_r:vendor_mtk_trustkernel_tee_prop:s0
 
 # MTK dynamic debug control property
-persist.vendor.em.dy.debug u:object_r:vendor_mtk_em_dy_debug_ctrl_prop:s0
 
 # MTK GWSD property
-ro.vendor.mtk_gwsd_capability u:object_r:vendor_mtk_gwsd_capability_prop:s0
 
 # APUWare debug property
-persist.vendor.apuware.debug. u:object_r:vendor_mtk_apuware_debug_prop:s0
 
-persist.vendor.gsm.netin. u:object_r:vendor_mtk_nwk_opt_prop:s0
 
-vendor.mtk.wfd.enable u:object_r:vendor_mtk_wfd_enable_prop:s0
 
 # mtu property
-persist.vendor.radio.mobile.mtu.sysenv u:object_r:vendor_mtk_em_mtu_prop:s0
 
 # MTK call drop reason report
-ro.vendor.mtk_calldrop_reason u:object_r:vendor_mtk_call_drop_prop:s0
 
-ro.vendor.mtk_sec_video_path_support u:object_r:vendor_mtk_sec_video_path_support_prop:s0
-ro.vendor.mtk_svp_on_mtee_support u:object_r:vendor_mtk_svp_on_mtee_support_prop:s0
 
 # MTK MCF property
-ro.vendor.mtk_mcf_support u:object_r:vendor_mtk_mcf_prop:s0
 
-ro.vendor.aeev.dynamic.switch u:object_r:vendor_mtk_aeev_dynamic_switch_prop:s0
-ro.vendor.aee.convert64       u:object_r:vendor_mtk_ro_aee_prop:s0
-vendor.wo.   u:object_r:vendor_mtk_wod_prop:s0
-persist.vendor.wo.   u:object_r:vendor_mtk_persist_wod_prop:s0
 
 #=============allow volte deamon  ==============
-ctl.vendor.volte_imcb          u:object_r:vendor_mtk_ctl_volte_imcb_prop:s0
-ctl.vendor.volte_stack         u:object_r:vendor_mtk_ctl_volte_stack_prop:s0
-ctl.vendor.volte_ua            u:object_r:vendor_mtk_ctl_volte_ua_prop:s0
-vendor.ril.volte.              u:object_r:vendor_mtk_md_volte_prop:s0
 
 #=============allow MD APP==============
-ro.vendor.md_apps.             u:object_r:vendor_mtk_default_prop:s0
-vendor.md_apps.                u:object_r:vendor_mtk_default_prop:s0
 
 #VIVO lizonglin add for VIVO_SEPOLICY end
 ro.vendor.vivo_apps.          u:object_r:vendor_vivo_defend_prop:s0
@@ -286,7 +189,6 @@ vendor.vivo.gnss.agps.    u:object_r:vendor_vgnss_prop:s0
 persist.vendor.camera.  u:object_r:vendor_camera_mtk_prop:s0
 
 # vivo wanglimin add for JIO_SUBSIDYLOCK begin
-ro.vendor.mtk_subsidy_lock_support u:object_r:vendor_mtk_default_prop:s0
 
 vendor.vivo.nfc.             u:object_r:vendor_nfc_mtk_prop:s0
 
