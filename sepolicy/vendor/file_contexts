@@ -80,7 +80,6 @@
 /sys/fs/f2fs/dm-.*/screen_state u:object_r:sysfs_f2fs:s0
 /dev/touchscreen(/.*)?                    u:object_r:mvts_device:s0
 /sys/cam_thermal(/.*)? u:object_r:sysfs_cam:s0
-/data/vendor/nfc(/.*)? u:object_r:nfc_vendor_data_file:s0
 /sys/kernel/audio[^/]+/reg[^/]* u:object_r:sysfs_audio_reg:s0
 /sys/devices/soc1(/.*)?  u:object_r:qcom_soc1_info:s0
 /dev/BU64981GWZAF(/.*)? u:object_r:BU64981GWZAF_device:s0

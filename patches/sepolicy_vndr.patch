@@ -1,0 +1,12 @@
+diff --git a/bsp/non_plat/file_contexts b/bsp/non_plat/file_contexts
+index 8cb09fa..3c908d2 100644
+--- a/bsp/non_plat/file_contexts
++++ b/bsp/non_plat/file_contexts
+@@ -115,7 +115,6 @@
+ # MTK VTService
+ /dev/socket/volte_imsvt1(/.*)? u:object_r:volte_imsvt1_socket:s0
+ 
+-/dev/goodix_fp     u:object_r:fingerprint_device:s0
+ 
+ #MTK widevine kernel driver
+ /dev/drm_wv u:object_r:widevine_drv_device:s0

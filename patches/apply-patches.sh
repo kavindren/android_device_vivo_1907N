@@ -16,9 +16,10 @@ ROOT="$(cd "$HERE/../../../.." && pwd)"      # .../device/vivo/1907N/patches -> 
 BASE_FILE="$HERE/BASE"
 
 names=(frameworks_base packages_apps_Settings packages_modules_Connectivity \
-       packages_modules_Wifi system_core bootable_recovery vendor_lineage)
+       packages_modules_Wifi system_core bootable_recovery vendor_lineage sepolicy_vndr)
 paths=(frameworks/base packages/apps/Settings packages/modules/Connectivity \
-       packages/modules/Wifi system/core bootable/recovery vendor/lineage)
+       packages/modules/Wifi system/core bootable/recovery vendor/lineage \
+       device/mediatek/sepolicy_vndr)
 
 fail=0
 for i in "${!names[@]}"; do

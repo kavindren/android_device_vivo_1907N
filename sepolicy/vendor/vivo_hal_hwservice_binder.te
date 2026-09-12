@@ -313,8 +313,6 @@ allow ueventd sysfs_mrdump_file:file relabelto;
 allow ueventd sysfs_fp:file relabelto;
 allow ueventd sysfs_fp:dir relabelto;
 
-allow hal_nfc_default nfc_vendor_data_file:dir  rw_dir_perms;
-allow hal_nfc_default nfc_vendor_data_file:file create_file_perms;
 
 allow atcid_vendor           hal_vivoatcmd_hwservice:hwservice_manager find;
 allow hal_bspservice_default hal_vivoatcmd_hwservice:hwservice_manager find;
