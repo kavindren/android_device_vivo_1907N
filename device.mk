@@ -231,6 +231,23 @@ $(call inherit-product-if-exists, vendor/vivo/1907N/1907N-vendor.mk)
 PRODUCT_PACKAGES += \
     TetheringWifiRegexOverlay
 
+# Several stock MTK prebuilt HAL services (vendor/vivo/1907N proprietary) are linked against
+# the old Android-12-era AIDL "ndk_platform" backend naming (android.hardware.<x>-V<n>-
+# ndk_platform.so) instead of LOS20's current "-ndk" naming. Without these the linker refuses
+# to start the service at all - confirmed via /cache dmesg+logcat capture:
+#   vendor.mediatek.hardware.mtkpower@1.0-service   -> android.hardware.power-V2-ndk_platform.so
+#     (PowerManagerService then waits forever for IPower/default, boot never gets past the
+#     animation - this is the one that was actually blocking boot)
+#   android.hardware.gnss-service.mediatek          -> android.hardware.gnss-V1-ndk_platform.so
+#   android.hardware.vibrator-service.mediatek      -> android.hardware.vibrator-V2-ndk_platform.so
+# NEED_AIDL_NDK_PLATFORM_BACKEND (BoardConfig.mk) makes Soong able to build these legacy-named
+# variants; list them explicitly so they're actually installed to /vendor/lib64 (nothing else
+# in the build graph depends on them).
+PRODUCT_PACKAGES += \
+    android.hardware.power-V2-ndk_platform \
+    android.hardware.gnss-V1-ndk_platform \
+    android.hardware.vibrator-V2-ndk_platform
+
 # TEMPORARILY DISABLED for LOS20: FaceCaptureService calls FaceManager.getShareMemoryFd()/
 # sendCommand() added by our frameworks/base patch (patches/frameworks_base.patch), which
 # doesn't apply cleanly against LOS20's newer FaceManager.java yet (see patches/README.md -
