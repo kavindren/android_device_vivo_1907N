@@ -266,14 +266,11 @@ PRODUCT_PACKAGES += \
     android.hardware.vibrator-V2-ndk_platform \
     android.system.keystore2-V1-ndk_platform
 
-# TEMPORARILY DISABLED for LOS20: FaceCaptureService calls FaceManager.getShareMemoryFd()/
-# sendCommand() added by our frameworks/base patch (patches/frameworks_base.patch), which
-# doesn't apply cleanly against LOS20's newer FaceManager.java yet (see patches/README.md -
-# deferred until after basic boot works, per the same plan as the Settings Face Unlock UI
-# patch). Re-enable once that patch is rebased.
-#PRODUCT_PACKAGES += \
-#    FaceCaptureService \
-#    default-permissions-facecapture.xml
+# Re-enabled: patches/frameworks_base.patch (FaceManager.getShareMemoryFd()/sendCommand()) is
+# now rebased against LOS20 (see patches/BASE).
+PRODUCT_PACKAGES += \
+    FaceCaptureService \
+    default-permissions-facecapture.xml
 
 # Lift-to-wake via the vivo raiseup_detect sensor (AOSP pickup gesture can't see it).
 PRODUCT_PACKAGES += \
