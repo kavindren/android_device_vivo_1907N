@@ -119,12 +119,17 @@ KERNEL_LD := LD=ld.lld
 # all - only host-cmulti/host-cshlib do. The clang toolchain LOS20 bundles ships no bfd `ld`,
 # so fixdep's build fails ("Executable ld doesn't exist") unless the linker choice is passed
 # via HOSTCFLAGS instead, which cmd_host-csingle does use.
-# -integrated-as: the Makefile above unconditionally appends -no-integrated-as when clang is
-# used, so clang emits .s text for the ancient bundled aarch64-linux-android-4.9 GNU `as` to
-# consume - which chokes on newer clang-14 assembly syntax ("junk at end of line" in
-# init/calibrate.c and presumably others). KCFLAGS is appended last by kbuild, so this
-# re-enables clang's own integrated assembler instead, sidestepping the old `as` entirely.
-TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS="-fcolor-diagnostics -Wno-unused-function -Wno-unused-variable -march=armv8.2-a -mtune=cortex-a55 -integrated-as" LOCALVERSION=-kavindren HOSTCFLAGS="-fuse-ld=lld"
+# AS override: the ancient bundled aarch64-linux-android-4.9 GNU `as` can't parse clang-14's
+# newer assembly syntax ("junk at end of line" in init/calibrate.c and presumably others).
+# Originally worked around with -integrated-as (clang's own assembler instead of an external
+# one) via KCFLAGS, but that's a real change to how the TARGET kernel code itself gets
+# assembled (not just host tools) and risks subtly different codegen from what this kernel
+# has always been built/tested with - plausibly the cause of an early (pre-pstore) boot crash
+# on real hardware. Safer fix: keep using an external `as` (matching -no-integrated-as, the
+# kernel Makefile's own default for clang), just a newer one that understands clang-14's
+# output - installed via pacman (extra/aarch64-linux-gnu-binutils). AS= on the command line
+# overrides the Makefile's own `AS = $(CROSS_COMPILE)as`.
+TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS="-fcolor-diagnostics -Wno-unused-function -Wno-unused-variable -march=armv8.2-a -mtune=cortex-a55" LOCALVERSION=-kavindren HOSTCFLAGS="-fuse-ld=lld" AS=/usr/bin/aarch64-linux-gnu-as
 
 BOARD_CUSTOM_DTBIMG_MK := $(DEVICE_PATH)/dtbimg.mk
 
