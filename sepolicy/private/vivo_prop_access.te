@@ -1,7 +1,7 @@
 # mtk_atci_sys_prop no longer exists unprefixed in upstream sepolicy_vndr - it split into
-# system_mtk_atci_sys_prop/vendor_mtk_atci_sys_prop. Grant both, matching the original intent.
+# system_mtk_atci_sys_prop (plat_private, visible here) and vendor_mtk_atci_sys_prop
+# (non_plat/vendor-only - a platform .te file can't reference it across the Treble split).
 get_prop(crash_dump, system_mtk_atci_sys_prop)
-get_prop(crash_dump, vendor_mtk_atci_sys_prop)
 
 get_prop(hal_cameralog_default, hwservicemanager_prop)
 get_prop(hal_nativecamera_default, hwservicemanager_prop)
