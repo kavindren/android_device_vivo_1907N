@@ -48,4 +48,32 @@ for i in "${!names[@]}"; do
   fail=1
 done
 
+# --- Non-patch fixups ---
+
+# LOS20 kernel build with the newer bundled clang needs a newer aarch64 assembler than the
+# one bundled in prebuilts/gcc's ancient aarch64-linux-android-4.9 toolchain (see
+# BoardConfig.mk). This isn't representable as a normal git patch (binary file swapped for a
+# script), so it's done here directly. Requires extra/aarch64-linux-gnu-binutils (pacman on
+# Arch; install the equivalent package for your distro if this fails).
+AS_DIR="$ROOT/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin"
+AS_REAL="$AS_DIR/aarch64-linux-android-as"
+if [ -d "$AS_DIR" ]; then
+  if [ -f "$AS_REAL.real" ]; then
+    echo "SKIP     aarch64-linux-android-as wrapper (already installed)"
+  else
+    if [ ! -x /usr/bin/aarch64-linux-gnu-as ]; then
+      echo "MISSING  /usr/bin/aarch64-linux-gnu-as - install aarch64-linux-gnu-binutils (or equivalent) first"
+      fail=1
+    else
+      cp "$AS_REAL" "$AS_REAL.real"
+      cp "$HERE/aarch64-linux-android-as.wrapper.sh" "$AS_REAL"
+      chmod +x "$AS_REAL"
+      echo "APPLIED  aarch64-linux-android-as wrapper"
+    fi
+  fi
+else
+  echo "MISSING  $AS_DIR (run repo sync first)"
+  fail=1
+fi
+
 exit $fail

@@ -119,17 +119,21 @@ KERNEL_LD := LD=ld.lld
 # all - only host-cmulti/host-cshlib do. The clang toolchain LOS20 bundles ships no bfd `ld`,
 # so fixdep's build fails ("Executable ld doesn't exist") unless the linker choice is passed
 # via HOSTCFLAGS instead, which cmd_host-csingle does use.
-# AS override: the ancient bundled aarch64-linux-android-4.9 GNU `as` can't parse clang-14's
-# newer assembly syntax ("junk at end of line" in init/calibrate.c and presumably others).
+# The ancient bundled aarch64-linux-android-4.9 GNU `as` can't parse clang-14's newer
+# assembly syntax ("junk at end of line" in init/calibrate.c and presumably others).
 # Originally worked around with -integrated-as (clang's own assembler instead of an external
 # one) via KCFLAGS, but that's a real change to how the TARGET kernel code itself gets
 # assembled (not just host tools) and risks subtly different codegen from what this kernel
 # has always been built/tested with - plausibly the cause of an early (pre-pstore) boot crash
-# on real hardware. Safer fix: keep using an external `as` (matching -no-integrated-as, the
-# kernel Makefile's own default for clang), just a newer one that understands clang-14's
-# output - installed via pacman (extra/aarch64-linux-gnu-binutils). AS= on the command line
-# overrides the Makefile's own `AS = $(CROSS_COMPILE)as`.
-TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS="-fcolor-diagnostics -Wno-unused-function -Wno-unused-variable -march=armv8.2-a -mtune=cortex-a55" LOCALVERSION=-kavindren HOSTCFLAGS="-fuse-ld=lld" AS=/usr/bin/aarch64-linux-gnu-as
+# on real hardware. AS= on the make command line does NOT fix this: with -no-integrated-as
+# (the kernel Makefile's own default for clang), clang resolves the assembler itself via its
+# own --prefix/--gcc-toolchain logic (both set from CROSS_COMPILE by the Makefile), not via
+# the AS variable. The actual fix is swapping the real binary at
+# prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-as for a
+# wrapper delegating to a modern aarch64-linux-gnu-as (pacman: extra/aarch64-linux-gnu-binutils)
+# - see patches/apply-patches.sh, which performs this swap (not a normal git patch, since it's
+# a binary-for-script file replacement).
+TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS="-fcolor-diagnostics -Wno-unused-function -Wno-unused-variable -march=armv8.2-a -mtune=cortex-a55" LOCALVERSION=-kavindren HOSTCFLAGS="-fuse-ld=lld"
 
 BOARD_CUSTOM_DTBIMG_MK := $(DEVICE_PATH)/dtbimg.mk
 
