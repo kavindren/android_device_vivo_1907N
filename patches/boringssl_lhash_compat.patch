@@ -1,0 +1,59 @@
+diff --git a/src/crypto/lhash/lhash.c b/src/crypto/lhash/lhash.c
+index 4a95a2e6..28eb35fc 100644
+--- a/src/crypto/lhash/lhash.c
++++ b/src/crypto/lhash/lhash.c
+@@ -351,3 +351,54 @@ void OPENSSL_lh_doall_arg(_LHASH *lh, void (*func)(void *, void *), void *arg) {
+   // resizing is done here.
+   lh_maybe_resize(lh);
+ }
++
++// vivo 1907N bring-up (LOS20/Android 13): plain, untyped aliases for the classic OpenSSL-style
++// lhash API. Some point after LOS19.1's (Android 12) libcrypto.so snapshot, upstream BoringSSL
++// renamed these to the OPENSSL_lh_* names above and stopped exporting the bare lh_* symbols -
++// the public header (openssl/lhash.h) now explicitly says "lhash is an internal library and not
++// exported for use outside BoringSSL". Fine for anything built against a current NDK/AOSP
++// header, but vendor.mediatek's prebuilt /vendor/bin/mtk_agpsd (no source available to us -
++// closed blob) links directly against the old bare names: "CANNOT LINK EXECUTABLE
++// /vendor/bin/mtk_agpsd: cannot locate symbol lh_free" - crash-looping agpsd, so no AGPS
++// assistance data and a much slower/less reliable GPS fix. Same fix philosophy as
++// system/core/libutils/RefBase.cpp's incStrongRequireStrong() compat shim: restore the old
++// exported symbol as a trivial forwarder in the real AOSP source rather than touch the closed
++// vendor binary (impossible) or hack the vendor sysfs/linker config.
++OPENSSL_EXPORT _LHASH *lh_new(lhash_hash_func hash, lhash_cmp_func comp) {
++  return OPENSSL_lh_new(hash, comp);
++}
++
++OPENSSL_EXPORT void lh_free(_LHASH *lh) { OPENSSL_lh_free(lh); }
++
++OPENSSL_EXPORT size_t lh_num_items(const _LHASH *lh) {
++  return OPENSSL_lh_num_items(lh);
++}
++
++OPENSSL_EXPORT void *lh_retrieve(const _LHASH *lh, const void *data,
++                                  lhash_hash_func_helper call_hash_func,
++                                  lhash_cmp_func_helper call_cmp_func) {
++  return OPENSSL_lh_retrieve(lh, data, call_hash_func, call_cmp_func);
++}
++
++OPENSSL_EXPORT void *lh_retrieve_key(
++    const _LHASH *lh, const void *key, uint32_t key_hash,
++    int (*cmp_key)(const void *key, const void *value)) {
++  return OPENSSL_lh_retrieve_key(lh, key, key_hash, cmp_key);
++}
++
++OPENSSL_EXPORT int lh_insert(_LHASH *lh, void **old_data, void *data,
++                              lhash_hash_func_helper call_hash_func,
++                              lhash_cmp_func_helper call_cmp_func) {
++  return OPENSSL_lh_insert(lh, old_data, data, call_hash_func, call_cmp_func);
++}
++
++OPENSSL_EXPORT void *lh_delete(_LHASH *lh, const void *data,
++                                lhash_hash_func_helper call_hash_func,
++                                lhash_cmp_func_helper call_cmp_func) {
++  return OPENSSL_lh_delete(lh, data, call_hash_func, call_cmp_func);
++}
++
++OPENSSL_EXPORT void lh_doall_arg(_LHASH *lh, void (*func)(void *, void *),
++                                  void *arg) {
++  OPENSSL_lh_doall_arg(lh, func, arg);
++}
