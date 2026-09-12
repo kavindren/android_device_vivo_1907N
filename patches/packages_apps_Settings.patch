@@ -1,16 +1,18 @@
 diff --git a/res/layout/face_enroll_education.xml b/res/layout/face_enroll_education.xml
-index 2a78f999eb..859fde90cc 100644
+index 1f9696e229..d3c5113079 100644
 --- a/res/layout/face_enroll_education.xml
 +++ b/res/layout/face_enroll_education.xml
-@@ -60,13 +60,17 @@
+@@ -60,10 +60,17 @@
                  app:lottie_loop="true"
                  app:lottie_speed="1.5" />
  
-+            <!-- vivo 1907N Face Unlock bring-up (not AOSP): android:background dropped (drew the
-+                 face icon twice, see FaceEducationAnimationDrawable). layout_height fixed at
-+                 440dp (matching illustration_lottie's own size for this slot) instead of
-+                 match_parent - it was inheriting this FrameLayout's wrap_content resolution,
-+                 which the broken illustration_default video view collapses to near-zero. -->
++            <!-- vivo 1907N Face Unlock bring-up (not AOSP): layout_height fixed at 440dp (matching
++                 illustration_lottie's own size for this slot) instead of wrap_content - it was
++                 inheriting this FrameLayout's wrap_content resolution, which the broken
++                 illustration_default video view collapses to near-zero. LOS20 upstream already
++                 uses android:src (not android:background) here, unlike the older AOSP base this
++                 was originally written against, so the separate "drew the face icon twice" fix
++                 that patch made doesn't apply here any more - left as-is. -->
              <ImageView
                  android:id="@+id/illustration_accessibility"
 -                android:layout_width="wrap_content"
@@ -18,12 +20,8 @@ index 2a78f999eb..859fde90cc 100644
 +                android:layout_width="match_parent"
 +                android:layout_height="440dp"
                  android:layout_gravity="center"
--                android:visibility="invisible"
--                android:background="@drawable/face_enroll_icon_large"/>
-+                android:visibility="invisible"/>
- 
-         </FrameLayout>
- 
+                 android:visibility="invisible"
+                 android:layout_marginTop="@dimen/illustration_accessibility_margin_top"
 diff --git a/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java b/src/com/android/settings/biometrics/face/FaceEducationAnimationDrawable.java
 new file mode 100644
 index 0000000000..365ef329b4
@@ -252,18 +250,18 @@ index 5be7c5331d..5d6abb8ef3 100644
          // Draw the animation
          mParticleCollection.draw(canvas);
 diff --git a/src/com/android/settings/biometrics/face/FaceEnrollEducation.java b/src/com/android/settings/biometrics/face/FaceEnrollEducation.java
-index 6509d4e6e2..87ab8c7026 100644
+index 4ef47522fa..11aeadb0b0 100644
 --- a/src/com/android/settings/biometrics/face/FaceEnrollEducation.java
 +++ b/src/com/android/settings/biometrics/face/FaceEnrollEducation.java
-@@ -27,6 +27,7 @@ import android.view.View;
+@@ -32,6 +32,7 @@ import android.view.View;
  import android.view.accessibility.AccessibilityManager;
  import android.widget.Button;
  import android.widget.CompoundButton;
 +import android.widget.ImageView;
  
- import com.android.settings.R;
- import com.android.settings.Utils;
-@@ -50,7 +51,14 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+@@ -63,7 +64,14 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
      private boolean mIsUsingLottie;
      private IllustrationVideoView mIllustrationDefault;
      private LottieAnimationView mIllustrationLottie;
@@ -277,9 +275,9 @@ index 6509d4e6e2..87ab8c7026 100644
 +    // states now - there's nothing left to switch between.
 +    private FaceEducationAnimationDrawable mEducationAnimationDrawable;
      private Intent mResultIntent;
-     private boolean mNextClicked;
      private boolean mAccessibilityEnabled;
-@@ -64,13 +72,16 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+ 
+@@ -76,13 +84,16 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
                              : R.string.security_settings_face_enroll_education_message;
                      setDescriptionText(descriptionRes);
  
@@ -298,7 +296,7 @@ index 6509d4e6e2..87ab8c7026 100644
                  }
              };
  
-@@ -88,14 +99,17 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+@@ -100,14 +111,17 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
          mIllustrationLottie = findViewById(R.id.illustration_lottie);
          mIllustrationAccessibility = findViewById(R.id.illustration_accessibility);
  
@@ -324,7 +322,7 @@ index 6509d4e6e2..87ab8c7026 100644
  
          mFooterBarMixin = getLayout().getMixin(FooterBarMixin.class);
  
-@@ -154,6 +168,16 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+@@ -194,6 +208,16 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
          }
      }
  
@@ -341,7 +339,7 @@ index 6509d4e6e2..87ab8c7026 100644
      @Override
      protected void onResume() {
          super.onResume();
-@@ -246,23 +270,15 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
+@@ -326,25 +350,15 @@ public class FaceEnrollEducation extends BiometricEnrollBase {
          return SettingsEnums.FACE_ENROLL_INTRO;
      }
  
@@ -363,8 +361,10 @@ index 6509d4e6e2..87ab8c7026 100644
  
      private void showDefaultIllustration() {
 -        if (mIsUsingLottie) {
+-            mIllustrationLottie.setAnimation(R.raw.face_education_lottie);
 -            mIllustrationLottie.setVisibility(View.VISIBLE);
 -            mIllustrationLottie.playAnimation();
+-            mIllustrationLottie.setProgress(0f);
 -        } else {
 -            mIllustrationDefault.setVisibility(View.VISIBLE);
 -            mIllustrationDefault.start();
@@ -727,7 +727,7 @@ index 853ca7c40c..bb92f82fa7 100644
      }
  }
 diff --git a/src/com/android/settings/connecteddevice/usb/UsbDetailsFunctionsController.java b/src/com/android/settings/connecteddevice/usb/UsbDetailsFunctionsController.java
-index 006f72a39e..1f6706ef2f 100644
+index b887bd704f..a699993ffe 100644
 --- a/src/com/android/settings/connecteddevice/usb/UsbDetailsFunctionsController.java
 +++ b/src/com/android/settings/connecteddevice/usb/UsbDetailsFunctionsController.java
 @@ -16,8 +16,6 @@
