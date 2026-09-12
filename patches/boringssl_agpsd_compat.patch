@@ -1,3 +1,27 @@
+diff --git a/src/crypto/hpke/hpke.c b/src/crypto/hpke/hpke.c
+index 827ffaab..fa79c451 100644
+--- a/src/crypto/hpke/hpke.c
++++ b/src/crypto/hpke/hpke.c
+@@ -613,6 +613,19 @@ const EVP_HPKE_AEAD *EVP_HPKE_CTX_aead(const EVP_HPKE_CTX *ctx) {
+   return ctx->aead;
+ }
+ 
++// vivo 1907N bring-up (LOS20/Android 13): plain compat alias for the pre-rename name of the
++// function above. Same lh_* rename story as crypto/lhash/lhash.c - /vendor/bin/mtk_agpsd
++// (closed blob) links against EVP_HPKE_get_aead directly: "CANNOT LINK EXECUTABLE
++// /vendor/bin/mtk_agpsd: cannot locate symbol EVP_HPKE_get_aead", found only after the lhash
++// fix let the linker get this far into mtk_agpsd's symbol table. Checked every other
++// crypto-family symbol this binary references against current BoringSSL - the rest are all
++// still exported, just declared in crypto/internal.h or fipsmodule/tls/internal.h rather than a
++// public header (OPENSSL_EXPORT applies regardless of which header declares it), or via the
++// DECLARE_ASN1_FUNCTIONS macro (d2i_X509_NAME/i2d_X509_NAME) - this was the only other rename.
++OPENSSL_EXPORT const EVP_HPKE_AEAD *EVP_HPKE_get_aead(const EVP_HPKE_CTX *ctx) {
++  return EVP_HPKE_CTX_aead(ctx);
++}
++
+ const EVP_HPKE_KDF *EVP_HPKE_CTX_kdf(const EVP_HPKE_CTX *ctx) {
+   return ctx->kdf;
+ }
 diff --git a/src/crypto/lhash/lhash.c b/src/crypto/lhash/lhash.c
 index 4a95a2e6..28eb35fc 100644
 --- a/src/crypto/lhash/lhash.c
