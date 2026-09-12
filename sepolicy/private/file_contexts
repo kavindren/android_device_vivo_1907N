@@ -1,23 +1,10 @@
 /system/apex/apex\.test(/.*)?                         u:object_r:system_file:s0
 /firmware/firmware_mnt  u:object_r:rootfs:s0
 /system/bin/newfs_msdos		u:object_r:fsck_exec:s0
-/system/bin/mediaserver64                       u:object_r:mediaserver_exec:s0
 /system/bin/mediaserverwrapper                  u:object_r:mediaserverwrapper_exec:s0
 /system/apex/apex\.test/bin/surfaceflinger            u:object_r:surfaceflinger_exec:s0
 /system/apex/apex\.test/bin/apex_test_preInstallHook  u:object_r:apex_test_prepostinstall_exec:s0
 /system/apex/apex\.test/bin/apex_test_postInstallHook u:object_r:apex_test_prepostinstall_exec:s0
-/(system_ext|system/system_ext)/bin/mdlogger           u:object_r:mdlogger_exec:s0
-/(system_ext|system/system_ext)/bin/emdlogger[0-9]+    u:object_r:emdlogger_exec:s0
-/(system_ext|system/system_ext)/bin/aee_core_forwarder u:object_r:aee_core_forwarder_exec:s0
-/(system_ext|system/system_ext)/bin/aeedb              u:object_r:crash_dump_exec:s0
-/(system_ext|system/system_ext)/bin/aee_aed            u:object_r:crash_dump_exec:s0
-/(system_ext|system/system_ext)/bin/aee_aed64          u:object_r:crash_dump_exec:s0
-/(system_ext|system/system_ext)/bin/aee_dumpstate      u:object_r:dumpstate_exec:s0
-/(system_ext|system/system_ext)/bin/aee_aed64_v2          u:object_r:crash_dump_exec:s0
-/(system_ext|system/system_ext)/bin/aee_core_forwarder_v2 u:object_r:aee_core_forwarder_exec:s0
-/(system_ext|system/system_ext)/bin/aee_v2                u:object_r:crash_dump_exec:s0
-/(system_ext|system/system_ext)/bin/aeedb_v2              u:object_r:crash_dump_exec:s0
-/(system_ext|system/system_ext)/bin/aee_dumpstate_v2      u:object_r:dumpstate_exec:s0
 /vgc(/.*)?                  u:object_r:oemfs:s0
 /dyn(/.*)?  u:object_r:system_file:s0
 /data/.fs_init_info                                u:object_r:vivo_data_file:s0
@@ -84,7 +71,6 @@
 /forbidden_packages.txt                                         u:object_r:rootfs:s0
 /data/vendor/ndt_at(/.*)?                      u:object_r:forcetouch_private_file:s0
 /data/misc/fs_info/.perf_res.txt                   u:object_r:vivo_data_file:s0
-/data/log_wifi_temp(/.*)? u:object_r:logtemp_data_file:s0
 /data/media/0/bbklog(/.*)?  u:object_r:vivo_log_file:s0
 /data/preload/config(/.*)?   u:object_r:yzfswj_data_file:s0
 /oem/etc/vivo_config.ini             u:object_r:oem_vivo_config_ini_file:s0
@@ -103,7 +89,6 @@
 /data/vivo-common/cota-persist(/.*)?            u:object_r:cota_persist_data_file:s0
 /data/vivo-common/circulatedlog(/.*)? u:object_r:circulatedlog_data_file:s0
 /factory                        u:object_r:system_file:s0
-/dev/tll u:object_r:tll_device:s0
 /dev/tfa98xx			u:object_r:audio_ic_device:s0
 /vgc/data-app               u:object_r:system_file:s0
 /system/bin/vrp u:object_r:vrp_exec:s0
@@ -131,8 +116,6 @@
 /system/bin/vivo_daemon    u:object_r:vivo_daemon_exec:s0
 /sys/lcm/oled_hlpmmode1 u:object_r:sysfs_alpmmode_secondary:s0
 /system/bin/charger_log        u:object_r:bbk_log_exec:s0
-/system/bin/mediahelper    u:object_r:mediahelper_exec:s0
-/system/bin/drmserver64  u:object_r:drmserver_exec:s0
 /system/bin/atcid_common       u:object_r:atcid_common_exec:s0
 /system/bin/customcenter     u:object_r:vivo_customcenter_exec:s0
 /system/bin/bsptestserver        u:object_r:bsptestserver_exec:s0
@@ -148,7 +131,6 @@
 /cache/recovery/last_vivokp            u:object_r:atcmd_cache_file:s0
 /system/bin/vivocameraserver	u:object_r:vivocameraserver_exec:s0
 /sys/kernel/debug/em_enforce     u:object_r:atcmd_enforce_file:s0
-/system/bin/mtk_plpath_utils u:object_r:mtk_plpath_utils_exec:s0
 /sys/board_info/user_cpu_freq u:object_r:sysfs_user_cpu_freq:s0
 /system/bin/mtk_camdumpserver u:object_r:mtk_camdumpserver_exec:s0
 /sys/kernel/debug/usb/vdevices u:object_r:debugfs_otg:s0
