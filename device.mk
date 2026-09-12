@@ -81,6 +81,9 @@ PRODUCT_PACKAGES += \
     init.udfps-hbm.rc
 
 PRODUCT_PACKAGES += \
+    init.bootlog.rc
+
+PRODUCT_PACKAGES += \
     init.vivo-defend.rc
 
 PRODUCT_PACKAGES += \

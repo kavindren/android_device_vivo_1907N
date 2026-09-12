@@ -1,0 +1,31 @@
+# TEMP diagnostic (LOS20 bring-up): the device reboots partway through boot on real hardware,
+# and neither /proc/last_kmsg nor /sys/fs/pstore capture anything (it's a clean, userspace-
+# triggered reboot, not a kernel panic - see los-1907N-aee-expdb-diagnostics session memory).
+# /cache is a real, separately-mounted partition here (fstab.mt6768), mounted in first-stage
+# init well before /data, and survives a reboot - so write continuously to it instead of
+# relying on adb/logcat catching up before the crash.
+#
+# dmesg -w needs only /proc (available basically immediately, no /data/logd dependency) -
+# start it as early as possible. logcat needs logd, which needs /data mounted, so it starts
+# later (post-fs-data) - still well before zygote/system_server.
+on post-fs
+    mkdir /cache/bootlog 0755 root root
+    start dmesg_to_cache
+
+on post-fs-data
+    start logcat_to_cache
+
+service dmesg_to_cache /system/bin/sh -c "exec dmesg -w >> /cache/bootlog/dmesg.log 2>&1"
+    class core
+    user root
+    group root log
+    seclabel u:r:su:s0
+    disabled
+    oneshot
+
+service logcat_to_cache /system/bin/logcat -b all -v threadtime -f /cache/bootlog/logcat.log
+    class core
+    user root
+    group root log
+    seclabel u:r:su:s0
+    disabled
