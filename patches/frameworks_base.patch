@@ -146,6 +146,123 @@ index f701ec3ec367..806ec1b97e9b 100644
      private final List<SensorLocationInternal> mSensorLocations;
  
      public FingerprintSensorPropertiesInternal(int sensorId,
+diff --git a/core/java/android/os/storage/StorageManager.java b/core/java/android/os/storage/StorageManager.java
+index d9604b3f0145..fe6f806a44a6 100644
+--- a/core/java/android/os/storage/StorageManager.java
++++ b/core/java/android/os/storage/StorageManager.java
+@@ -1706,6 +1706,18 @@ public class StorageManager {
+         return RoSystemProperties.CRYPTO_FILE_ENCRYPTED;
+     }
+ 
++    /** {@hide}
++     * CryptKeeper (the pre-FBE full-disk-encryption "encrypting..." bounce screen) was removed
++     * from AOSP years ago, but this static method's absence is a hard NoSuchMethodError for any
++     * priv-app still compiled against an SDK where it existed (e.g. this device's stock MTK IMS
++     * blob, com.mediatek.ims - crashes MwiServiceHandlerThread/WifiPdnHandler otherwise).
++     * CryptKeeper no longer exists, so the device is never in a cryptkeeper bounce: always false.
++     */
++    @UnsupportedAppUsage
++    public static boolean inCryptKeeperBounce() {
++        return false;
++    }
++
+     /** {@hide} */
+     public static boolean isFileEncryptedEmulatedOnly() {
+         return SystemProperties.getBoolean(StorageManager.PROP_EMULATE_FBE, false);
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsDisplayMode.kt b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsDisplayMode.kt
+index e9de7ccc7b4f..0963f6b61c4a 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsDisplayMode.kt
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsDisplayMode.kt
+@@ -2,6 +2,8 @@ package com.android.systemui.biometrics
+ 
+ import android.content.Context
+ import android.os.RemoteException
++import android.os.SystemClock
++import android.os.SystemProperties
+ import android.os.Trace
+ import android.util.Log
+ import com.android.systemui.dagger.SysUISingleton
+@@ -10,6 +12,31 @@ import javax.inject.Inject
+ 
+ private const val TAG = "UdfpsDisplayMode"
+ 
++// vivo 1907N (Goodix gf9518) UDFPS bring-up: ported from the LOS19.1-era
++// Vivo1907NUdfpsHbmProvider, which implemented the since-removed UdfpsHbmProvider interface -
++// this LOS20/Android-13 SystemUI has no such interface (illumination is drawn unconditionally by
++// UdfpsSurfaceView), but the ACTUAL panel-local HBM boost that provider drove was dropped along
++// with it when that class was deleted. This class's enable()/disable() below (the "misnomer"
++// comment on onHbmEnabled is correct - AOSP's default here only requests a refresh-rate change)
++// is the only remaining hook that fires on every real UDFPS illumination, so the boost is wired
++// in here instead of resurrecting the old interface.
++//
++// Without this, every capture happens at the panel's normal (non-boosted) brightness - the
++// Goodix TA's gf_algo_preprocess sees a permanently underexposed frame and rejects it as
++// GF_ERROR_DIRTY_SCREEN on literally every touch (confirmed via live Trustonic TEE logs: enroll
++// never advances past preprocess, 100% reproducible). SystemUI can't write the vendor sysfs node
++// directly (Treble boundary), so this bridges through vendor.udfps.hbm_state to vendor init - see
++// device/vivo/1907N/rootdir/etc/init.udfps-hbm.rc and sepolicy/vendor/udfps_hbm.te.
++private const val VIVO_UDFPS_HBM_PROP = "vendor.udfps.hbm_state"
++
++// The vendor gf9518 daemon auto-reverts panel HBM ~85ms after a single "4" write (confirmed via
++// dmesg: OverlayEngine_0's lcm_set_hbm_cmdq reverting hbm=4->5 on its own timer, unrelated to the
++// app), but a real image capture takes ~150ms. This alternates two distinct "on" property values
++// (both wired to "write 4" in init.udfps-hbm.rc) to keep re-arming it for as long as illumination
++// needs to stay lit, since property triggers only fire on a real value transition, not a
++// redundant re-set to the same value.
++private const val VIVO_UDFPS_HBM_KEEPALIVE_INTERVAL_MS = 50L
++
+ /**
+  * UdfpsDisplayMode that encapsulates pixel-specific code, such as enabling the high-brightness mode
+  * (HBM) in a display-specific way and freezing the display's refresh rate.
+@@ -26,6 +53,26 @@ constructor(
+     // The request is reset to null after it's processed.
+     private var currentRequest: Request? = null
+ 
++    // vivo 1907N: guards the panel-HBM keepalive thread started by enable() below.
++    @Volatile private var vivoHbmKeepAliveActive = false
++
++    private fun vivoStartHbmKeepAlive() {
++        vivoHbmKeepAliveActive = true
++        Thread({
++            var toggle = false
++            while (vivoHbmKeepAliveActive) {
++                SystemProperties.set(VIVO_UDFPS_HBM_PROP, if (toggle) "2" else "1")
++                toggle = !toggle
++                SystemClock.sleep(VIVO_UDFPS_HBM_KEEPALIVE_INTERVAL_MS)
++            }
++        }, "Vivo1907NUdfpsHbmKeepAlive").start()
++    }
++
++    private fun vivoStopHbmKeepAlive() {
++        vivoHbmKeepAliveActive = false
++        SystemProperties.set(VIVO_UDFPS_HBM_PROP, "0")
++    }
++
+     override fun enable(onEnabled: Runnable?) {
+         execution.isMainThread()
+         Log.v(TAG, "enable")
+@@ -45,6 +92,9 @@ constructor(
+         val request = Request(context.displayId)
+         currentRequest = request
+ 
++        // vivo 1907N: real panel-local HBM boost, see the block comment above.
++        vivoStartHbmKeepAlive()
++
+         try {
+             // This method is a misnomer. It has nothing to do with HBM, its purpose is to set
+             // the appropriate display refresh rate.
+@@ -62,6 +112,11 @@ constructor(
+         execution.isMainThread()
+         Log.v(TAG, "disable")
+ 
++        // vivo 1907N: always stop the panel-local HBM boost, even if the refresh-rate request
++        // below was never (or already) torn down - leaving the sensor lit is worse than a
++        // redundant sysfs write.
++        vivoStopHbmKeepAlive()
++
+         val request = currentRequest
+         if (request == null) {
+             Log.w(TAG, "disable | already disabled")
 diff --git a/services/core/Android.bp b/services/core/Android.bp
 index faf7da35813a..045935dc53da 100644
 --- a/services/core/Android.bp
@@ -944,3 +1061,53 @@ index 44f2786ba4cf..bd6aa0ab6b9e 100644
          mSuspendBlocker.release();
      }
  
+diff --git a/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java b/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
+index 23d913cba733..0290f1508212 100644
+--- a/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
++++ b/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
+@@ -161,7 +161,17 @@ public final class UsbPortHidl implements UsbPortHal {
+ 
+     static boolean isServicePresent(IndentingPrintWriter pw) {
+         try {
+-            IUsb.getService(true);
++            // getService(true) (retry=true) blocks/retries forever if the HAL is declared but
++            // never actually registers - this device has no android.hardware.usb@1.0-service at
++            // all, so hwservicemanager just keeps lazy-HAL-retrying it every second, and this
++            // "presence check" never returns. That permanently hangs the calling thread
++            // (system_server's "android.display" HandlerThread, via UsbService$Lifecycle.
++            // onBootPhase()'s CompletableFuture.join() -> UsbPortManager construction), which is
++            // exactly what Android's own Watchdog then kills every boot (see
++            // los-1907N-los20-port session memory). connectToProxy() below already correctly
++            // uses the non-retrying getService() for the real connection; this presence check
++            // must too.
++            IUsb.getService();
+         } catch (NoSuchElementException e) {
+             logAndPrintException(pw, "connectToProxy: usb hidl hal service not found.", e);
+             return false;
+diff --git a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
+index d69247743840..87e1a0a58bbc 100644
+--- a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
++++ b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
+@@ -193,6 +193,22 @@ public final class TelephonyPermissions {
+         return false;
+     }
+ 
++    /**
++     * Check whether the given subscription is associated with the given user.
++     *
++     * LineageOS's telephony/common (this file) doesn't implement per-user subscription
++     * association (a multi-user/enterprise AOSP feature), but packages/services/Telephony's
++     * lineage-20.0/21.0 branches already call this expecting it to exist. Since this device
++     * class doesn't restrict subscriptions by user, always allow - equivalent to the
++     * pre-this-check behavior.
++     *
++     * @return {@code true} - always, on a build with no per-user subscription restriction.
++     */
++    public static boolean checkSubscriptionAssociatedWithUser(Context context, int subId,
++            UserHandle callingUserHandle) {
++        return true;
++    }
++
+     /**
+      * Check whether the app with the given pid/uid can read phone state, or has carrier
+      * privileges on any active subscription.
