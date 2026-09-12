@@ -113,22 +113,39 @@ TARGET_KERNEL_CONFIG := pd1913f_defconfig
 # fresh repo sync, same as the other 6 out-of-tree patches).
 include vendor/lineage/config/BoardConfigKernel.mk
 
-TARGET_KERNEL_CLANG_VERSION := r450784d
+# TARGET_KERNEL_CLANG_VERSION: deliberately staying on r383902 (clang 11.0.1), NOT LOS20's own
+# bundled r450784d (clang 14). Tried r450784d first (matching what a "properly ported to
+# LOS20" tree would normally use) - it compiles fine (see the AS-wrapper fixup below, needed
+# to get there), but a real device boot attempt reproducibly rebooted ~170s into every boot,
+# root-caused down to a userspace/vendor-init issue unrelated to the kernel (see
+# los-1907N-los20-port / los-1907N-aee-expdb-diagnostics session memory). As a targeted test,
+# rebuilt this exact 4.14.336 kernel source with r383902 instead (fetched from
+# prebuilts/clang/host/linux-x86's own upstream history at tag android-12.0.0_r9, where it
+# still exists as a subdirectory - see patches/apply-patches.sh) - stock's own kernel is ALSO
+# built with r383902/clang-11.0.1 (confirmed via a live stock uname), so this is a genuinely
+# proven-compatible toolchain for this exact kernel/SoC, not a downgrade of convenience. Same
+# boot failure reproduced identically with r383902 too, conclusively ruling out the compiler/
+# toolchain as the cause - kept on r383902 anyway since it's the safer, stock-matching choice
+# and LOS20's own bundled clang buys nothing here.
+TARGET_KERNEL_CLANG_VERSION := r383902
 KERNEL_LD := LD=ld.lld
+# The two fixups below (HOSTCFLAGS/HOSTLDFLAGS forcing lld, and the aarch64-linux-android-as
+# binary swap) were needed to get r450784d building at all. They're harmless no-ops with
+# r383902 (which bundles its own working bfd `ld` and needs no assembler swap) - left in place
+# rather than risk regressing anything by unwinding them now that r450784d is no longer used.
 # scripts/Makefile.host's cmd_host-csingle (used for fixdep) doesn't pull in HOSTLDFLAGS at
-# all - only host-cmulti/host-cshlib do. The clang toolchain LOS20 bundles ships no bfd `ld`,
-# so fixdep's build fails ("Executable ld doesn't exist") unless the linker choice is passed
-# via HOSTCFLAGS instead, which cmd_host-csingle does use.
-# The ancient bundled aarch64-linux-android-4.9 GNU `as` can't parse clang-14's newer
-# assembly syntax ("junk at end of line" in init/calibrate.c and presumably others).
-# Originally worked around with -integrated-as (clang's own assembler instead of an external
-# one) via KCFLAGS, but that's a real change to how the TARGET kernel code itself gets
-# assembled (not just host tools) and risks subtly different codegen from what this kernel
-# has always been built/tested with - plausibly the cause of an early (pre-pstore) boot crash
-# on real hardware. AS= on the make command line does NOT fix this: with -no-integrated-as
-# (the kernel Makefile's own default for clang), clang resolves the assembler itself via its
-# own --prefix/--gcc-toolchain logic (both set from CROSS_COMPILE by the Makefile), not via
-# the AS variable. The actual fix is swapping the real binary at
+# all - only host-cmulti/host-cshlib do, which mattered when the clang toolchain in use shipped
+# no bfd `ld` ("Executable ld doesn't exist") - the linker choice has to come via HOSTCFLAGS
+# instead, which cmd_host-csingle does use.
+# r450784d/clang-14's newer assembly syntax ("junk at end of line" in init/calibrate.c and
+# presumably others) broke the ancient bundled aarch64-linux-android-4.9 GNU `as`. Tried
+# -integrated-as (clang's own assembler instead of an external one) via KCFLAGS first, but
+# that's a real change to how the TARGET kernel code itself gets assembled (not just host
+# tools) and was the initial suspect for the boot crash (now ruled out along with everything
+# else compiler-related - see above). AS= on the make command line does NOT redirect this:
+# with -no-integrated-as (the kernel Makefile's own default for clang), clang resolves the
+# assembler itself via its own --prefix/--gcc-toolchain logic (both set from CROSS_COMPILE by
+# the Makefile), not via the AS variable. The actual fix is swapping the real binary at
 # prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-as for a
 # wrapper delegating to a modern aarch64-linux-gnu-as (pacman: extra/aarch64-linux-gnu-binutils)
 # - see patches/apply-patches.sh, which performs this swap (not a normal git patch, since it's

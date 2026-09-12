@@ -76,4 +76,28 @@ else
   fail=1
 fi
 
+# BoardConfig.mk pins TARGET_KERNEL_CLANG_VERSION to r383902 (clang 11.0.1, same toolchain as
+# stock's own kernel), not LOS20's own bundled r450784d - the newer one was ruled out as the
+# cause of a real boot failure (see BoardConfig.mk's comment + los-1907N-los20-port session
+# memory), and r383902 no longer exists in LOS20's own prebuilts/clang/host/linux-x86 checkout.
+# Fetch it from that same repo's own upstream history (still present at the android-12.0.0_r9
+# tag) instead of vendoring a second copy of the tree.
+CLANG_DIR="$ROOT/prebuilts/clang/host/linux-x86"
+if [ -d "$CLANG_DIR/.git" ]; then
+  if [ -x "$CLANG_DIR/clang-r383902/bin/clang" ]; then
+    echo "SKIP     clang-r383902 (already present)"
+  else
+    if git -C "$CLANG_DIR" fetch --depth=1 aosp refs/tags/android-12.0.0_r9 >/dev/null 2>&1 &&
+       git -C "$CLANG_DIR" checkout FETCH_HEAD -- clang-r383902 >/dev/null 2>&1; then
+      echo "APPLIED  clang-r383902 (fetched from android-12.0.0_r9)"
+    else
+      echo "ERROR    could not fetch clang-r383902 - fetch 'aosp' remote reachable? tag still exists?"
+      fail=1
+    fi
+  fi
+else
+  echo "MISSING  $CLANG_DIR (run repo sync first)"
+  fail=1
+fi
+
 exit $fail
