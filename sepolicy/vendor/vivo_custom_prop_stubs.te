@@ -1,3 +1,5 @@
+type vendor_camera_prop, property_type, vendor_property_type;
+type vendor_debug_prop, property_type, vendor_property_type;
 type vendor_vgc_prop, property_type, vendor_property_type;
 type vendor_fuelsummary_prop, property_type, vendor_property_type;
 type framework_svadump_prop, property_type, vendor_property_type;

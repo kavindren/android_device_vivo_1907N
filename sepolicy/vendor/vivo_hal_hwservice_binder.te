@@ -266,7 +266,7 @@ allow ueventd vivo_tpfs:file relabelto;
 allow ueventd sysfs_cpu_type:file relabelto;
 allow ueventd vivo_lcmfs:dir relabelto;
 
-set_prop(atcid_vendor, persist_service_atci_prop)
+set_prop(atcid_vendor, vendor_mtk_persist_service_atci_prop)
 
 # --- gallery3d (untrusted_app_29) ---
 get_prop(untrusted_app_29, qemu_hw_prop)
@@ -276,22 +276,22 @@ get_prop(platform_app, vendor_camera_mtk_prop)
 set_prop(mtk_hal_power, vendor_mtk_vm_prop)
 
 allow mediaserver package_native_service:service_manager find;
-get_prop(mediaserver, debug_mtk_gpud_prop)
+get_prop(mediaserver, vendor_mtk_gpu_prop)
 
 allow mtk_hal_c2 ion_device:chr_file getattr;
 allow mtk_hal_c2 mediaserver:binder call;
 allow mtk_hal_c2 hal_graphics_allocator_default:fd use;
-get_prop(mtk_hal_c2, debug_mtk_gpud_prop)
+get_prop(mtk_hal_c2, vendor_mtk_gpu_prop)
 get_prop(mtk_hal_c2, codec2_config_prop)
 
-get_prop(radio, mtk_mobile_management_prop)
+get_prop(radio, vendor_mtk_mobile_management_prop)
 
 get_prop(crash_dump, packagemanager_config_prop)
 get_prop(crash_dump, media_variant_prop)
 
 allow hal_wifi_hostapd_default hal_vivohostapd_hwservice:hwservice_manager { add find };
 
-get_prop(hal_wifi_default, mtk_wifi_hotspot_prop)
+get_prop(hal_wifi_default, vendor_mtk_wifi_hotspot_prop)
 allow hal_wifi_default self:capability sys_module;
 
 allow webview_zygote proc_uptime:file r_file_perms;
@@ -303,11 +303,11 @@ allow ueventd sysfs_oled_hbm:file relabelto;
 allow ueventd sysfs_gsensor_data:file relabelto;
 
 get_prop(mtk_hal_camera, vendor_mtk_mdp_debug_log_prop)
-get_prop(mtk_hal_camera, mtk_pq_ro_prop)
+get_prop(mtk_hal_camera, vendor_mtk_pq_ro_prop)
 
 allow mtk_hal_c2 ion_device:chr_file ioctl;
 
-get_prop(mediaswcodec, debug_mtk_gpud_prop)
+get_prop(mediaswcodec, vendor_mtk_gpu_prop)
 
 allow ueventd sysfs_mrdump_file:file relabelto;
 allow ueventd sysfs_fp:file relabelto;
