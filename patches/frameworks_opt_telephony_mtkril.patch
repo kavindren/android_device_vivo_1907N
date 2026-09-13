@@ -1,3 +1,19 @@
+diff --git a/src/java/com/android/internal/telephony/BaseCommands.java b/src/java/com/android/internal/telephony/BaseCommands.java
+index 972884a77b..697d873d95 100644
+--- a/src/java/com/android/internal/telephony/BaseCommands.java
++++ b/src/java/com/android/internal/telephony/BaseCommands.java
+@@ -166,7 +166,10 @@ public abstract class BaseCommands implements CommandsInterface {
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+     protected int mAllowedNetworkTypesBitmask;
+     // CDMA subscription received from PhoneFactory
+-    protected int mCdmaSubscription;
++    // vivo 1907N IMS bring-up: MtkRadioIndication (mediatek-telephony-common.jar, prebuilt)
++    // reads this compositionally through an "mRil"-typed field - it extends AOSP's own
++    // RadioIndication, not RIL/BaseCommands, so protected (subclass-only) isn't enough.
++    public int mCdmaSubscription;
+     // Type of Phone, GSM or CDMA. Set by GsmCdmaPhone.
+     @UnsupportedAppUsage
+     protected int mPhoneType;
 diff --git a/src/java/com/android/internal/telephony/PhoneFactory.java b/src/java/com/android/internal/telephony/PhoneFactory.java
 index 3361b74710..9b4eedb4f5 100644
 --- a/src/java/com/android/internal/telephony/PhoneFactory.java
@@ -117,7 +133,7 @@ index 3361b74710..9b4eedb4f5 100644
                          cdmaSubscription, i);
                  sPhones[i] = createPhone(context, i);
 diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
-index 70431f6a0c..1ce39a8901 100644
+index 70431f6a0c..0fd2c40cba 100644
 --- a/src/java/com/android/internal/telephony/RIL.java
 +++ b/src/java/com/android/internal/telephony/RIL.java
 @@ -160,7 +160,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
@@ -164,7 +180,7 @@ index 70431f6a0c..1ce39a8901 100644
      private RadioResponse mRadioResponse;
      private RadioIndication mRadioIndication;
 -    private volatile IRadio mRadioProxy = null;
-+    protected volatile IRadio mRadioProxy = null;
++    public volatile IRadio mRadioProxy = null;
      private DataResponse mDataResponse;
      private DataIndication mDataIndication;
      private MessagingResponse mMessagingResponse;
@@ -179,7 +195,7 @@ index 70431f6a0c..1ce39a8901 100644
 +    // way. Confirmed via a live IllegalAccessError otherwise: "Field '...RIL.mRilHandler' is
 +    // inaccessible to class ...MtkRIL". Widening only, nothing narrowed - no other caller of
 +    // this field (all within this same class/package already) loses any capability.
-+    protected RilHandler mRilHandler;
++    public RilHandler mRilHandler;
      private MockModem mMockModem;
  
      // Thread-safe HashMap to map from RIL_REQUEST_XXX constant to HalVersion.
@@ -194,7 +210,64 @@ index 70431f6a0c..1ce39a8901 100644
          RILRequest rr = RILRequest.obtain(request, result, workSource);
          addRequest(rr);
          return rr;
-@@ -5791,12 +5807,14 @@ public class RIL extends BaseCommands implements CommandsInterface {
+@@ -5113,7 +5129,30 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         }
+     }
+ 
+-    void processRequestAck(int serial) {
++    // vivo 1907N IMS bring-up: single-arg overload for MtkRadioExIndication (mediatek-telephony-
++    // common.jar, prebuilt) - its own proprietary "RadioEx" HIDL indication channel isn't one of
++    // the 7 standard service categories above (RADIO/DATA/MESSAGING/MODEM/NETWORK/SIM/VOICE), so
++    // there's no correct "service" value to route an ack through sendAck() for it. Deliberately
++    // NOT guessing at one - an ack sent to the wrong HAL service proxy risks silently desyncing
++    // wakelock/proxy state, which is worse than just not acking a channel this framework has no
++    // real model of. Confirmed via a live NoSuchMethodError crash-looping com.android.phone
++    // (MtkRadioExIndication.java:713 etc., called from many RadioEx indication handlers).
++    // MUST be public, not protected: unlike MtkRIL, MtkRadioExIndication does NOT extend RIL -
++    // it's an unrelated class (different package) holding an "mRil" reference and calling
++    // through it, so subclass-only protected access doesn't apply (confirmed via a second live
++    // crash, IllegalAccessError this time, after protected wasn't enough).
++    public void processIndication(int indicationType) {
++        if (indicationType == RadioIndicationType.UNSOLICITED_ACK_EXP) {
++            riljLoge("processIndication(int): UNSOLICITED_ACK_EXP on the RadioEx channel has no"
++                    + " service to ack through - not sending one");
++        }
++    }
++
++    // vivo 1907N IMS bring-up: MtkRadioExResponse/MtkRadioExResponseV2 (mediatek-telephony-
++    // common.jar, prebuilt) call this compositionally through an "mRil"-typed field, not by
++    // inheritance (neither extends RIL) - same category as processIndication/riljLog, needs
++    // public, not just package-private/protected.
++    public void processRequestAck(int serial) {
+         RILRequest rr;
+         synchronized (mRequestList) {
+             rr = mRequestList.get(serial);
+@@ -5605,8 +5644,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         return rc;
+     }
+ 
++    // vivo 1907N IMS bring-up: MtkRIL calls this directly by class-qualified static reference
++    // (Lcom/android/internal/telephony/RIL;->retToString), not the subclass-qualified pattern -
++    // widened to public for the same reason as unsljLog* above.
+     @UnsupportedAppUsage
+-    static String retToString(int req, Object ret) {
++    public static String retToString(int req, Object ret) {
+         if (ret == null) return "";
+         switch (req) {
+             // Don't log these return values, for privacy's sake.
+@@ -5732,8 +5774,10 @@ public class RIL extends BaseCommands implements CommandsInterface {
+      *
+      * @param rilVer is the version of the ril or -1 if disconnected.
+      */
++    // vivo 1907N IMS bring-up: MtkRadioIndication (mediatek-telephony-common.jar, prebuilt)
++    // calls this compositionally through an "mRil"-typed field - needs public.
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    void notifyRegistrantsRilConnectionChanged(int rilVer) {
++    public void notifyRegistrantsRilConnectionChanged(int rilVer) {
+         mRilVersion = rilVer;
+         if (mRilConnectedRegistrants != null) {
+             mRilConnectedRegistrants.notifyRegistrants(
+@@ -5791,12 +5835,14 @@ public class RIL extends BaseCommands implements CommandsInterface {
          }
      }
  
@@ -202,16 +275,16 @@ index 70431f6a0c..1ce39a8901 100644
 +    // calls both directly (invoke-virtual). riljLogv left untouched, not referenced by it.
      @UnsupportedAppUsage
 -    void riljLog(String msg) {
-+    protected void riljLog(String msg) {
++    public void riljLog(String msg) {
          Rlog.d(RILJ_LOG_TAG, msg + (" [PHONE" + mPhoneId + "]"));
      }
  
 -    void riljLoge(String msg) {
-+    protected void riljLoge(String msg) {
++    public void riljLoge(String msg) {
          Rlog.e(RILJ_LOG_TAG, msg + (" [PHONE" + mPhoneId + "]"));
      }
  
-@@ -5804,6 +5822,24 @@ public class RIL extends BaseCommands implements CommandsInterface {
+@@ -5804,6 +5850,24 @@ public class RIL extends BaseCommands implements CommandsInterface {
          Rlog.v(RILJ_LOG_TAG, msg + (" [PHONE" + mPhoneId + "]"));
      }
  
@@ -236,6 +309,67 @@ index 70431f6a0c..1ce39a8901 100644
      boolean isLogOrTrace() {
          return RIL.RILJ_LOGD || Trace.isTagEnabled(Trace.TRACE_TAG_NETWORK);
      }
+@@ -5812,8 +5876,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         return RIL.RILJ_LOGV || Trace.isTagEnabled(Trace.TRACE_TAG_NETWORK);
+     }
+ 
++    // vivo 1907N IMS bring-up: unsljLog/unsljLogMore/unsljLogRet/unsljLogvRet below and
++    // retToString above are all called compositionally by MtkRadioIndication/MtkRadioExIndication
++    // (mediatek-telephony-common.jar, prebuilt) through an "mRil"-typed field - need public.
+     @UnsupportedAppUsage
+-    void unsljLog(int response) {
++    public void unsljLog(int response) {
+         String logStr = RILUtils.responseToString(response);
+         if (RIL.RILJ_LOGD) {
+             riljLog("[UNSL]< " + logStr);
+@@ -5822,7 +5889,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     }
+ 
+     @UnsupportedAppUsage
+-    void unsljLogMore(int response, String more) {
++    public void unsljLogMore(int response, String more) {
+         String logStr = RILUtils.responseToString(response) + " " + more;
+         if (RIL.RILJ_LOGD) {
+             riljLog("[UNSL]< " + logStr);
+@@ -5831,7 +5898,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     }
+ 
+     @UnsupportedAppUsage
+-    void unsljLogRet(int response, Object ret) {
++    public void unsljLogRet(int response, Object ret) {
+         String logStr = RILUtils.responseToString(response) + " " + retToString(response, ret);
+         if (RIL.RILJ_LOGD) {
+             riljLog("[UNSL]< " + logStr);
+@@ -5840,7 +5907,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     }
+ 
+     @UnsupportedAppUsage
+-    void unsljLogvRet(int response, Object ret) {
++    public void unsljLogvRet(int response, Object ret) {
+         String logStr = RILUtils.responseToString(response) + " " + retToString(response, ret);
+         if (RIL.RILJ_LOGV) {
+             riljLogv("[UNSL]< " + logStr);
+diff --git a/src/java/com/android/internal/telephony/RadioIndication.java b/src/java/com/android/internal/telephony/RadioIndication.java
+index d947d53611..4179869ea7 100644
+--- a/src/java/com/android/internal/telephony/RadioIndication.java
++++ b/src/java/com/android/internal/telephony/RadioIndication.java
+@@ -147,6 +147,16 @@ public class RadioIndication extends IRadioIndication.Stub {
+         mRil.setRadioState(state, false /* forceNotifyRegistrants */);
+     }
+ 
++    // vivo 1907N IMS bring-up: MtkRadioIndication (mediatek-telephony-common.jar, prebuilt)
++    // overrides radioStateChanged() and calls this directly (invoke-virtual, self-qualified -
++    // true inherited access, not composition) - this used to be a method directly on
++    // RadioIndication in whatever AOSP snapshot it was built against; upstream inlined it into
++    // radioStateChanged() as RILUtils.convertHalRadioState() without leaving a trace. Kept
++    // protected since only confirmed used via subclass inheritance so far.
++    protected int getRadioStateFromInt(int state) {
++        return RILUtils.convertHalRadioState(state);
++    }
++
+     public void callStateChanged(int indicationType) {
+         mRil.processIndication(RIL.RADIO_SERVICE, indicationType);
+ 
 diff --git a/src/java/com/android/internal/telephony/TelephonyDevController.java b/src/java/com/android/internal/telephony/TelephonyDevController.java
 index f97386df23..c8533e7cca 100644
 --- a/src/java/com/android/internal/telephony/TelephonyDevController.java
