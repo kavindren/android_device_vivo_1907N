@@ -747,6 +747,48 @@ index f97386df23..c8533e7cca 100644
          cmdsIf.unregisterForHardwareConfigChanged(sTelephonyDevController);
      }
  
+diff --git a/src/java/com/android/internal/telephony/dataconnection/TransportManager.java b/src/java/com/android/internal/telephony/dataconnection/TransportManager.java
+index 63358f4993..556a28d505 100644
+--- a/src/java/com/android/internal/telephony/dataconnection/TransportManager.java
++++ b/src/java/com/android/internal/telephony/dataconnection/TransportManager.java
+@@ -16,6 +16,7 @@
+ 
+ package com.android.internal.telephony.dataconnection;
+ 
++import android.annotation.NonNull;
+ import android.annotation.Nullable;
+ import android.os.Handler;
+ import android.os.Message;
+@@ -255,6 +256,29 @@ public class TransportManager extends Handler {
+         mHandoverNeededEventRegistrants.remove(h);
+     }
+ 
++    // vivo 1907N IMS bring-up: getAvailableTransports() and isAnyApnPreferredOnIwlan() used to
++    // live directly on TransportManager in whatever AOSP snapshot MtkServiceStateTracker
++    // (mediatek-telephony-common.jar, prebuilt) was built against; upstream since moved both to
++    // AccessNetworksManager (the latter also renamed, dropping "Preferred"). Confirmed via a live
++    // NoSuchMethodError crash in MtkServiceStateTracker.updatePhoneType(), then a full smali
++    // cross-reference of every TransportManager;-> call site in MtkServiceStateTracker and its
++    // inner classes to catch the sibling rename in the same pass rather than one crash at a time.
++    // Thin delegating shims under the old names/location, same pattern as the RILUtils moves.
++
++    /**
++     * @see AccessNetworksManager#getAvailableTransports()
++     */
++    public @NonNull int[] getAvailableTransports() {
++        return mAccessNetworksManager.getAvailableTransports();
++    }
++
++    /**
++     * @see AccessNetworksManager#isAnyApnOnIwlan()
++     */
++    public boolean isAnyApnPreferredOnIwlan() {
++        return mAccessNetworksManager.isAnyApnOnIwlan();
++    }
++
+     /**
+      * Registers the data throttler with DcTracker.
+      */
 diff --git a/src/java/com/android/internal/telephony/imsphone/ImsPhone.java b/src/java/com/android/internal/telephony/imsphone/ImsPhone.java
 index 71e85f35b1..0520a1f880 100644
 --- a/src/java/com/android/internal/telephony/imsphone/ImsPhone.java
