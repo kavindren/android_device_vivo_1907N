@@ -117,10 +117,58 @@ index 3361b74710..9b4eedb4f5 100644
                          cdmaSubscription, i);
                  sPhones[i] = createPhone(context, i);
 diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
-index 70431f6a0c..5d566fc7ea 100644
+index 70431f6a0c..1ce39a8901 100644
 --- a/src/java/com/android/internal/telephony/RIL.java
 +++ b/src/java/com/android/internal/telephony/RIL.java
-@@ -249,7 +249,13 @@ public class RIL extends BaseCommands implements CommandsInterface {
+@@ -160,7 +160,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     public static final HalVersion RADIO_HAL_VERSION_2_0 = new HalVersion(2, 0);
+ 
+     // IRadio version
+-    private HalVersion mRadioVersion = RADIO_HAL_VERSION_UNKNOWN;
++    // vivo 1907N IMS bring-up: widened alongside mRilHandler/mPhoneId - MtkRIL reads this too.
++    protected HalVersion mRadioVersion = RADIO_HAL_VERSION_UNKNOWN;
+ 
+     //***** Instance Variables
+ 
+@@ -194,7 +195,12 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+     AtomicBoolean mTestingEmergencyCall = new AtomicBoolean(false);
+ 
+-    final Integer mPhoneId;
++    // vivo 1907N IMS bring-up: was package-private. Same story as mRilHandler above - MtkRIL
++    // (different package) reads this constantly (17 call sites in its own jar, all reads, no
++    // writes - stays final). Confirmed via a live IllegalAccessError crash-looping
++    // com.android.phone (which in turn triggered RescueParty into requesting a recovery wipe -
++    // see MtkRIL.java:552 in the crash log). Widening only.
++    protected final Integer mPhoneId;
+ 
+     private boolean mUseOldMncMccFormat;
+ 
+@@ -219,7 +225,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     private final SparseArray<Set<Integer>> mDisabledRadioServices = new SparseArray<>();
+ 
+     /* default work source which will blame phone process */
+-    private WorkSource mRILDefaultWorkSource;
++    // vivo 1907N IMS bring-up: widened alongside mRilHandler/mPhoneId - MtkRIL reads this too.
++    protected WorkSource mRILDefaultWorkSource;
+ 
+     /* Worksource containing all applications causing wakelock to be held */
+     private WorkSource mActiveWakelockWorkSource;
+@@ -229,10 +236,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     /** Radio bug detector instance */
+     private RadioBugDetector mRadioBugDetector = null;
+ 
+-    private boolean mIsCellularSupported;
++    // vivo 1907N IMS bring-up: widened alongside mRilHandler/mPhoneId - MtkRIL reads both.
++    protected boolean mIsCellularSupported;
+     private RadioResponse mRadioResponse;
+     private RadioIndication mRadioIndication;
+-    private volatile IRadio mRadioProxy = null;
++    protected volatile IRadio mRadioProxy = null;
+     private DataResponse mDataResponse;
+     private DataIndication mDataIndication;
+     private MessagingResponse mMessagingResponse;
+@@ -249,7 +257,13 @@ public class RIL extends BaseCommands implements CommandsInterface {
      private final SparseArray<BinderServiceDeathRecipient> mDeathRecipients = new SparseArray<>();
      private final SparseArray<AtomicLong> mServiceCookies = new SparseArray<>();
      private final RadioProxyDeathRecipient mRadioProxyDeathRecipient;
@@ -135,6 +183,59 @@ index 70431f6a0c..5d566fc7ea 100644
      private MockModem mMockModem;
  
      // Thread-safe HashMap to map from RIL_REQUEST_XXX constant to HalVersion.
+@@ -1176,7 +1190,9 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         }
+     }
+ 
+-    private RILRequest obtainRequest(int request, Message result, WorkSource workSource) {
++    // vivo 1907N IMS bring-up: widened alongside the fields above - MtkRIL calls the 3-arg
++    // overload directly (invoke-virtual). The varargs overload left untouched, not referenced.
++    protected RILRequest obtainRequest(int request, Message result, WorkSource workSource) {
+         RILRequest rr = RILRequest.obtain(request, result, workSource);
+         addRequest(rr);
+         return rr;
+@@ -5791,12 +5807,14 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         }
+     }
+ 
++    // vivo 1907N IMS bring-up: riljLog/riljLoge widened alongside the fields above - MtkRIL
++    // calls both directly (invoke-virtual). riljLogv left untouched, not referenced by it.
+     @UnsupportedAppUsage
+-    void riljLog(String msg) {
++    protected void riljLog(String msg) {
+         Rlog.d(RILJ_LOG_TAG, msg + (" [PHONE" + mPhoneId + "]"));
+     }
+ 
+-    void riljLoge(String msg) {
++    protected void riljLoge(String msg) {
+         Rlog.e(RILJ_LOG_TAG, msg + (" [PHONE" + mPhoneId + "]"));
+     }
+ 
+@@ -5804,6 +5822,24 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         Rlog.v(RILJ_LOG_TAG, msg + (" [PHONE" + mPhoneId + "]"));
+     }
+ 
++    // vivo 1907N IMS bring-up: these three used to be static methods directly on RIL itself in
++    // whatever older AOSP snapshot MtkRIL (mediatek-telephony-common.jar, prebuilt) was compiled
++    // against - upstream later moved them out to RILUtils (same package, still public static)
++    // without leaving anything behind here. MtkRIL's own bytecode still calls
++    // RIL.convertNullToEmptyString()/primitiveArrayToArrayList()/requestToString() directly, so
++    // provide them back as thin static delegates rather than touching RILUtils's real callers.
++    protected static String convertNullToEmptyString(String string) {
++        return RILUtils.convertNullToEmptyString(string);
++    }
++
++    protected static ArrayList<Byte> primitiveArrayToArrayList(byte[] arr) {
++        return RILUtils.primitiveArrayToArrayList(arr);
++    }
++
++    protected static String requestToString(int request) {
++        return RILUtils.requestToString(request);
++    }
++
+     boolean isLogOrTrace() {
+         return RIL.RILJ_LOGD || Trace.isTagEnabled(Trace.TRACE_TAG_NETWORK);
+     }
 diff --git a/src/java/com/android/internal/telephony/TelephonyDevController.java b/src/java/com/android/internal/telephony/TelephonyDevController.java
 index f97386df23..c8533e7cca 100644
 --- a/src/java/com/android/internal/telephony/TelephonyDevController.java
