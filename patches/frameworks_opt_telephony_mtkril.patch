@@ -1,38 +1,33 @@
 diff --git a/src/java/com/android/internal/telephony/PhoneFactory.java b/src/java/com/android/internal/telephony/PhoneFactory.java
-index a91d872332..cbff157626 100644
+index cbff157626..9b4eedb4f5 100644
 --- a/src/java/com/android/internal/telephony/PhoneFactory.java
 +++ b/src/java/com/android/internal/telephony/PhoneFactory.java
-@@ -138,16 +138,30 @@ public class PhoneFactory {
-             // with 8MB logd buffers - reason never pinned down, even though other classes'
-             // Rlog output, e.g. RIL.java's RILJ tag, is captured fine and continuously). A
-             // system property is immune to logd buffering/dropping, so use that instead as the
--            // one source of truth for which class actually got wired up as mCi.
--            SystemProperties.set("debug.mtkril.instance" + instanceId, ci.getClass().getName());
-+            // one source of truth for which class actually got wired up as mCi. MUST use the
-+            // "ril." prefix (radio_prop in property_contexts) - "debug." (debug_prop) is NOT
-+            // set_prop-granted to the radio domain in this sepolicy tree, which crash-looped
-+            // com.android.phone on every boot (uncaught RuntimeException from
-+            // SystemProperties.set on an avc denial) until this was caught. Also wrapped in its
-+            // own try/catch now so a permission problem can never crash phone bring-up again,
-+            // whatever the property name ends up being.
-+            setRilDebugPropSafely("ril.mtkril.instance" + instanceId, ci.getClass().getName());
+@@ -148,12 +148,27 @@ public class PhoneFactory {
+             setRilDebugPropSafely("ril.mtkril.instance" + instanceId, ci.getClass().getName());
              return ci;
          } catch (ReflectiveOperationException e) {
--            SystemProperties.set("debug.mtkril.instance" + instanceId,
-+            setRilDebugPropSafely("ril.mtkril.instance" + instanceId,
-                     "FALLBACK:" + e.getClass().getSimpleName());
++            // First round of testing this got as far as MtkRIL's own constructor actually
++            // throwing (ReflectiveOperationException here was InvocationTargetException, not a
++            // ClassNotFoundException/NoSuchMethodException), so surface the real wrapped cause
++            // - that's the thing that actually needs fixing next, not this reflection shim.
++            Throwable cause = e.getCause() != null ? e.getCause() : e;
++            String detail = cause.getClass().getSimpleName() + ":" + cause.getMessage();
+             setRilDebugPropSafely("ril.mtkril.instance" + instanceId,
+-                    "FALLBACK:" + e.getClass().getSimpleName());
++                    "FALLBACK:" + truncateForProp(detail));
++            // Try logging the full stack trace too, in case this boot's log capture behaves
++            // differently now that the crash-loop is gone - costs nothing if it's still dropped.
++            Rlog.w(LOG_TAG, "newRil FALLBACK for instanceId=" + instanceId, e);
              return new RIL(context, preferredNetworkType, cdmaSubscription, instanceId);
          }
      }
  
-+    private static void setRilDebugPropSafely(String key, String value) {
-+        try {
-+            SystemProperties.set(key, value);
-+        } catch (RuntimeException e) {
-+            Rlog.w(LOG_TAG, "setRilDebugPropSafely: couldn't set " + key + ": " + e);
-+        }
++    private static String truncateForProp(String s) {
++        // PROP_VALUE_MAX is 91 bytes (bionic system_properties.h); leave room for "FALLBACK:".
++        final int max = 80;
++        return s.length() > max ? s.substring(0, max) : s;
 +    }
 +
-     public static void makeDefaultPhones(Context context) {
-         makeDefaultPhone(context);
-     }
+     private static void setRilDebugPropSafely(String key, String value) {
+         try {
+             SystemProperties.set(key, value);
