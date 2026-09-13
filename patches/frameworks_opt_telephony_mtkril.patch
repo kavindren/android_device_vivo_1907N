@@ -135,3 +135,36 @@ index 70431f6a0c..5d566fc7ea 100644
      private MockModem mMockModem;
  
      // Thread-safe HashMap to map from RIL_REQUEST_XXX constant to HalVersion.
+diff --git a/src/java/com/android/internal/telephony/TelephonyDevController.java b/src/java/com/android/internal/telephony/TelephonyDevController.java
+index f97386df23..c8533e7cca 100644
+--- a/src/java/com/android/internal/telephony/TelephonyDevController.java
++++ b/src/java/com/android/internal/telephony/TelephonyDevController.java
+@@ -102,8 +102,16 @@ public class TelephonyDevController extends Handler {
+     /**
+      * each RIL call this interface to register/unregister the unsolicited hardware
+      * configuration callback data it can provide.
++     *
++     * vivo 1907N IMS bring-up: was "static void". MtkRIL's own constructor (mediatek-
++     * telephony-common.jar, prebuilt) calls TelephonyDevController.getInstance().registerRIL(this)
++     * and its compiled bytecode expects an invoke-virtual, i.e. an instance method - confirmed via
++     * a live IncompatibleClassChangeError otherwise ("expected to be of type virtual but instead
++     * was found to be of type static"). Every field this touches is already static, and the only
++     * real call site (RIL.java, right below) already calls it through a "tdc" instance variable,
++     * so dropping "static" is a pure bytecode-shape change with the exact same source semantics.
+      */
+-    public static void registerRIL(CommandsInterface cmdsIf) {
++    public void registerRIL(CommandsInterface cmdsIf) {
+         /* get the current configuration from this ril... */
+         cmdsIf.getHardwareConfig(sRilHardwareConfig);
+         /* ... process it ... */
+@@ -117,7 +125,9 @@ public class TelephonyDevController extends Handler {
+         cmdsIf.registerForHardwareConfigChanged(sTelephonyDevController, EVENT_HARDWARE_CONFIG_CHANGED, null);
+     }
+ 
+-    public static void unregisterRIL(CommandsInterface cmdsIf) {
++    // Kept symmetric with registerRIL above, same reasoning - not currently exercised by
++    // MtkRIL's own bytecode, but RIL.java's dispose() path may need the same shape.
++    public void unregisterRIL(CommandsInterface cmdsIf) {
+         cmdsIf.unregisterForHardwareConfigChanged(sTelephonyDevController);
+     }
+ 
