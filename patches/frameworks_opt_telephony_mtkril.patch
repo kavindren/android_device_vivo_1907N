@@ -1,80 +1,40 @@
 diff --git a/src/java/com/android/internal/telephony/PhoneFactory.java b/src/java/com/android/internal/telephony/PhoneFactory.java
-index 3361b74710..249c2c297c 100644
+index 249c2c297c..a91d872332 100644
 --- a/src/java/com/android/internal/telephony/PhoneFactory.java
 +++ b/src/java/com/android/internal/telephony/PhoneFactory.java
-@@ -57,6 +57,7 @@ import com.android.telephony.Rlog;
- 
- import java.io.FileDescriptor;
- import java.io.PrintWriter;
-+import java.lang.reflect.Constructor;
- import java.util.HashMap;
- import java.util.Map;
- 
-@@ -104,6 +105,47 @@ public class PhoneFactory {
- 
-     //***** Class Methods
- 
-+    /**
-+     * vivo 1907N IMS bring-up: real root cause of IMS/VoLTE never registering, traced all the
-+     * way down from MtkQualifiedNetworksService's own constructor (mediatek-telephony-
-+     * common.jar, byte-identical to stock): it checks `mPhone.mCi instanceof MtkRIL` and
-+     * silently no-ops its whole periodic qualified-networks evaluation loop otherwise, logging
-+     * just "Constructor: mPhone.mCi is not instanceof MTKRIL!" - a message nothing downstream of
-+     * that class ever surfaces prominently. MtkTelephonyComponentFactory (also already in that
-+     * jar) was clearly meant to inject this via overriding a makeRil() factory method, but that
-+     * indirection doesn't exist in this AOSP version at all - this class constructs RIL
-+     * directly, no factory call in between. MtkRIL extends RIL with an identical constructor
-+     * signature (Context, int, int, Integer) to the real one, so this is a direct swap, not a
-+     * port - except mediatek-telephony-common.jar is a dex_import prebuilt, which Soong
-+     * explicitly forbids as a compile-time dependency of a real java_library (it "can only be
-+     * installed", per build/soong/java/java.go's own comment on DexImport) - so this can't be a
-+     * plain "new MtkRIL(...)" the compiler resolves normally. Falls back to real RIL if the
-+     * class genuinely isn't present (e.g. building for a different, non-MTK device), so this is
-+     * never a hard dependency.
-+     */
-+    private static CommandsInterface newRil(Context context, int preferredNetworkType,
-+            int cdmaSubscription, Integer instanceId) {
-+        try {
-+            Class<?> mtkRilClass = Class.forName("com.mediatek.internal.telephony.MtkRIL");
-+            Constructor<?> ctor = mtkRilClass.getConstructor(
-+                    Context.class, int.class, int.class, Integer.class);
-+            CommandsInterface ci = (CommandsInterface) ctor.newInstance(
-+                    context, preferredNetworkType, cdmaSubscription, instanceId);
-+            // vivo 1907N IMS bring-up: unmissable, always-on marker (Rlog.w survives any tag
-+            // filtering) confirming which concrete class actually got wired up as mCi - logcat
-+            // archaeology around PhoneFactory's own Rlog.i calls proved unreliable (they never
-+            // showed up in *any* boot capture, even with 8MB logd buffers, for reasons never
-+            // pinned down), so don't rely on those - rely on this line instead.
-+            Rlog.w(LOG_TAG, "newRil SUCCESS: mCi is " + ci.getClass().getName()
-+                    + " for instanceId=" + instanceId);
-+            return ci;
-+        } catch (ReflectiveOperationException e) {
-+            Rlog.w(LOG_TAG, "newRil FALLBACK: MtkRIL not available for instanceId=" + instanceId
-+                    + ", falling back to plain RIL: " + e);
-+            return new RIL(context, preferredNetworkType, cdmaSubscription, instanceId);
-+        }
-+    }
-+
-     public static void makeDefaultPhones(Context context) {
-         makeDefaultPhone(context);
+@@ -31,6 +31,7 @@ import android.net.LocalServerSocket;
+ import android.os.Build;
+ import android.os.HandlerThread;
+ import android.os.Looper;
++import android.os.SystemProperties;
+ import android.preference.PreferenceManager;
+ import android.provider.Settings;
+ import android.provider.Settings.SettingNotFoundException;
+@@ -131,17 +132,18 @@ public class PhoneFactory {
+                     Context.class, int.class, int.class, Integer.class);
+             CommandsInterface ci = (CommandsInterface) ctor.newInstance(
+                     context, preferredNetworkType, cdmaSubscription, instanceId);
+-            // vivo 1907N IMS bring-up: unmissable, always-on marker (Rlog.w survives any tag
+-            // filtering) confirming which concrete class actually got wired up as mCi - logcat
+-            // archaeology around PhoneFactory's own Rlog.i calls proved unreliable (they never
+-            // showed up in *any* boot capture, even with 8MB logd buffers, for reasons never
+-            // pinned down), so don't rely on those - rely on this line instead.
+-            Rlog.w(LOG_TAG, "newRil SUCCESS: mCi is " + ci.getClass().getName()
+-                    + " for instanceId=" + instanceId);
++            // vivo 1907N IMS bring-up: logcat proved completely unreliable for observing this
++            // call site (neither this class's own pre-existing Rlog.i calls nor a newly added
++            // Rlog.w ever showed up in *any* boot capture, across multiple reboots and even
++            // with 8MB logd buffers - reason never pinned down, even though other classes'
++            // Rlog output, e.g. RIL.java's RILJ tag, is captured fine and continuously). A
++            // system property is immune to logd buffering/dropping, so use that instead as the
++            // one source of truth for which class actually got wired up as mCi.
++            SystemProperties.set("debug.mtkril.instance" + instanceId, ci.getClass().getName());
+             return ci;
+         } catch (ReflectiveOperationException e) {
+-            Rlog.w(LOG_TAG, "newRil FALLBACK: MtkRIL not available for instanceId=" + instanceId
+-                    + ", falling back to plain RIL: " + e);
++            SystemProperties.set("debug.mtkril.instance" + instanceId,
++                    "FALLBACK:" + e.getClass().getSimpleName());
+             return new RIL(context, preferredNetworkType, cdmaSubscription, instanceId);
+         }
      }
-@@ -172,7 +214,7 @@ public class PhoneFactory {
-                     networkModes[i] = RILConstants.PREFERRED_NETWORK_MODE;
- 
-                     Rlog.i(LOG_TAG, "Network Mode set to " + Integer.toString(networkModes[i]));
--                    sCommandsInterfaces[i] = new RIL(context,
-+                    sCommandsInterfaces[i] = newRil(context,
-                             RadioAccessFamily.getRafFromNetworkType(networkModes[i]),
-                             cdmaSubscription, i);
-                 }
-@@ -299,7 +341,9 @@ public class PhoneFactory {
- 
-             int cdmaSubscription = CdmaSubscriptionSourceManager.getDefault(context);
-             for (int i = prevActiveModemCount; i < activeModemCount; i++) {
--                sCommandsInterfaces[i] = new RIL(context, RadioAccessFamily.getRafFromNetworkType(
-+                // vivo 1907N IMS bring-up: same MtkRIL swap as newRil()'s use in
-+                // makeRadioInterfaces() above - see that method's own comment.
-+                sCommandsInterfaces[i] = newRil(context, RadioAccessFamily.getRafFromNetworkType(
-                         RILConstants.PREFERRED_NETWORK_MODE),
-                         cdmaSubscription, i);
-                 sPhones[i] = createPhone(context, i);
