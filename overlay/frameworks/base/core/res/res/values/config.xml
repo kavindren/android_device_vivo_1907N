@@ -91,4 +91,24 @@
     <string name="config_wlan_data_service_package" translatable="false">com.android.phone</string>
     <string name="config_wlan_network_service_class" translatable="false">com.mediatek.internal.telephony.IWlanNetworkService</string>
     <string name="config_wlan_network_service_package" translatable="false">com.android.phone</string>
+
+    <!-- vivo 1907N IMS bring-up: the actual missing piece, found via a live dumpsys check
+         against a real stock Funtouch log (~/fp_and_ims_logcat.txt, MtkQualifiedNetworksService
+         logging "UPDATE_QUALIFIED_NETWORKS" every few seconds throughout, from the very start).
+         On our build the equivalent never bound at all - `dumpsys activity services` showed
+         IWlanNetworkService/IwlanDataService genuinely bound, but no ServiceRecord for
+         MtkQualifiedNetworksService, ever, in any capture. Root cause: unlike
+         config_wwan_data_service_package (defaults to com.android.phone in AOSP's own
+         config_telephony.xml), config_qualified_networks_service_package has NO AOSP default at
+         all - it's an empty string unless a device overlay sets it, by design (its own code
+         comment: "Return empty string when in legacy mode"). The earlier patch adding
+         MtkQualifiedNetworksService's <service> manifest entry never added this override,
+         wrongly assuming an empty package would resolve the same way an empty *class* name does
+         (implicit intent) - AccessNetworksManager.bindQualifiedNetworksService() logs exactly
+         "Can't find the binding package" and returns immediately when the package itself is
+         empty, before ever constructing an intent at all. Stock's own framework-res.apk sets
+         this to com.android.phone (confirmed by decoding it directly) - same value as the WLAN
+         entries above, since MtkQualifiedNetworksService lives in the same
+         mediatek-telephony-common.jar, hosted the same way inside com.android.phone. -->
+    <string name="config_qualified_networks_service_package" translatable="false">com.android.phone</string>
 </resources>
