@@ -15,7 +15,7 @@ index 972884a77b..697d873d95 100644
      @UnsupportedAppUsage
      protected int mPhoneType;
 diff --git a/src/java/com/android/internal/telephony/PhoneFactory.java b/src/java/com/android/internal/telephony/PhoneFactory.java
-index 3361b74710..9b4eedb4f5 100644
+index 3361b74710..22f15a7c61 100644
 --- a/src/java/com/android/internal/telephony/PhoneFactory.java
 +++ b/src/java/com/android/internal/telephony/PhoneFactory.java
 @@ -31,6 +31,7 @@ import android.net.LocalServerSocket;
@@ -34,7 +34,7 @@ index 3361b74710..9b4eedb4f5 100644
  import java.util.HashMap;
  import java.util.Map;
  
-@@ -104,6 +106,77 @@ public class PhoneFactory {
+@@ -104,6 +106,88 @@ public class PhoneFactory {
  
      //***** Class Methods
  
@@ -92,6 +92,17 @@ index 3361b74710..9b4eedb4f5 100644
 +            // differently now that the crash-loop is gone - costs nothing if it's still dropped.
 +            Rlog.w(LOG_TAG, "newRil FALLBACK for instanceId=" + instanceId, e);
 +            return new RIL(context, preferredNetworkType, cdmaSubscription, instanceId);
++        } catch (LinkageError e) {
++            // vivo 1907N IMS bring-up: MtkTelephonyComponentFactory's own Class.forName() hit
++            // this for real (MtkServiceStateTracker overriding a "final" ServiceStateTracker
++            // method - not a ReflectiveOperationException, uncatchable by the block above since
++            // LinkageError extends Error). Hardening this call site the same way defensively,
++            // even though it hasn't actually hit this yet, since we now know the failure mode
++            // exists and this is just as uncaught otherwise.
++            Rlog.w(LOG_TAG, "newRil LINKERR for instanceId=" + instanceId, e);
++            setRilDebugPropSafely("ril.mtkril.instance" + instanceId,
++                    "LINKERR:" + truncateForProp(e.getClass().getSimpleName() + ":" + e.getMessage()));
++            return new RIL(context, preferredNetworkType, cdmaSubscription, instanceId);
 +        }
 +    }
 +
@@ -112,7 +123,7 @@ index 3361b74710..9b4eedb4f5 100644
      public static void makeDefaultPhones(Context context) {
          makeDefaultPhone(context);
      }
-@@ -172,7 +245,7 @@ public class PhoneFactory {
+@@ -172,7 +256,7 @@ public class PhoneFactory {
                      networkModes[i] = RILConstants.PREFERRED_NETWORK_MODE;
  
                      Rlog.i(LOG_TAG, "Network Mode set to " + Integer.toString(networkModes[i]));
@@ -121,7 +132,7 @@ index 3361b74710..9b4eedb4f5 100644
                              RadioAccessFamily.getRafFromNetworkType(networkModes[i]),
                              cdmaSubscription, i);
                  }
-@@ -299,7 +372,9 @@ public class PhoneFactory {
+@@ -299,7 +383,9 @@ public class PhoneFactory {
  
              int cdmaSubscription = CdmaSubscriptionSourceManager.getDefault(context);
              for (int i = prevActiveModemCount; i < activeModemCount; i++) {
@@ -370,6 +381,34 @@ index d947d53611..4179869ea7 100644
      public void callStateChanged(int indicationType) {
          mRil.processIndication(RIL.RADIO_SERVICE, indicationType);
  
+diff --git a/src/java/com/android/internal/telephony/ServiceStateTracker.java b/src/java/com/android/internal/telephony/ServiceStateTracker.java
+index efc79a44c2..abbcb45bb3 100755
+--- a/src/java/com/android/internal/telephony/ServiceStateTracker.java
++++ b/src/java/com/android/internal/telephony/ServiceStateTracker.java
+@@ -3249,13 +3249,21 @@ public class ServiceStateTracker extends Handler {
+         mRatLog.log(mSS.toString());
+     }
+ 
++    // vivo 1907N IMS bring-up: dropped "final" - MtkServiceStateTracker (mediatek-telephony-
++    // common.jar, prebuilt) overrides both. Unlike every other fix in this patch set (all
++    // visibility), this one is a hard java.lang.LinkageError at class-load time, not a
++    // catchable exception - confirmed it crashes com.android.phone before even reaching
++    // MtkTelephonyComponentFactory's constructor, uncatchable by the newRil()-style
++    // try/catch(ReflectiveOperationException) since LinkageError extends Error. Also hardened
++    // makeDefaultInstance() below to catch Throwable, not just ReflectiveOperationException, so
++    // the next such issue (if any) fails safe instead of crashing phone bring-up again.
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    protected final void log(String s) {
++    protected void log(String s) {
+         Rlog.d(LOG_TAG, "[" + mPhone.getPhoneId() + "] " + s);
+     }
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    protected final void loge(String s) {
++    protected void loge(String s) {
+         Rlog.e(LOG_TAG, "[" + mPhone.getPhoneId() + "] " + s);
+     }
+ 
 diff --git a/src/java/com/android/internal/telephony/SmsStorageMonitor.java b/src/java/com/android/internal/telephony/SmsStorageMonitor.java
 index b890a4da4d..3295556191 100755
 --- a/src/java/com/android/internal/telephony/SmsStorageMonitor.java
@@ -550,7 +589,7 @@ index 82799bea8b..97c75b4b98 100644
          if (name == Settings.Global.MULTI_SIM_DATA_CALL_SUBSCRIPTION) {
              invalidateDefaultDataSubIdCaches();
 diff --git a/src/java/com/android/internal/telephony/TelephonyComponentFactory.java b/src/java/com/android/internal/telephony/TelephonyComponentFactory.java
-index dcbd2d5a95..359cbd189a 100644
+index dcbd2d5a95..345c7f70d2 100644
 --- a/src/java/com/android/internal/telephony/TelephonyComponentFactory.java
 +++ b/src/java/com/android/internal/telephony/TelephonyComponentFactory.java
 @@ -60,6 +60,7 @@ import org.xmlpull.v1.XmlPullParserException;
@@ -561,7 +600,7 @@ index dcbd2d5a95..359cbd189a 100644
  import java.util.Arrays;
  import java.util.HashSet;
  import java.util.Set;
-@@ -231,11 +232,55 @@ public class TelephonyComponentFactory {
+@@ -231,11 +232,70 @@ public class TelephonyComponentFactory {
  
      public static TelephonyComponentFactory getInstance() {
          if (sInstance == null) {
@@ -600,6 +639,21 @@ index dcbd2d5a95..359cbd189a 100644
 +            String detail = cause.getClass().getSimpleName() + ":" + cause.getMessage();
 +            setDiagPropSafely("ril.mtktcf.result",
 +                    "FALLBACK:" + (detail.length() > 80 ? detail.substring(0, 80) : detail));
++            return new TelephonyComponentFactory();
++        } catch (LinkageError e) {
++            // vivo 1907N IMS bring-up: Class.forName() itself can throw this (not just
++            // ReflectiveOperationException) if any class MtkTelephonyComponentFactory's own
++            // method signatures reference - e.g. MtkServiceStateTracker overriding a "final"
++            // method on our side - fails ART's class verifier. Confirmed live: crashed
++            // com.android.phone before this method's try block could even catch it, since
++            // LinkageError extends Error, not Exception. Catching it explicitly here so any
++            // *other* such mismatch we haven't found yet fails safe instead of taking down
++            // phone bring-up again.
++            Rlog.w(TAG, "MtkTelephonyComponentFactory failed to link/verify, falling back to "
++                    + "plain TelephonyComponentFactory: " + e);
++            String detail = e.getClass().getSimpleName() + ":" + e.getMessage();
++            setDiagPropSafely("ril.mtktcf.result",
++                    "LINKERR:" + (detail.length() > 80 ? detail.substring(0, 80) : detail));
 +            return new TelephonyComponentFactory();
 +        }
 +    }
