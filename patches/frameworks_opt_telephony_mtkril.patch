@@ -1,40 +1,38 @@
 diff --git a/src/java/com/android/internal/telephony/PhoneFactory.java b/src/java/com/android/internal/telephony/PhoneFactory.java
-index 249c2c297c..a91d872332 100644
+index a91d872332..cbff157626 100644
 --- a/src/java/com/android/internal/telephony/PhoneFactory.java
 +++ b/src/java/com/android/internal/telephony/PhoneFactory.java
-@@ -31,6 +31,7 @@ import android.net.LocalServerSocket;
- import android.os.Build;
- import android.os.HandlerThread;
- import android.os.Looper;
-+import android.os.SystemProperties;
- import android.preference.PreferenceManager;
- import android.provider.Settings;
- import android.provider.Settings.SettingNotFoundException;
-@@ -131,17 +132,18 @@ public class PhoneFactory {
-                     Context.class, int.class, int.class, Integer.class);
-             CommandsInterface ci = (CommandsInterface) ctor.newInstance(
-                     context, preferredNetworkType, cdmaSubscription, instanceId);
--            // vivo 1907N IMS bring-up: unmissable, always-on marker (Rlog.w survives any tag
--            // filtering) confirming which concrete class actually got wired up as mCi - logcat
--            // archaeology around PhoneFactory's own Rlog.i calls proved unreliable (they never
--            // showed up in *any* boot capture, even with 8MB logd buffers, for reasons never
--            // pinned down), so don't rely on those - rely on this line instead.
--            Rlog.w(LOG_TAG, "newRil SUCCESS: mCi is " + ci.getClass().getName()
--                    + " for instanceId=" + instanceId);
-+            // vivo 1907N IMS bring-up: logcat proved completely unreliable for observing this
-+            // call site (neither this class's own pre-existing Rlog.i calls nor a newly added
-+            // Rlog.w ever showed up in *any* boot capture, across multiple reboots and even
-+            // with 8MB logd buffers - reason never pinned down, even though other classes'
-+            // Rlog output, e.g. RIL.java's RILJ tag, is captured fine and continuously). A
-+            // system property is immune to logd buffering/dropping, so use that instead as the
-+            // one source of truth for which class actually got wired up as mCi.
-+            SystemProperties.set("debug.mtkril.instance" + instanceId, ci.getClass().getName());
+@@ -138,16 +138,30 @@ public class PhoneFactory {
+             // with 8MB logd buffers - reason never pinned down, even though other classes'
+             // Rlog output, e.g. RIL.java's RILJ tag, is captured fine and continuously). A
+             // system property is immune to logd buffering/dropping, so use that instead as the
+-            // one source of truth for which class actually got wired up as mCi.
+-            SystemProperties.set("debug.mtkril.instance" + instanceId, ci.getClass().getName());
++            // one source of truth for which class actually got wired up as mCi. MUST use the
++            // "ril." prefix (radio_prop in property_contexts) - "debug." (debug_prop) is NOT
++            // set_prop-granted to the radio domain in this sepolicy tree, which crash-looped
++            // com.android.phone on every boot (uncaught RuntimeException from
++            // SystemProperties.set on an avc denial) until this was caught. Also wrapped in its
++            // own try/catch now so a permission problem can never crash phone bring-up again,
++            // whatever the property name ends up being.
++            setRilDebugPropSafely("ril.mtkril.instance" + instanceId, ci.getClass().getName());
              return ci;
          } catch (ReflectiveOperationException e) {
--            Rlog.w(LOG_TAG, "newRil FALLBACK: MtkRIL not available for instanceId=" + instanceId
--                    + ", falling back to plain RIL: " + e);
-+            SystemProperties.set("debug.mtkril.instance" + instanceId,
-+                    "FALLBACK:" + e.getClass().getSimpleName());
+-            SystemProperties.set("debug.mtkril.instance" + instanceId,
++            setRilDebugPropSafely("ril.mtkril.instance" + instanceId,
+                     "FALLBACK:" + e.getClass().getSimpleName());
              return new RIL(context, preferredNetworkType, cdmaSubscription, instanceId);
          }
+     }
+ 
++    private static void setRilDebugPropSafely(String key, String value) {
++        try {
++            SystemProperties.set(key, value);
++        } catch (RuntimeException e) {
++            Rlog.w(LOG_TAG, "setRilDebugPropSafely: couldn't set " + key + ": " + e);
++        }
++    }
++
+     public static void makeDefaultPhones(Context context) {
+         makeDefaultPhone(context);
      }
