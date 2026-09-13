@@ -1,0 +1,65 @@
+diff --git a/Android.bp b/Android.bp
+index fab53d1da6..140623d58b 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -93,6 +93,12 @@ java_library {
+         "voip-common",
+         "ims-common",
+         "unsupportedappusage",
++        // vivo 1907N IMS bring-up: PhoneFactory.java now constructs MtkRIL instead of RIL -
++        // this vendor-prebuilt dex_import jar (device/vivo/1907N proprietary tree, already on
++        // the boot classpath at runtime) needs to be compile-time visible here too, purely so
++        // javac can resolve the MtkRIL symbol. libs (not static_libs): it's already a separate
++        // boot jar at runtime, this must not get re-bundled into telephony-common's own output.
++        "mediatek-telephony-common",
+     ],
+     static_libs: [
+         "android.hardware.radio.config-V1.0-java-shallow",
+diff --git a/src/java/com/android/internal/telephony/PhoneFactory.java b/src/java/com/android/internal/telephony/PhoneFactory.java
+index 3361b74710..2ed8293b9b 100644
+--- a/src/java/com/android/internal/telephony/PhoneFactory.java
++++ b/src/java/com/android/internal/telephony/PhoneFactory.java
+@@ -37,6 +37,9 @@ import android.provider.Settings.SettingNotFoundException;
+ import android.telephony.AnomalyReporter;
+ import android.telephony.RadioAccessFamily;
+ import android.telephony.SubscriptionManager;
++
++// vivo 1907N IMS bring-up: see the two "new MtkRIL(...)" call sites below for why.
++import com.mediatek.internal.telephony.MtkRIL;
+ import android.telephony.TelephonyManager;
+ import android.util.LocalLog;
+ 
+@@ -172,7 +175,21 @@ public class PhoneFactory {
+                     networkModes[i] = RILConstants.PREFERRED_NETWORK_MODE;
+ 
+                     Rlog.i(LOG_TAG, "Network Mode set to " + Integer.toString(networkModes[i]));
+-                    sCommandsInterfaces[i] = new RIL(context,
++                    // vivo 1907N IMS bring-up: real root cause of IMS/VoLTE never registering,
++                    // traced all the way down from MtkQualifiedNetworksService's own constructor
++                    // (mediatek-telephony-common.jar, byte-identical to stock): it checks
++                    // `mPhone.mCi instanceof MtkRIL` and silently no-ops its whole periodic
++                    // qualified-networks evaluation loop otherwise, logging just
++                    // "Constructor: mPhone.mCi is not instanceof MTKRIL!" - a message nothing
++                    // downstream of this class ever surfaces prominently. MtkTelephonyComponent
++                    // Factory (also already in that jar) was clearly meant to inject this via
++                    // overriding a makeRil() factory method, but that indirection doesn't exist
++                    // in this AOSP version at all - PhoneFactory constructs RIL directly, no
++                    // factory call in between. MtkRIL extends RIL with an identical constructor
++                    // signature (Context, int, int, Integer) to the real one below, so this is a
++                    // direct swap, not a port: the "1907N never gets a real IMS registration"
++                    // wall traces to literally these two lines constructing the wrong class.
++                    sCommandsInterfaces[i] = new MtkRIL(context,
+                             RadioAccessFamily.getRafFromNetworkType(networkModes[i]),
+                             cdmaSubscription, i);
+                 }
+@@ -299,7 +316,9 @@ public class PhoneFactory {
+ 
+             int cdmaSubscription = CdmaSubscriptionSourceManager.getDefault(context);
+             for (int i = prevActiveModemCount; i < activeModemCount; i++) {
+-                sCommandsInterfaces[i] = new RIL(context, RadioAccessFamily.getRafFromNetworkType(
++                // vivo 1907N IMS bring-up: same MtkRIL swap as the other makeRadioInterfaces()
++                // call site above - see that comment for the full explanation.
++                sCommandsInterfaces[i] = new MtkRIL(context, RadioAccessFamily.getRafFromNetworkType(
+                         RILConstants.PREFERRED_NETWORK_MODE),
+                         cdmaSubscription, i);
+                 sPhones[i] = createPhone(context, i);
