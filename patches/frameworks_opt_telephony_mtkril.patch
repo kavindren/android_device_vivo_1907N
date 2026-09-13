@@ -370,6 +370,41 @@ index d947d53611..4179869ea7 100644
      public void callStateChanged(int indicationType) {
          mRil.processIndication(RIL.RADIO_SERVICE, indicationType);
  
+diff --git a/src/java/com/android/internal/telephony/SmsStorageMonitor.java b/src/java/com/android/internal/telephony/SmsStorageMonitor.java
+index b890a4da4d..3295556191 100755
+--- a/src/java/com/android/internal/telephony/SmsStorageMonitor.java
++++ b/src/java/com/android/internal/telephony/SmsStorageMonitor.java
+@@ -50,20 +50,25 @@ public class SmsStorageMonitor extends Handler {
+     /** Radio is ON */
+     private static final int EVENT_RADIO_ON = 3;
+ 
++    // vivo 1907N IMS bring-up: mContext/mWakeLock/mPhone/mStorageAvailable/mCi widened from
++    // private/package-private to protected - MtkSmsStorageMonitor (mediatek-telephony-
++    // common.jar, prebuilt) extends this from a different package and reads all of them via
++    // inheritance (mCi confirmed read-only there, kept final). Same pattern as MtkRIL/
++    // MtkSubscriptionController.
+     /** Context from phone object passed to constructor. */
+-    private final Context mContext;
++    protected final Context mContext;
+ 
+     /** Wake lock to ensure device stays awake while dispatching the SMS intent. */
+-    private PowerManager.WakeLock mWakeLock;
++    protected PowerManager.WakeLock mWakeLock;
+ 
+     private boolean mReportMemoryStatusPending;
+ 
+     /** it is use to put in to extra value for SIM_FULL_ACTION and SMS_REJECTED_ACTION */
+-    Phone mPhone;
++    protected Phone mPhone;
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    final CommandsInterface mCi;                            // accessed from inner class
+-    boolean mStorageAvailable = true;                       // accessed from inner class
++    protected final CommandsInterface mCi;                  // accessed from inner class
++    protected boolean mStorageAvailable = true;             // accessed from inner class
+ 
+     /**
+      * Hold the wake lock for 5 seconds, which should be enough time for
 diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
 index 82799bea8b..97c75b4b98 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionController.java
@@ -616,3 +651,344 @@ index f97386df23..c8533e7cca 100644
          cmdsIf.unregisterForHardwareConfigChanged(sTelephonyDevController);
      }
  
+diff --git a/src/java/com/android/internal/telephony/imsphone/ImsPhone.java b/src/java/com/android/internal/telephony/imsphone/ImsPhone.java
+index 71e85f35b1..0520a1f880 100644
+--- a/src/java/com/android/internal/telephony/imsphone/ImsPhone.java
++++ b/src/java/com/android/internal/telephony/imsphone/ImsPhone.java
+@@ -133,6 +133,12 @@ import java.util.function.Consumer;
+ /**
+  * {@hide}
+  */
++// vivo 1907N IMS bring-up: 16 fields/methods below widened from private/package-private to
++// protected - MtkImsPhone (mediatek-telephony-common.jar, prebuilt), now actually constructed
++// since MtkTelephonyComponentFactory.makeImsPhone() is wired in, reads/calls all of them via
++// inheritance. Found via the same self-qualified-smali-reference diff used for MtkRIL/
++// MtkSubscriptionController, applied proactively (not one crash at a time) since this class was
++// clearly next in the makePhone -> createImsPhone -> makeImsPhoneCallTracker chain.
+ public class ImsPhone extends ImsPhoneBase {
+     private static final String LOG_TAG = "ImsPhone";
+     private static final boolean DBG = true;
+@@ -248,14 +254,14 @@ public class ImsPhone extends ImsPhoneBase {
+     }
+ 
+     // Instance Variables
+-    Phone mDefaultPhone;
++    protected Phone mDefaultPhone;
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    ImsPhoneCallTracker mCT;
++    protected ImsPhoneCallTracker mCT;
+     ImsExternalCallTracker mExternalCallTracker;
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private ArrayList <ImsPhoneMmiCode> mPendingMMIs = new ArrayList<ImsPhoneMmiCode>();
++    protected ArrayList <ImsPhoneMmiCode> mPendingMMIs = new ArrayList<ImsPhoneMmiCode>();
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private ServiceState mSS = new ServiceState();
++    protected ServiceState mSS = new ServiceState();
+ 
+     private final ImsManagerFactory mImsManagerFactory;
+ 
+@@ -279,7 +285,7 @@ public class ImsPhone extends ImsPhoneBase {
+     private ImsRegistrationCallbackHelper mImsMmTelRegistrationHelper;
+ 
+     // The roaming state if currently in service, or the last roaming state when was in service.
+-    private boolean mLastKnownRoamingState = false;
++    protected boolean mLastKnownRoamingState = false;
+ 
+     private boolean mIsInImsEcm = false;
+ 
+@@ -1080,7 +1086,7 @@ public class ImsPhone extends ImsPhoneBase {
+     }
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private boolean isValidCommandInterfaceCFAction (int commandInterfaceCFAction) {
++    protected boolean isValidCommandInterfaceCFAction (int commandInterfaceCFAction) {
+         switch (commandInterfaceCFAction) {
+         case CF_ACTION_DISABLE:
+         case CF_ACTION_ENABLE:
+@@ -1093,7 +1099,7 @@ public class ImsPhone extends ImsPhoneBase {
+     }
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private  boolean isCfEnable(int action) {
++    protected boolean isCfEnable(int action) {
+         return (action == CF_ACTION_ENABLE) || (action == CF_ACTION_REGISTRATION);
+     }
+ 
+@@ -1129,7 +1135,7 @@ public class ImsPhone extends ImsPhoneBase {
+     }
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private int getActionFromCFAction(int action) {
++    protected int getActionFromCFAction(int action) {
+         switch(action) {
+             case CF_ACTION_DISABLE: return ImsUtInterface.ACTION_DEACTIVATION;
+             case CF_ACTION_ENABLE: return ImsUtInterface.ACTION_ACTIVATION;
+@@ -1411,7 +1417,7 @@ public class ImsPhone extends ImsPhoneBase {
+     }
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private void sendErrorResponse(Message onComplete) {
++    protected void sendErrorResponse(Message onComplete) {
+         logd("sendErrorResponse");
+         if (onComplete != null) {
+             AsyncResult.forMessage(onComplete, null,
+@@ -1482,7 +1488,7 @@ public class ImsPhone extends ImsPhoneBase {
+         return ex;
+     }
+ 
+-    private void
++    protected void
+     onNetworkInitiatedUssd(ImsPhoneMmiCode mmi) {
+         logd("onNetworkInitiatedUssd");
+         mMmiCompleteRegistrants.notifyRegistrants(
+@@ -1728,7 +1734,7 @@ public class ImsPhone extends ImsPhoneBase {
+         return cwInfos;
+     }
+ 
+-    private void
++    protected void
+     sendResponse(Message onComplete, Object result, Throwable e) {
+         if (onComplete != null) {
+             CommandException ex = null;
+@@ -1771,7 +1777,7 @@ public class ImsPhone extends ImsPhoneBase {
+         return b;
+     }
+ 
+-    private void sendResponseOrRetryOnCsfbSs(SS ss, int what, Throwable e, Object obj) {
++    protected void sendResponseOrRetryOnCsfbSs(SS ss, int what, Throwable e, Object obj) {
+         if (!isCsRetryException(e)) {
+             sendResponse(ss.mOnComplete, obj, e);
+             return;
+@@ -2425,7 +2431,7 @@ public class ImsPhone extends ImsPhoneBase {
+      * @return true if we are reporting not in service for CS domain over WWAN transport and WLAN
+      * for PS domain over WWAN transport.
+      */
+-    private boolean isCsNotInServiceAndPsWwanReportingWlan(ServiceState ss) {
++    protected boolean isCsNotInServiceAndPsWwanReportingWlan(ServiceState ss) {
+         // We can not get into this condition if we are in AP-Assisted mode.
+         if (mDefaultPhone.getAccessNetworksManager() == null
+                 || !mDefaultPhone.getAccessNetworksManager().isInLegacyMode()) {
+@@ -2643,7 +2649,7 @@ public class ImsPhone extends ImsPhoneBase {
+         pw.flush();
+     }
+ 
+-    private void logi(String s) {
++    protected void logi(String s) {
+         Rlog.i(LOG_TAG, "[" + mPhoneId + "] " + s);
+     }
+ 
+@@ -2651,11 +2657,11 @@ public class ImsPhone extends ImsPhoneBase {
+         Rlog.v(LOG_TAG, "[" + mPhoneId + "] " + s);
+     }
+ 
+-    private void logd(String s) {
++    protected void logd(String s) {
+         Rlog.d(LOG_TAG, "[" + mPhoneId + "] " + s);
+     }
+ 
+-    private void loge(String s) {
++    protected void loge(String s) {
+         Rlog.e(LOG_TAG, "[" + mPhoneId + "] " + s);
+     }
+ }
+diff --git a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCallTracker.java b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCallTracker.java
+index 48a863ee8e..2bbc8630c3 100644
+--- a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCallTracker.java
++++ b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCallTracker.java
+@@ -154,6 +154,12 @@ import java.util.regex.Pattern;
+ /**
+  * {@hide}
+  */
++// vivo 1907N IMS bring-up: 25 fields/methods below widened from private to protected -
++// MtkImsPhoneCallTracker (mediatek-telephony-common.jar, prebuilt) reads/calls all of them via
++// inheritance. This is the actual class that reads persist.vendor.operator.optr and drives the
++// real IMS/VoLTE/VoWiFi registration sequence - everything this whole MtkTelephonyComponentFactory
++// injection effort was for. Found proactively via the same self-qualified-smali-reference diff
++// used for MtkRIL, not one crash at a time.
+ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+     static final String LOG_TAG = "ImsPhoneCallTracker";
+     static final String VERBOSE_STATE_TAG = "IPCTState";
+@@ -193,7 +199,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+     private MmTelFeature.MmTelCapabilities mMmTelCapabilities =
+             new MmTelFeature.MmTelCapabilities();
+ 
+-    private TelephonyMetrics mMetrics;
++    protected TelephonyMetrics mMetrics;
+     private final Map<String, CallQualityMetrics> mCallQualityMetrics = new ConcurrentHashMap<>();
+     private final ConcurrentLinkedQueue<CallQualityMetrics> mCallQualityMetricsHistory =
+             new ConcurrentLinkedQueue<>();
+@@ -406,7 +412,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+         }
+     }
+ 
+-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
++    protected final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+         @Override
+         public void onReceive(Context context, Intent intent) {
+             if (intent.getAction().equals(CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED)) {
+@@ -524,7 +530,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+ 
+     //***** Instance Variables
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private ArrayList<ImsPhoneConnection> mConnections = new ArrayList<ImsPhoneConnection>();
++    protected ArrayList<ImsPhoneConnection> mConnections = new ArrayList<ImsPhoneConnection>();
+     private RegistrantList mVoiceCallEndedRegistrants = new RegistrantList();
+     private RegistrantList mVoiceCallStartedRegistrants = new RegistrantList();
+ 
+@@ -571,7 +577,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+     private final AtomicInteger mDefaultDialerUid = new AtomicInteger(NetworkStats.UID_ALL);
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private ImsPhoneConnection mPendingMO;
++    protected ImsPhoneConnection mPendingMO;
+     private int mClirMode = CommandsInterface.CLIR_DEFAULT;
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+     private Object mSyncHold = new Object();
+@@ -582,24 +588,24 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+     private Message mPendingUssd = null;
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    ImsPhone mPhone;
++    protected ImsPhone mPhone;
+ 
+     private boolean mDesiredMute = false;    // false = mute off
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private boolean mOnHoldToneStarted = false;
++    protected boolean mOnHoldToneStarted = false;
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private int mOnHoldToneId = -1;
++    protected int mOnHoldToneId = -1;
+ 
+-    private PhoneConstants.State mState = PhoneConstants.State.IDLE;
++    protected PhoneConstants.State mState = PhoneConstants.State.IDLE;
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private ImsManager mImsManager;
+-    private ImsUtInterface mUtInterface;
++    protected ImsManager mImsManager;
++    protected ImsUtInterface mUtInterface;
+ 
+-    private Call.SrvccState mSrvccState = Call.SrvccState.NONE;
++    protected Call.SrvccState mSrvccState = Call.SrvccState.NONE;
+ 
+     private boolean mIsInEmergencyCall = false;
+-    private boolean mIsDataEnabled = false;
++    protected boolean mIsDataEnabled = false;
+ 
+     private int pendingCallClirMode;
+     private int mPendingCallVideoState;
+@@ -612,7 +618,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+     private boolean mAllowEmergencyVideoCalls = false;
+     private boolean mIgnoreDataEnabledChangedForVideoCalls = false;
+-    private boolean mIsViLteDataMetered = false;
++    protected boolean mIsViLteDataMetered = false;
+     private boolean mAlwaysPlayRemoteHoldTone = false;
+     private boolean mAutoRetryFailedWifiEmergencyCall = false;
+     private boolean mSupportCepOnPeer = true;
+@@ -620,7 +626,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+     private boolean mSupportSdpForRtpHeaderExtensions = false;
+     // Tracks the state of our background/foreground calls while a call hold/swap operation is
+     // in progress. Values listed above.
+-    private HoldSwapState mHoldSwitchingState = HoldSwapState.INACTIVE;
++    protected HoldSwapState mHoldSwitchingState = HoldSwapState.INACTIVE;
+ 
+     private String mLastDialString = null;
+     private ImsDialArgs mLastDialArgs = null;
+@@ -648,13 +654,13 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+      * Carrier configuration option which determines whether adding a call during a video call
+      * should be allowed.
+      */
+-    private boolean mAllowAddCallDuringVideoCall = true;
++    protected boolean mAllowAddCallDuringVideoCall = true;
+ 
+     /**
+      * Carrier configuration option which determines whether holding a video call
+      * should be allowed.
+      */
+-    private boolean mAllowHoldingVideoCall = true;
++    protected boolean mAllowHoldingVideoCall = true;
+ 
+     /**
+      * Carrier configuration option which determines whether to notify the connection if a handover
+@@ -957,7 +963,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+      * happens we need to prevent the IMS service config from being updated, as this will cause VT
+      * to be disabled mid-call, resulting in an inability to un-pause the video.
+      */
+-    private boolean mShouldUpdateImsConfigOnDisconnect = false;
++    protected boolean mShouldUpdateImsConfigOnDisconnect = false;
+ 
+     private Pair<Boolean, Integer> mPendingSilentRedialInfo = null;
+ 
+@@ -991,7 +997,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+                 Executor executor);
+     }
+     private final ConnectorFactory mConnectorFactory;
+-    private final FeatureConnector<ImsManager> mImsManagerConnector;
++    protected final FeatureConnector<ImsManager> mImsManagerConnector;
+ 
+     // Used exclusively for IMS Registration related events for logging.
+     private final LocalLog mRegLocalLog = new LocalLog(64);
+@@ -2716,7 +2722,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+     }
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private synchronized ImsPhoneConnection findConnection(final ImsCall imsCall) {
++    protected synchronized ImsPhoneConnection findConnection(final ImsCall imsCall) {
+         for (ImsPhoneConnection conn : mConnections) {
+             if (conn.getImsCall() == imsCall) {
+                 return conn;
+@@ -4873,7 +4879,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+     }
+ 
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+-    private void setVideoCallProvider(ImsPhoneConnection conn, ImsCall imsCall)
++    protected void setVideoCallProvider(ImsPhoneConnection conn, ImsCall imsCall)
+             throws RemoteException {
+         IImsVideoCallProvider imsVideoCallProvider =
+                 imsCall.getCallSession().getVideoCallProvider();
+@@ -4928,7 +4934,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+      * @param callSubject The call subject.
+      * @return The call subject with invalid characters removed and escaping applied as required.
+      */
+-    private String cleanseInstantLetteringMessage(String callSubject) {
++    protected String cleanseInstantLetteringMessage(String callSubject) {
+         if (TextUtils.isEmpty(callSubject)) {
+             return callSubject;
+         }
+@@ -5004,7 +5010,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+         }
+     }
+ 
+-    private ImsException getImsManagerIsNullException() {
++    protected ImsException getImsManagerIsNullException() {
+         return new ImsException("no ims manager", ImsReasonInfo.CODE_LOCAL_ILLEGAL_STATE);
+     }
+ 
+@@ -5149,7 +5155,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+         }
+     }
+ 
+-    private void maybeNotifyDataDisabled(boolean enabled, int reasonCode) {
++    protected void maybeNotifyDataDisabled(boolean enabled, int reasonCode) {
+         if (!enabled) {
+             // If data is disabled while there are ongoing VT calls which are not taking place over
+             // wifi, then they should be disconnected to prevent the user from incurring further
+@@ -5184,7 +5190,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+      *                            disabled.
+      * @param reasonCode The {@link ImsReasonInfo} code for the data enabled state change.
+      */
+-    private void handleDataEnabledChange(boolean enabled, int reasonCode) {
++    protected void handleDataEnabledChange(boolean enabled, int reasonCode) {
+         if (!enabled) {
+             // If data is disabled while there are ongoing VT calls which are not taking place over
+             // wifi, then they should be disconnected to prevent the user from incurring further
+@@ -5250,7 +5256,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+         }
+     }
+ 
+-    private void resetImsCapabilities() {
++    protected void resetImsCapabilities() {
+         log("Resetting Capabilities...");
+         boolean tmpIsVideoCallEnabled = isVideoCallEnabled();
+         mMmTelCapabilities = new MmTelFeature.MmTelCapabilities();
