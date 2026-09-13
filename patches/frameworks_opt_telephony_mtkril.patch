@@ -370,6 +370,75 @@ index d947d53611..4179869ea7 100644
      public void callStateChanged(int indicationType) {
          mRil.processIndication(RIL.RADIO_SERVICE, indicationType);
  
+diff --git a/src/java/com/android/internal/telephony/TelephonyComponentFactory.java b/src/java/com/android/internal/telephony/TelephonyComponentFactory.java
+index dcbd2d5a95..359cbd189a 100644
+--- a/src/java/com/android/internal/telephony/TelephonyComponentFactory.java
++++ b/src/java/com/android/internal/telephony/TelephonyComponentFactory.java
+@@ -60,6 +60,7 @@ import org.xmlpull.v1.XmlPullParserException;
+ 
+ import java.io.File;
+ import java.io.IOException;
++import java.lang.reflect.Constructor;
+ import java.util.Arrays;
+ import java.util.HashSet;
+ import java.util.Set;
+@@ -231,11 +232,55 @@ public class TelephonyComponentFactory {
+ 
+     public static TelephonyComponentFactory getInstance() {
+         if (sInstance == null) {
+-            sInstance = new TelephonyComponentFactory();
++            sInstance = makeDefaultInstance();
+         }
+         return sInstance;
+     }
+ 
++    /**
++     * vivo 1907N IMS bring-up: real device intent is telephony_injection.xml (parsed by
++     * injectTheComponentFactory() below) pointing PhoneGlobals at MtkTelephonyComponentFactory -
++     * confirmed genuinely empty (package="" jar="") in stock's own TeleService.apk too, so this
++     * AOSP-sanctioned mechanism is vestigial here; whatever real, patched PhoneFactory.java
++     * MediaTek/vivo actually ship must wire this up some other way we don't have source for.
++     * MtkTelephonyComponentFactory (mediatek-telephony-common.jar, prebuilt dex_import - can't
++     * be a compile-time dependency, same reason MtkRIL needed reflection in PhoneFactory)
++     * overrides ~50 of this class's factory methods (makePhone, makeImsPhoneCallTracker,
++     * makeGsmCdmaCallTracker, makeDcTracker, makeServiceStateTracker, makeUiccController, ...),
++     * i.e. this single substitution is what actually wires the *rest* of the MTK telephony
++     * stack in, not just the RIL swap. Falls back to the plain factory if the class or its
++     * no-arg constructor isn't there, so this is never a hard dependency.
++     */
++    private static TelephonyComponentFactory makeDefaultInstance() {
++        try {
++            Class<?> mtkFactoryClass =
++                    Class.forName("com.mediatek.internal.telephony.MtkTelephonyComponentFactory");
++            Constructor<?> ctor = mtkFactoryClass.getConstructor();
++            TelephonyComponentFactory instance = (TelephonyComponentFactory) ctor.newInstance();
++            setDiagPropSafely("ril.mtktcf.result", instance.getClass().getName());
++            return instance;
++        } catch (ReflectiveOperationException e) {
++            Rlog.w(TAG, "MtkTelephonyComponentFactory not available, falling back to plain "
++                    + "TelephonyComponentFactory: " + e);
++            Throwable cause = e.getCause() != null ? e.getCause() : e;
++            String detail = cause.getClass().getSimpleName() + ":" + cause.getMessage();
++            setDiagPropSafely("ril.mtktcf.result",
++                    "FALLBACK:" + (detail.length() > 80 ? detail.substring(0, 80) : detail));
++            return new TelephonyComponentFactory();
++        }
++    }
++
++    // Same "ril." prefix trick as PhoneFactory.newRil() - radio_prop is already
++    // set_prop(radio, radio_prop)-granted, "debug."/persist.* is not, and this must never be
++    // able to crash phone bring-up regardless of sepolicy.
++    private static void setDiagPropSafely(String key, String value) {
++        try {
++            android.os.SystemProperties.set(key, value);
++        } catch (RuntimeException e) {
++            Rlog.w(TAG, "setDiagPropSafely: couldn't set " + key + ": " + e);
++        }
++    }
++
+     /**
+      * Inject TelephonyComponentFactory using a xml config file.
+      * @param parser a nullable {@link XmlResourceParser} created with the injection config file.
 diff --git a/src/java/com/android/internal/telephony/TelephonyDevController.java b/src/java/com/android/internal/telephony/TelephonyDevController.java
 index f97386df23..c8533e7cca 100644
 --- a/src/java/com/android/internal/telephony/TelephonyDevController.java
