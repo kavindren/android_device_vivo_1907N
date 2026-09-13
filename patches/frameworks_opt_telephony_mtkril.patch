@@ -382,10 +382,52 @@ index d947d53611..4179869ea7 100644
          mRil.processIndication(RIL.RADIO_SERVICE, indicationType);
  
 diff --git a/src/java/com/android/internal/telephony/ServiceStateTracker.java b/src/java/com/android/internal/telephony/ServiceStateTracker.java
-index efc79a44c2..abbcb45bb3 100755
+index efc79a44c2..ed07df3cce 100755
 --- a/src/java/com/android/internal/telephony/ServiceStateTracker.java
 +++ b/src/java/com/android/internal/telephony/ServiceStateTracker.java
-@@ -3249,13 +3249,21 @@ public class ServiceStateTracker extends Handler {
+@@ -469,6 +469,28 @@ public class ServiceStateTracker extends Handler {
+     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+     protected final GsmCdmaPhone mPhone;
+ 
++    // vivo 1907N IMS bring-up: mTransportManager used to live directly on ServiceStateTracker in
++    // whatever AOSP snapshot MtkServiceStateTracker (mediatek-telephony-common.jar, prebuilt)
++    // was built against; upstream since moved it to Phone only (see Phone.mTransportManager),
++    // and only constructs it there when !isUsingNewDataStack(). Confirmed via
++    // config_telephony.xml that config_force_disable_telephony_new_data_stack defaults to
++    // false on our build, i.e. isUsingNewDataStack() is TRUE and Phone.mTransportManager stays
++    // null - so blindly copying it here would trade the NoSuchFieldError for an unguarded NPE
++    // the moment MtkServiceStateTracker's constructor calls registerForHandoverNeededEvent() on
++    // it (confirmed via smali: no null check at that call site).
++    //
++    // TransportManager itself turns out to be a thin, side-effect-free wrapper even under the
++    // new stack: its constructor does nothing but grab the ALREADY-unconditionally-constructed
++    // Phone.mAccessNetworksManager and register for EVENT_QUALIFIED_NETWORKS_CHANGED on it - it
++    // does not bind any services itself (AccessNetworksManager already does all real binding),
++    // so building one here is safe and does not depend on / interfere with isUsingNewDataStack()
++    // anywhere else in Phone/GsmCdmaPhone. Kept as our OWN private instance (not written back to
++    // mPhone.mTransportManager) specifically so nothing else in Phone/GsmCdmaPhone that branches
++    // on isUsingNewDataStack() or on mTransportManager's nullness sees any behavior change - this
++    // exists purely so MtkServiceStateTracker has a working handover-needed-event source, which
++    // is plausibly also functionally relevant to real IMS/VoWiFi handover, not just a crash fix.
++    protected com.android.internal.telephony.dataconnection.TransportManager mTransportManager;
++
+     private CellIdentity mCellIdentity;
+     @Nullable private CellIdentity mLastKnownCellIdentity;
+     private static final int MS_PER_HOUR = 60 * 60 * 1000;
+@@ -632,6 +654,12 @@ public class ServiceStateTracker extends Handler {
+                 .makeNitzStateMachine(phone);
+         mPhone = phone;
+         mCi = ci;
++        // See the comment on the mTransportManager field declaration above: Phone's own copy is
++        // null under the new data stack (our build's default), so build our own private,
++        // side-effect-free instance instead of copying a possibly-null reference.
++        mTransportManager = mPhone.mTransportManager != null
++                ? mPhone.mTransportManager
++                : new com.android.internal.telephony.dataconnection.TransportManager(mPhone);
+ 
+         mServiceStateStats = new ServiceStateStats(mPhone);
+ 
+@@ -3249,13 +3277,21 @@ public class ServiceStateTracker extends Handler {
          mRatLog.log(mSS.toString());
      }
  
