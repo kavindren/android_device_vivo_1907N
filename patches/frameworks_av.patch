@@ -1,0 +1,30 @@
+diff --git a/services/camera/libcameraservice/device3/Camera3OutputStream.cpp b/services/camera/libcameraservice/device3/Camera3OutputStream.cpp
+index 26fab414c6..ce415a2ddd 100644
+--- a/services/camera/libcameraservice/device3/Camera3OutputStream.cpp
++++ b/services/camera/libcameraservice/device3/Camera3OutputStream.cpp
+@@ -577,7 +577,24 @@ status_t Camera3OutputStream::configureQueueLocked() {
+         return res;
+     }
+ 
+-    if ((res = configureConsumerQueueLocked(true /*allowPreviewRespace*/)) != OK) {
++    // 1907N: disabled. This Android 13 optimization adds 2 extra buffers
++    // (kDisplaySyncExtraBuffer) to any HW-composer-consumed stream (i.e. the live preview
++    // SurfaceView, active in both Photo and Video mode). Front-camera Video mode hangs on
++    // every capture app tested (Aperture/CameraX, a third-party GCam port, and the legacy
++    // AOSP Camera2 app) with a real ISP hardware DMA error (CAM_A DMA_ERR_ST) on every frame;
++    // Photo mode and rear-camera video are both unaffected. A real LOS19.1 build with a
++    // byte-identical kernel and vendor camera HAL blob (confirmed via git history - neither
++    // has ever been modified) does not hit this error and records fine; LOS19.1's
++    // frameworks/av predates this extra-buffer mechanism entirely. Leading theory: Video
++    // mode has two continuously-active streams (preview + encoder) sharing the same MTK ISP
++    // DMA/FBC hardware path for this sensor, and the extra 2 preview buffers push the
++    // aggregate buffer/DMA demand past whatever the closed vivo/MTK HAL's normal_video
++    // scenario was actually validated against - Photo mode's second stream (JPEG) is not
++    // continuously active, so it never reaches the same aggregate demand. Disabling this
++    // reverts buffer-count negotiation to the LOS19.1-equivalent (proven-working) behavior,
++    // at the cost of losing this Android 13 preview-smoothness optimization. Not yet
++    // confirmed on real hardware - this is the next build/flash/test cycle's hypothesis.
++    if ((res = configureConsumerQueueLocked(false /*allowPreviewRespace*/)) != OK) {
+         return res;
+     }
+ 

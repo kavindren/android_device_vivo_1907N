@@ -13,6 +13,7 @@ frameworks_base_usbporthidl_fix 20301873c477fc51982c0b4b4aa02735caf0c4a5
 system_core_refbase_compat c0500ffe2
 boringssl_agpsd_compat 62fa09ed43a8
 packages_services_telephony_ims_services 43f185c727fd
+frameworks_av e0519520f5491eb34fc34f8c0e790f22de6a8d92
 # frameworks_opt_telephony_mtkril and frameworks_base_mtkservicestate_fix: PARKED 2026-09-14,
 # see patches/parked/README.md - com.android.phone crash-looped with an unresolved
 # NoClassDefFoundError that survived every targeted fix. Reverted to plain AOSP RIL/
