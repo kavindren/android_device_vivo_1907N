@@ -198,11 +198,21 @@ PRODUCT_PACKAGES += \
     libhidltransport \
     libprocessinfoservice_aidl
 
+# LOS20 1907N stabilization: vendor.vivo.hardware.{osccamera.provider,nativecamera.provider,
+# camera.cameralog}@1.0-service deliberately dropped from PRODUCT_PACKAGES. None of the three
+# has an -impl.so anywhere in our extracted blobs (confirmed: the only osccamera -impl.so we
+# have is for a DIFFERENT interface, osccamera.vivodevice, already included below) - every one
+# of them was crash-looping forever on a ~5s restart cycle since boot
+# ("LegacySupport: Could not get passthrough implementation for
+# vendor.vivo.hardware.<x>@1.0::I<X>/default" -> exit status 1 -> restart), confirmed via a real
+# logcat capture. Live-reproduced front-camera "works in Photo, hangs in Video until you open
+# Recents" symptom lines up with a HIDL client blocking on one of these while it happens to be
+# mid-crash - Video mode plausibly probes a vendor extension Photo mode doesn't, and going to
+# Recents/onPause forces Android to give up on the blocked call. Their client .so libraries
+# (PRODUCT_COPY_FILES below) are left in place - harmless if unused, and other vivo camera code
+# may still reference the symbols even with no daemon behind them.
 PRODUCT_PACKAGES += \
     vivocameraserver \
-    vendor.vivo.hardware.osccamera.provider@1.0-service \
-    vendor.vivo.hardware.nativecamera.provider@1.0-service \
-    vendor.vivo.hardware.camera.cameralog@1.0-service \
     libvivocameraservice \
     vendor.vivo.hardware.camera.vop@1.0 \
     vendor.vivo.hardware.osccamera.provider@1.0 \
@@ -233,10 +243,7 @@ PRODUCT_COPY_FILES += \
     vendor/vivo/1907N/proprietary/system/lib64/vendor.vivo.hardware.camera.vivopostproc@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.vivo.hardware.camera.vivopostproc@1.0.so
 
 PRODUCT_COPY_FILES += \
-    vendor/vivo/1907N/proprietary/system/etc/init/vivocameraserver.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vivocameraserver.rc \
-    vendor/vivo/1907N/proprietary/system/etc/init/vendor.vivo.hardware.osccamera.provider@1.0-service.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vendor.vivo.hardware.osccamera.provider@1.0-service.rc \
-    vendor/vivo/1907N/proprietary/system/etc/init/vendor.vivo.hardware.nativecamera.provider@1.0-service.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vendor.vivo.hardware.nativecamera.provider@1.0-service.rc \
-    vendor/vivo/1907N/proprietary/system/etc/init/vendor.vivo.hardware.camera.cameralog@1.0-service.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vendor.vivo.hardware.camera.cameralog@1.0-service.rc
+    vendor/vivo/1907N/proprietary/system/etc/init/vivocameraserver.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/vivocameraserver.rc
 
 $(call inherit-product-if-exists, vendor/vivo/1907N/1907N-vendor.mk)
 
