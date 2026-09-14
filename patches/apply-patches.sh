@@ -24,12 +24,13 @@ names=(frameworks_base packages_apps_Settings packages_modules_Connectivity \
        frameworks_base_telephony_permissions hardware_lineage_compat \
        frameworks_base_storagemanager_compat frameworks_base_usbporthidl_fix \
        system_core_refbase_compat boringssl_agpsd_compat \
-       packages_services_telephony_ims_services frameworks_opt_telephony_mtkril)
+       packages_services_telephony_ims_services frameworks_opt_telephony_mtkril \
+       frameworks_base_mtkservicestate_fix)
 paths=(frameworks/base packages/apps/Settings packages/modules/Connectivity \
        packages/modules/Wifi system/core bootable/recovery vendor/lineage \
        device/mediatek/sepolicy_vndr frameworks/base hardware/lineage/compat \
        frameworks/base frameworks/base system/core external/boringssl \
-       packages/services/Telephony frameworks/opt/telephony)
+       packages/services/Telephony frameworks/opt/telephony frameworks/base)
 
 fail=0
 for i in "${!names[@]}"; do
