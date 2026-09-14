@@ -66,11 +66,7 @@
         <item>95</item>
     </integer-array>
 
-    <!-- Was 40 (~15.7% of the 0-255 scale the Lights HAL actually consumes) - user reported
-         AOD as "almost nothing visible". Raised for real visibility; still meaningfully dimmer
-         than the lowest normal on-screen setting. See the mtk_leds_drv.c max_brightness fix
-         (kernel/vivo/1907N) for the double-scaling bug this value was also being distorted by. -->
-    <integer name="config_screenBrightnessDoze">60</integer>
+    <integer name="config_screenBrightnessDoze">40</integer>
     <item name="config_screenBrightnessDozeFloat" format="float" type="dimen">-1</item>
 
     <integer translatable="false" name="config_brightness_ramp_rate_fast">450</integer>
