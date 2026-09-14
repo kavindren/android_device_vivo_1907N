@@ -37,6 +37,26 @@ float mirrorConvertLinearToGamma(float linear) {
     }
     return kHlgA * std::log(normalized - kHlgB) + kHlgC;
 }
+
+// mirrorConvertLinearToGamma()'s sqrt() branch has a very steep slope near 0, so the small but
+// non-zero luma the framework sends at the *minimum* slider position (enforced by
+// config_screenBrightnessSettingMinimum) gets blown up disproportionately - measured live at
+// slider-minimum: level 222/2047, clearly brighter than the user wants for "minimum". Rather
+// than guess at the framework's exact minimum luma value, remap using that live measurement
+// directly as a calibration point: two-segment piecewise-linear in fraction space, pinned at
+// (measured minimum -> desired minimum) and (1.0 -> 1.0, i.e. max brightness left exactly
+// where it was). Compresses only the low end; the mid/high range shifts only slightly (a small
+// upward stretch to keep max pinned).
+constexpr float kMinPivotOldFrac = 222.0f / 2047.0f;
+constexpr float kMinPivotNewFrac = 50.0f / 2047.0f;
+
+float remapLowEnd(float frac) {
+    if (frac <= kMinPivotOldFrac) {
+        return frac * (kMinPivotNewFrac / kMinPivotOldFrac);
+    }
+    return kMinPivotNewFrac + (frac - kMinPivotOldFrac) * (1.0f - kMinPivotNewFrac) /
+                                      (1.0f - kMinPivotOldFrac);
+}
 }  // namespace
 
 Lights::Lights() : mMaxBrightness(kDefaultMaxBrightness) {
@@ -66,7 +86,8 @@ ndk::ScopedAStatus Lights::setLightState(int id, const HwLightState& state) {
     // original slider fraction and scale by that instead, so our output is linear in slider
     // position rather than in perceptual brightness. See mirrorConvertLinearToGamma() above.
     float sliderFraction = mirrorConvertLinearToGamma(static_cast<float>(luma) / 255.0f);
-    int level = static_cast<int>(std::lround(sliderFraction * mMaxBrightness));
+    float remappedFraction = remapLowEnd(sliderFraction);
+    int level = static_cast<int>(std::lround(remappedFraction * mMaxBrightness));
     if (level < 0) level = 0;
     if (level > mMaxBrightness) level = mMaxBrightness;
 
