@@ -1,5 +1,5 @@
 diff --git a/telephony/java/android/telephony/ServiceState.java b/telephony/java/android/telephony/ServiceState.java
-index 6fe9bf97c5c3..220e71ef71c0 100644
+index 6fe9bf97c5c3..504ad6419298 100644
 --- a/telephony/java/android/telephony/ServiceState.java
 +++ b/telephony/java/android/telephony/ServiceState.java
 @@ -20,6 +20,7 @@ import android.annotation.IntDef;
@@ -126,7 +126,7 @@ index 6fe9bf97c5c3..220e71ef71c0 100644
  
      /**
       * get String description of roaming type
-@@ -1432,8 +1459,8 @@ public class ServiceState implements Parcelable {
+@@ -1432,19 +1459,27 @@ public class ServiceState implements Parcelable {
       * @param b second obj
       * @return true if two objects equal or both are null
       */
@@ -137,9 +137,20 @@ index 6fe9bf97c5c3..220e71ef71c0 100644
          return (a == null) ? (b == null) : a.equals (b);
      }
  
-@@ -1443,8 +1470,8 @@ public class ServiceState implements Parcelable {
+     /**
+      * Set ServiceState based on intent notifier map.
+      *
++     * vivo 1907N IMS bring-up: dropped the @hide javadoc tag that was here - with it, metalava
++     * excluded this method from the API signature (current.txt) despite it being genuinely
++     * protected, which made hiddenapi-flags generation default it to "blocked" (full-hidden-API
++     * enforcement) instead of the "public-api,sdk,system-api,test-api" flags every other widened
++     * member in this file got. That mismatch was confirmed as the actual cause of
++     * MtkServiceState's NoClassDefFoundError - blocked hiddenapi access on a call site inside a
++     * boot-classpath class is a fundamentally different failure than every other fix in this
++     * patch, all of which were plain compile-time visibility.
++     *
       * @param m intent notifier map
-      * @hide
+-     * @hide
       */
 -    @UnsupportedAppUsage
 -    private void setFromNotifierBundle(Bundle m) {
