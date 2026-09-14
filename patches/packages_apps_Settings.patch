@@ -727,24 +727,13 @@ index 853ca7c40c..bb92f82fa7 100644
      }
  }
 diff --git a/src/com/android/settings/connecteddevice/usb/UsbBackend.java b/src/com/android/settings/connecteddevice/usb/UsbBackend.java
-index a4ca405565..24450d1215 100644
+index a4ca405565..4ca3a020e9 100644
 --- a/src/com/android/settings/connecteddevice/usb/UsbBackend.java
 +++ b/src/com/android/settings/connecteddevice/usb/UsbBackend.java
-@@ -156,6 +156,21 @@ public class UsbBackend {
+@@ -156,6 +156,10 @@ public class UsbBackend {
          }
      }
  
-+    // vivo 1907N stabilization: no android.hardware.usb (IUsb, port-role) HAL is present on this
-+    // device (deliberately - see device/vivo/1907N proprietary-files.txt, the combined MTK blob
-+    // that would provide it also races our own working IUsbGadget service for the same
-+    // hwservicemanager slot), so mPort/mPortStatus are always null and
-+    // isSingleDataRoleSupported() always returns false. UsbDetailsDataRoleController.isAvailable()
-+    // used to read that false as "role switching IS available" (its check is
-+    // `!isSingleDataRoleSupported()`) and show a "Управляющее устройство USB" section that could
-+    // never do anything - permanently greyed, since refresh() can never see a resolved data role
-+    // either. Added this explicit accessor so that controller can tell "no port HAL at all" apart
-+    // from "port HAL present but only one role combination supported" and hide the section
-+    // entirely instead of showing a dead control.
 +    public boolean isUsbPortAvailable() {
 +        return mPort != null;
 +    }
@@ -753,18 +742,12 @@ index a4ca405565..24450d1215 100644
          return mPort != null && mPortStatus != null
                  && mPortStatus.isRoleCombinationSupported(POWER_ROLE_SINK, DATA_ROLE_DEVICE)
 diff --git a/src/com/android/settings/connecteddevice/usb/UsbDetailsDataRoleController.java b/src/com/android/settings/connecteddevice/usb/UsbDetailsDataRoleController.java
-index 322cb00e37..763b975779 100644
+index 322cb00e37..57c87b6065 100644
 --- a/src/com/android/settings/connecteddevice/usb/UsbDetailsDataRoleController.java
 +++ b/src/com/android/settings/connecteddevice/usb/UsbDetailsDataRoleController.java
-@@ -113,7 +113,13 @@ public class UsbDetailsDataRoleController extends UsbDetailsController
- 
+@@ -114,6 +114,7 @@ public class UsbDetailsDataRoleController extends UsbDetailsController
      @Override
      public boolean isAvailable() {
-+        // vivo 1907N stabilization: isSingleDataRoleSupported() returns false when there's no
-+        // port HAL at all (mPort == null), same as when a real port HAL reports only one role
-+        // combination - this device is permanently the former (see UsbBackend.isUsbPortAvailable()
-+        // for the full explanation), so without the extra check below this always resolved to
-+        // "available" and showed a role-switching UI that could never do anything.
          return !Utils.isMonkeyRunning()
 +                && mUsbBackend.isUsbPortAvailable()
                  && !mUsbBackend.isSingleDataRoleSupported();
@@ -798,18 +781,12 @@ index b887bd704f..a699993ffe 100644
          } else {
              // Functions are only available in device mode
 diff --git a/src/com/android/settings/connecteddevice/usb/UsbDetailsPowerRoleController.java b/src/com/android/settings/connecteddevice/usb/UsbDetailsPowerRoleController.java
-index e8ff68411c..37c0556da4 100644
+index e8ff68411c..dd73703625 100644
 --- a/src/com/android/settings/connecteddevice/usb/UsbDetailsPowerRoleController.java
 +++ b/src/com/android/settings/connecteddevice/usb/UsbDetailsPowerRoleController.java
-@@ -123,7 +123,13 @@ public class UsbDetailsPowerRoleController extends UsbDetailsController
- 
+@@ -124,6 +124,7 @@ public class UsbDetailsPowerRoleController extends UsbDetailsController
      @Override
      public boolean isAvailable() {
-+        // vivo 1907N stabilization: same fix as UsbDetailsDataRoleController - with no port HAL
-+        // at all (mPort == null, see UsbBackend.isUsbPortAvailable()), isSinglePowerRoleSupported()
-+        // returns false the same way it would for a real port that only supports one power role,
-+        // so without the extra check this always showed a power-role toggle that could never do
-+        // anything on this device.
          return !Utils.isMonkeyRunning()
 +                && mUsbBackend.isUsbPortAvailable()
                  && !mUsbBackend.isSinglePowerRoleSupported();

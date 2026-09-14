@@ -1,36 +1,25 @@
 diff --git a/basic/non_plat/kernel.te b/basic/non_plat/kernel.te
-index 5831906..64e86f4 100644
+index 5831906..40672a0 100644
 --- a/basic/non_plat/kernel.te
 +++ b/basic/non_plat/kernel.te
-@@ -50,6 +50,14 @@ allow kernel misc2_block_device:blk_file rw_file_perms;
+@@ -50,6 +50,8 @@ allow kernel misc2_block_device:blk_file rw_file_perms;
  allow kernel fuseblk:dir create_dir_perms;
  allow kernel fuseblk:file create_file_perms;
  
-+# LOS20 1907N stabilization: real dmesg denial (avc: denied { search } for
-+# comm="mtk_wmtd_worker" name="/" dev="fuse" ino=... scontext=u:r:kernel:s0
-+# tcontext=u:object_r:fuse:s0 tclass=dir), spamming continuously (~once/sec) since boot. Same
-+# purpose as the fuseblk grant just above (mtk_wmtd kernel thread accessing /sdcard/wifi.cfg) -
-+# our device's external/removable storage is mounted with a plain "fuse" filesystem type, not
-+# fuseblk, so that rule alone doesn't cover it.
 +allow kernel fuse:dir search;
 +
  # Date : WK16.30
  # Operation: SQC
  # Purpose: Allow sdcardfs workqueue to access lower file systems
 diff --git a/basic/non_plat/mnld.te b/basic/non_plat/mnld.te
-index 996dea4..1685dc9 100644
+index 996dea4..8baae27 100644
 --- a/basic/non_plat/mnld.te
 +++ b/basic/non_plat/mnld.te
-@@ -119,3 +119,10 @@ allow mnld sysfs_leds:file r_file_perms;
+@@ -119,3 +119,5 @@ allow mnld sysfs_leds:file r_file_perms;
  #Add for /nvcfg/almanac.dat
  allow mnld nvcfg_file:dir w_dir_perms;
  allow mnld nvcfg_file:file create_file_perms;
 +
-+# LOS20 1907N stabilization: real dmesg denial (avc: denied { read } for comm="mnld"
-+# name="u:object_r:default_prop:s0" ... tclass=file) - mnld reads some property that falls
-+# through to the generic default_prop label (not covered by any more specific
-+# property_contexts entry), unlike vendor_mtk_mnld_prop/vendor_mtk_radio_prop/
-+# hwservicemanager_prop which are already explicitly granted above.
 +get_prop(mnld, default_prop)
 diff --git a/bsp/non_plat/file_contexts b/bsp/non_plat/file_contexts
 index 8cb09fa..3c908d2 100644

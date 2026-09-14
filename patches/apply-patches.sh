@@ -4,10 +4,6 @@
 # HOSTCFLAGS fix for kernel builds, LOS20 telephony-common gap fill, BoringSSL AGPS
 # compat, LOS20 IMS/VoLTE bring-up - QNS/IWLAN service registration).
 #
-# The MtkRIL/MtkTelephonyComponentFactory injection (frameworks_opt_telephony_mtkril,
-# frameworks_base_mtkservicestate_fix) is PARKED as of 2026-09-14 - not applied here, plain
-# AOSP RIL/TelephonyComponentFactory/ServiceState instead. See patches/parked/README.md.
-#
 # Run once after `repo sync`, from anywhere:
 #     device/vivo/1907N/patches/apply-patches.sh
 #
