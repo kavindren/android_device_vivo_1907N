@@ -1,5 +1,5 @@
 diff --git a/telephony/java/android/telephony/ServiceState.java b/telephony/java/android/telephony/ServiceState.java
-index 6fe9bf97c5c3..504ad6419298 100644
+index 6fe9bf97c5c3..d0ba04b7b5e1 100644
 --- a/telephony/java/android/telephony/ServiceState.java
 +++ b/telephony/java/android/telephony/ServiceState.java
 @@ -20,6 +20,7 @@ import android.annotation.IntDef;
@@ -154,8 +154,8 @@ index 6fe9bf97c5c3..504ad6419298 100644
       */
 -    @UnsupportedAppUsage
 -    private void setFromNotifierBundle(Bundle m) {
-+    @SuppressLint({"ProtectedMember", "MissingNullability"})
-+    protected void setFromNotifierBundle(Bundle m) {
++    @SuppressLint({"ProtectedMember"})
++    protected void setFromNotifierBundle(@NonNull Bundle m) {
          ServiceState ssFromBundle = m.getParcelable(EXTRA_SERVICE_STATE);
          if (ssFromBundle != null) {
              copyFrom(ssFromBundle);
