@@ -16,11 +16,147 @@ index 32101c791242..60b529f8bf74 100644
      dists: [
 diff --git a/core/api/lint-baseline.txt b/core/api/lint-baseline.txt
 new file mode 100644
-index 000000000000..9a97707763f1
+index 000000000000..2951a2a4cc75
 --- /dev/null
 +++ b/core/api/lint-baseline.txt
-@@ -0,0 +1 @@
+@@ -0,0 +1,137 @@
 +// Baseline format: 1.0
++InternalField: android.telephony.ServiceState#mCdmaDefaultRoamingIndicator:
++    Internal field mCdmaDefaultRoamingIndicator must not be exposed
++InternalField: android.telephony.ServiceState#mCdmaRoamingIndicator:
++    Internal field mCdmaRoamingIndicator must not be exposed
++InternalField: android.telephony.ServiceState#mCellBandwidths:
++    Internal field mCellBandwidths must not be exposed
++InternalField: android.telephony.ServiceState#mChannelNumber:
++    Internal field mChannelNumber must not be exposed
++InternalField: android.telephony.ServiceState#mCssIndicator:
++    Internal field mCssIndicator must not be exposed
++InternalField: android.telephony.ServiceState#mDataRegState:
++    Internal field mDataRegState must not be exposed
++InternalField: android.telephony.ServiceState#mIsEmergencyOnly:
++    Internal field mIsEmergencyOnly must not be exposed
++InternalField: android.telephony.ServiceState#mIsIwlanPreferred:
++    Internal field mIsIwlanPreferred must not be exposed
++InternalField: android.telephony.ServiceState#mIsManualNetworkSelection:
++    Internal field mIsManualNetworkSelection must not be exposed
++InternalField: android.telephony.ServiceState#mNetworkId:
++    Internal field mNetworkId must not be exposed
++InternalField: android.telephony.ServiceState#mNetworkRegistrationInfos:
++    Internal field mNetworkRegistrationInfos must not be exposed
++InternalField: android.telephony.ServiceState#mNrFrequencyRange:
++    Internal field mNrFrequencyRange must not be exposed
++InternalField: android.telephony.ServiceState#mOperatorAlphaLong:
++    Internal field mOperatorAlphaLong must not be exposed
++InternalField: android.telephony.ServiceState#mOperatorAlphaLongRaw:
++    Internal field mOperatorAlphaLongRaw must not be exposed
++InternalField: android.telephony.ServiceState#mOperatorAlphaShort:
++    Internal field mOperatorAlphaShort must not be exposed
++InternalField: android.telephony.ServiceState#mOperatorAlphaShortRaw:
++    Internal field mOperatorAlphaShortRaw must not be exposed
++InternalField: android.telephony.ServiceState#mOperatorNumeric:
++    Internal field mOperatorNumeric must not be exposed
++InternalField: android.telephony.ServiceState#mSystemId:
++    Internal field mSystemId must not be exposed
++InternalField: android.telephony.ServiceState#mVoiceRegState:
++    Internal field mVoiceRegState must not be exposed
++
++
++MissingNullability: android.telephony.ServiceState#mCellBandwidths:
++    Missing nullability on field `mCellBandwidths` in class `class android.telephony.ServiceState`
++MissingNullability: android.telephony.ServiceState#mNetworkRegistrationInfos:
++    Missing nullability on field `mNetworkRegistrationInfos` in class `class android.telephony.ServiceState`
++MissingNullability: android.telephony.ServiceState#mOperatorAlphaLong:
++    Missing nullability on field `mOperatorAlphaLong` in class `class android.telephony.ServiceState`
++MissingNullability: android.telephony.ServiceState#mOperatorAlphaLongRaw:
++    Missing nullability on field `mOperatorAlphaLongRaw` in class `class android.telephony.ServiceState`
++MissingNullability: android.telephony.ServiceState#mOperatorAlphaShort:
++    Missing nullability on field `mOperatorAlphaShort` in class `class android.telephony.ServiceState`
++MissingNullability: android.telephony.ServiceState#mOperatorAlphaShortRaw:
++    Missing nullability on field `mOperatorAlphaShortRaw` in class `class android.telephony.ServiceState`
++MissingNullability: android.telephony.ServiceState#mOperatorNumeric:
++    Missing nullability on field `mOperatorNumeric` in class `class android.telephony.ServiceState`
++
++
++MutableBareField: android.telephony.ServiceState#mCdmaDefaultRoamingIndicator:
++    Bare field mCdmaDefaultRoamingIndicator must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mCdmaRoamingIndicator:
++    Bare field mCdmaRoamingIndicator must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mCellBandwidths:
++    Bare field mCellBandwidths must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mChannelNumber:
++    Bare field mChannelNumber must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mCssIndicator:
++    Bare field mCssIndicator must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mDataRegState:
++    Bare field mDataRegState must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mIsEmergencyOnly:
++    Bare field mIsEmergencyOnly must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mIsIwlanPreferred:
++    Bare field mIsIwlanPreferred must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mIsManualNetworkSelection:
++    Bare field mIsManualNetworkSelection must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mNetworkId:
++    Bare field mNetworkId must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mNrFrequencyRange:
++    Bare field mNrFrequencyRange must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mOperatorAlphaLong:
++    Bare field mOperatorAlphaLong must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mOperatorAlphaLongRaw:
++    Bare field mOperatorAlphaLongRaw must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mOperatorAlphaShort:
++    Bare field mOperatorAlphaShort must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mOperatorAlphaShortRaw:
++    Bare field mOperatorAlphaShortRaw must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mOperatorNumeric:
++    Bare field mOperatorNumeric must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mSystemId:
++    Bare field mSystemId must be marked final, or moved behind accessors if mutable
++MutableBareField: android.telephony.ServiceState#mVoiceRegState:
++    Bare field mVoiceRegState must be marked final, or moved behind accessors if mutable
++
++
++ProtectedMember: android.telephony.ServiceState#equalsHandlesNulls(Object, Object):
++    Protected methods not allowed; must be public: method android.telephony.ServiceState.equalsHandlesNulls(Object,Object)}
++ProtectedMember: android.telephony.ServiceState#mCdmaDefaultRoamingIndicator:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mCdmaDefaultRoamingIndicator}
++ProtectedMember: android.telephony.ServiceState#mCdmaRoamingIndicator:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mCdmaRoamingIndicator}
++ProtectedMember: android.telephony.ServiceState#mCellBandwidths:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mCellBandwidths}
++ProtectedMember: android.telephony.ServiceState#mChannelNumber:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mChannelNumber}
++ProtectedMember: android.telephony.ServiceState#mCssIndicator:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mCssIndicator}
++ProtectedMember: android.telephony.ServiceState#mDataRegState:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mDataRegState}
++ProtectedMember: android.telephony.ServiceState#mIsEmergencyOnly:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mIsEmergencyOnly}
++ProtectedMember: android.telephony.ServiceState#mIsIwlanPreferred:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mIsIwlanPreferred}
++ProtectedMember: android.telephony.ServiceState#mIsManualNetworkSelection:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mIsManualNetworkSelection}
++ProtectedMember: android.telephony.ServiceState#mNetworkId:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mNetworkId}
++ProtectedMember: android.telephony.ServiceState#mNetworkRegistrationInfos:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mNetworkRegistrationInfos}
++ProtectedMember: android.telephony.ServiceState#mNrFrequencyRange:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mNrFrequencyRange}
++ProtectedMember: android.telephony.ServiceState#mOperatorAlphaLong:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mOperatorAlphaLong}
++ProtectedMember: android.telephony.ServiceState#mOperatorAlphaLongRaw:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mOperatorAlphaLongRaw}
++ProtectedMember: android.telephony.ServiceState#mOperatorAlphaShort:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mOperatorAlphaShort}
++ProtectedMember: android.telephony.ServiceState#mOperatorAlphaShortRaw:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mOperatorAlphaShortRaw}
++ProtectedMember: android.telephony.ServiceState#mOperatorNumeric:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mOperatorNumeric}
++ProtectedMember: android.telephony.ServiceState#mSystemId:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mSystemId}
++ProtectedMember: android.telephony.ServiceState#mVoiceRegState:
++    Protected fields not allowed; must be public: field android.telephony.ServiceState.mVoiceRegState}
++ProtectedMember: android.telephony.ServiceState#setFromNotifierBundle(android.os.Bundle):
++    Protected methods not allowed; must be public: method android.telephony.ServiceState.setFromNotifierBundle(android.os.Bundle)}
 diff --git a/telephony/java/android/telephony/ServiceState.java b/telephony/java/android/telephony/ServiceState.java
 index 6fe9bf97c5c3..e6bee8a71577 100644
 --- a/telephony/java/android/telephony/ServiceState.java
