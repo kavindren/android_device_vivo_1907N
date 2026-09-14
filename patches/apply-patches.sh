@@ -2,7 +2,11 @@
 # Apply the vivo/1907N out-of-tree source patches (UDFPS HBM, Face Unlock, dual-Wi-Fi
 # SoftAP, tethering regex, USB gadget bind, recovery backlight, LOS20 host-toolchain
 # HOSTCFLAGS fix for kernel builds, LOS20 telephony-common gap fill, BoringSSL AGPS
-# compat, LOS20 IMS/VoLTE bring-up - QNS/IWLAN service registration and the MtkRIL swap).
+# compat, LOS20 IMS/VoLTE bring-up - QNS/IWLAN service registration).
+#
+# The MtkRIL/MtkTelephonyComponentFactory injection (frameworks_opt_telephony_mtkril,
+# frameworks_base_mtkservicestate_fix) is PARKED as of 2026-09-14 - not applied here, plain
+# AOSP RIL/TelephonyComponentFactory/ServiceState instead. See patches/parked/README.md.
 #
 # Run once after `repo sync`, from anywhere:
 #     device/vivo/1907N/patches/apply-patches.sh
@@ -24,13 +28,12 @@ names=(frameworks_base packages_apps_Settings packages_modules_Connectivity \
        frameworks_base_telephony_permissions hardware_lineage_compat \
        frameworks_base_storagemanager_compat frameworks_base_usbporthidl_fix \
        system_core_refbase_compat boringssl_agpsd_compat \
-       packages_services_telephony_ims_services frameworks_opt_telephony_mtkril \
-       frameworks_base_mtkservicestate_fix)
+       packages_services_telephony_ims_services)
 paths=(frameworks/base packages/apps/Settings packages/modules/Connectivity \
        packages/modules/Wifi system/core bootable/recovery vendor/lineage \
        device/mediatek/sepolicy_vndr frameworks/base hardware/lineage/compat \
        frameworks/base frameworks/base system/core external/boringssl \
-       packages/services/Telephony frameworks/opt/telephony frameworks/base)
+       packages/services/Telephony)
 
 fail=0
 for i in "${!names[@]}"; do
