@@ -152,6 +152,7 @@
 /dev/oxifp                                  u:object_r:vivo_fp_device:s0
 /dev/pn54x             u:object_r:nfc_device:s0
 /dev/pn553             u:object_r:nfc_device:s0
+/dev/nq-nci            u:object_r:nfc_device:s0
 /dev/qbt_fd                                 u:object_r:vivo_fp_device:s0
 /donuts_key                                                     u:object_r:rootfs:s0
 /dev/mbhcftm  u:object_r:audio_device:s0
