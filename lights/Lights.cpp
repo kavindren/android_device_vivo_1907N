@@ -11,7 +11,9 @@ namespace light {
 
 static constexpr const char* kBacklightPath = "/sys/class/leds/lcd-backlight/brightness";
 static constexpr const char* kMaxBacklightPath = "/sys/class/leds/lcd-backlight/max_brightness";
-static constexpr int kDefaultMaxBrightness = 2047;
+// Falls back to the kernel's real userspace-facing scale (see mtk_leds_drv.c's
+// "lcd-backlight" max_brightness fix) if the sysfs read below fails for some reason.
+static constexpr int kDefaultMaxBrightness = 255;
 
 Lights::Lights() : mMaxBrightness(kDefaultMaxBrightness) {
     std::string content;
