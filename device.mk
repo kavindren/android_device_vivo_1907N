@@ -72,6 +72,12 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/fstab.mt6768:$(TARGET_COPY_OUT_RAMDISK)/fstab.mt6768
 
+PRODUCT_PACKAGES += \
+    init.zram.rc
+
+PRODUCT_COPY_FILES += \
+    vendor/vivo/1907N/proprietary/vendor/etc/fstab.enableswap:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.enableswap
+
 # Stock Goodix GF9518 configs: factory QC .ini and FingerprintEngineer task XMLs. Nothing in
 # LineageOS references them yet; kept for a possible FingerprintEngineer port.
 PRODUCT_COPY_FILES += \
