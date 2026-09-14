@@ -60,6 +60,42 @@ persist.mtk_epdg_support=1
 
 ro.vendor.md_auto_setup_ims=1
 
+# LOS20 1907N stabilization: Bluetooth doesn't connect to ANY device/profile. Root cause found via
+# live logcat of a real pairing attempt - bonding and SDP both succeed (finds A2DP/AVRCP/HFP
+# UUIDs fine), but then `A2dpService: getA2dpService(): service is null` and
+# `BluetoothHidHostService: getHidHostService(): service is null` - the profile services never
+# start at all, so nothing is ever actually connected and the idle ACL link times out a few
+# seconds later. Since Android 13, packages/modules/Bluetooth's Config.java gates every profile
+# service (except GATT, which is unconditional) behind its own
+# BluetoothProperties.isProfileXxxEnabled() sysprop check (com.android.bluetooth's
+# btservice/Config.java, PROFILE_SERVICES_AND_FLAGS) - these default to Optional.empty()/false
+# unless a device tree explicitly sets them (confirmed: every real device tree checked, including
+# Google's own device/google/cuttlefish/shared/phone/product.prop, sets a full list; ours had
+# none at all). Values below mirror that cuttlefish phone reference set (the "device" side
+# profiles a real phone needs - source/AG/target/host, not the sink/client side used for car
+# head units or PC dongles).
+bluetooth.device.class_of_device=90,2,12
+bluetooth.profile.asha.central.enabled=true
+bluetooth.profile.a2dp.source.enabled=true
+bluetooth.profile.avrcp.target.enabled=true
+bluetooth.profile.bap.broadcast.assist.enabled=true
+bluetooth.profile.bap.unicast.client.enabled=true
+bluetooth.profile.bas.client.enabled=true
+bluetooth.profile.csip.set_coordinator.enabled=true
+bluetooth.profile.gatt.enabled=true
+bluetooth.profile.hap.client.enabled=true
+bluetooth.profile.hfp.ag.enabled=true
+bluetooth.profile.hid.device.enabled=true
+bluetooth.profile.hid.host.enabled=true
+bluetooth.profile.map.server.enabled=true
+bluetooth.profile.mcp.server.enabled=true
+bluetooth.profile.opp.enabled=true
+bluetooth.profile.pan.nap.enabled=true
+bluetooth.profile.pan.panu.enabled=true
+bluetooth.profile.pbap.server.enabled=true
+bluetooth.profile.ccp.server.enabled=true
+bluetooth.profile.vcp.controller.enabled=true
+
 # Self-hosted OTA (LineageOS Updater). Overrides the built-in updater_server_url. Placeholders:
 # {device}=ro.lineage.device, {type}=ro.lineage.releasetype (lowercased), {incr}=ro.build.version.incremental.
 # The 19.1 Updater reads "lineage.updater.uri" (Constants.PROP_UPDATER_URI), NOT "ro.updater.uri".
