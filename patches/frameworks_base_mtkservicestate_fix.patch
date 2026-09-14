@@ -1,5 +1,5 @@
 diff --git a/telephony/java/android/telephony/ServiceState.java b/telephony/java/android/telephony/ServiceState.java
-index 6fe9bf97c5c3..d9fef2ea7745 100644
+index 6fe9bf97c5c3..220e71ef71c0 100644
 --- a/telephony/java/android/telephony/ServiceState.java
 +++ b/telephony/java/android/telephony/ServiceState.java
 @@ -20,6 +20,7 @@ import android.annotation.IntDef;
@@ -43,46 +43,48 @@ index 6fe9bf97c5c3..d9fef2ea7745 100644
  
      /** @hide */
      @Retention(RetentionPolicy.SOURCE)
-@@ -326,33 +342,46 @@ public class ServiceState implements Parcelable {
+@@ -326,33 +342,40 @@ public class ServiceState implements Parcelable {
      private static final String EXTRA_SERVICE_STATE = "android.intent.extra.SERVICE_STATE";
  
  
 -    private String mOperatorAlphaLong;
 -    private String mOperatorAlphaShort;
 -    private String mOperatorNumeric;
+-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
+-    private boolean mIsManualNetworkSelection;
+-
+-    private boolean mIsEmergencyOnly;
+-
+-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
+-    private boolean mCssIndicator;
+-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
+-    private int mNetworkId;
+-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
+-    private int mSystemId;
+-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
+-    private int mCdmaRoamingIndicator;
+-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
+-    private int mCdmaDefaultRoamingIndicator;
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField", "MissingNullability"})
 +    protected String mOperatorAlphaLong;
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField", "MissingNullability"})
 +    protected String mOperatorAlphaShort;
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField", "MissingNullability"})
 +    protected String mOperatorNumeric;
-     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
--    private boolean mIsManualNetworkSelection;
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField"})
 +    protected boolean mIsManualNetworkSelection;
- 
--    private boolean mIsEmergencyOnly;
++
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField"})
 +    protected boolean mIsEmergencyOnly;
- 
-     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
--    private boolean mCssIndicator;
++
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField"})
 +    protected boolean mCssIndicator;
-     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
--    private int mNetworkId;
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField"})
 +    protected int mNetworkId;
-     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
--    private int mSystemId;
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField"})
 +    protected int mSystemId;
-     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
--    private int mCdmaRoamingIndicator;
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField"})
 +    protected int mCdmaRoamingIndicator;
-     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
--    private int mCdmaDefaultRoamingIndicator;
 +    @SuppressLint({"ProtectedMember", "MutableBareField", "InternalField"})
 +    protected int mCdmaDefaultRoamingIndicator;
      @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
@@ -103,7 +105,7 @@ index 6fe9bf97c5c3..d9fef2ea7745 100644
  
      /**
       *  ARFCN stands for Absolute Radio Frequency Channel Number. This field is current used for
-@@ -360,12 +389,16 @@ public class ServiceState implements Parcelable {
+@@ -360,12 +383,16 @@ public class ServiceState implements Parcelable {
       *  where it's for NR ARFCN (Reference: 3GPP TS 36.108) */
      private int mArfcnRsrpBoost = 0;
  
@@ -124,20 +126,22 @@ index 6fe9bf97c5c3..d9fef2ea7745 100644
  
      /**
       * get String description of roaming type
-@@ -1433,7 +1466,8 @@ public class ServiceState implements Parcelable {
+@@ -1432,8 +1459,8 @@ public class ServiceState implements Parcelable {
+      * @param b second obj
       * @return true if two objects equal or both are null
       */
-     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
+-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P, trackingBug = 115609023)
 -    private static boolean equalsHandlesNulls (Object a, Object b) {
 +    @SuppressLint({"ProtectedMember"})
 +    protected static boolean equalsHandlesNulls (@Nullable Object a, @Nullable Object b) {
          return (a == null) ? (b == null) : a.equals (b);
      }
  
-@@ -1444,7 +1478,8 @@ public class ServiceState implements Parcelable {
+@@ -1443,8 +1470,8 @@ public class ServiceState implements Parcelable {
+      * @param m intent notifier map
       * @hide
       */
-     @UnsupportedAppUsage
+-    @UnsupportedAppUsage
 -    private void setFromNotifierBundle(Bundle m) {
 +    @SuppressLint({"ProtectedMember", "MissingNullability"})
 +    protected void setFromNotifierBundle(Bundle m) {
