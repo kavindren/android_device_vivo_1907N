@@ -1,0 +1,18 @@
+# LOS20 1907N stabilization: system_suspend enumerates wakeup sources by resolving arbitrary
+# /sys/class/wakeup/wakeupN symlinks (see system/sepolicy/private/system_suspend.te's own comment
+# - "To resolve arbitrary sysfs paths from /sys/class/wakeup/* symlinks" - which only grants
+# `search` on the generic sysfs_type attribute, assuming every symlink resolves to something
+# specifically labeled sysfs_wakeup). On this device several wakeup sources resolve to paths that
+# don't match any of device/mediatek/sepolicy_vndr's genfscon rules for this exact naming variant
+# (e.g. mt6358-pmic vs the reference main_pmic, dual_role_usb without the reference soc/ prefix)
+# or get overridden by a broader device/vivo/1907N/sepolicy/vendor/file_contexts catch-all
+# (power_supply(/.*)? -> debugfs_fuelsummary), so they end up labeled sysfs, sysfs_usb_nonplat,
+# debugfs_fuelsummary, or sysfs_rtc instead - all real dmesg denials on real hardware
+# (avc: denied { read } for comm="binder:453_1" ... scontext=u:r:system_suspend:s0).
+#
+# Rather than chase every individual naming/labeling mismatch, upgrade the existing search-only
+# grant to full read - matches system_suspend's actual stated purpose (generic wakeup-source
+# introspection across arbitrary sysfs paths) and is safe: read-only, and every type covered here
+# already inherits the sysfs_type attribute by design specifically so platform code can interact
+# with vendor-specific sysfs subtypes generically.
+r_dir_file(system_suspend, sysfs_type)
