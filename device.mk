@@ -101,6 +101,19 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.usb.gadget@1.1-service.1907N
 
+# Diagnostic/workaround: ship the legacy AOSP Camera2 ("Snap") app alongside Aperture.
+# Front-camera Video mode hangs on Aperture (CameraX) AND on a third-party GCam port (MGC) -
+# both fail identically. A/B test against a real LOS19.1 build with byte-identical kernel +
+# vendor camera blobs (git history confirmed: neither has ever been touched since the initial
+# LOS19.1 blob extraction) showed the same hardware DMA error (ISP CAM_A DMA_ERR_ST) does NOT
+# fire on 19.1, which ships Camera2 instead of Aperture/CameraX - recording actually works
+# there. Since two different, unrelated LOS20 apps both reproduce the hang, this points at a
+# framework-level (frameworks/av, Android 12->13) behavior difference rather than an
+# app-specific one. Camera2 is the one client proven to avoid it on identical hardware -
+# shipping it here is both a live test of that theory and a practical fallback if it works.
+PRODUCT_PACKAGES += \
+    Camera2
+
 PRODUCT_PACKAGES += \
     android.hardware.bluetooth.audio@2.1-impl \
     audio.r_submix.default \
