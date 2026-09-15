@@ -522,7 +522,7 @@ index 5106e7695401..d72156cd748c 100644
          "android.hardware.oemlock-V1.0-java",
          "android.hardware.oemlock-V1-java",
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java b/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
-index 7ee2a7ababb3..fa44c29cca65 100644
+index 7ee2a7ababb3..bab17c8efe03 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
 @@ -664,6 +664,50 @@ public class FaceService extends SystemService {
@@ -535,7 +535,7 @@ index 7ee2a7ababb3..fa44c29cca65 100644
 +            // vivo 1907N Face Unlock bring-up: not an AOSP method - see IFaceService.aidl.
 +            Utils.checkPermission(getContext(), USE_BIOMETRIC_INTERNAL);
 +
-+            final ServiceProvider provider = getProviderForSensor(sensorId);
++            final ServiceProvider provider = mRegistry.getProviderForSensor(sensorId);
 +            if (provider == null) {
 +                Slog.w(TAG, "Null provider for getShareMemoryFd, caller: " + opPackageName);
 +                return null;
@@ -550,7 +550,7 @@ index 7ee2a7ababb3..fa44c29cca65 100644
 +            // vivo 1907N Face Unlock bring-up: not an AOSP method - see IFaceService.aidl.
 +            Utils.checkPermission(getContext(), USE_BIOMETRIC_INTERNAL);
 +
-+            final ServiceProvider provider = getProviderForSensor(sensorId);
++            final ServiceProvider provider = mRegistry.getProviderForSensor(sensorId);
 +            if (provider == null) {
 +                Slog.w(TAG, "Null provider for sendCommand, caller: " + opPackageName);
 +                return;
@@ -564,7 +564,7 @@ index 7ee2a7ababb3..fa44c29cca65 100644
 +            // vivo 1907N Face Unlock bring-up: not an AOSP method - see IFaceService.aidl.
 +            Utils.checkPermission(getContext(), USE_BIOMETRIC_INTERNAL);
 +
-+            final ServiceProvider provider = getProviderForSensor(sensorId);
++            final ServiceProvider provider = mRegistry.getProviderForSensor(sensorId);
 +            if (provider == null) {
 +                Slog.w(TAG, "Null provider for setPreviewSurface, caller: " + opPackageName);
 +                return;
