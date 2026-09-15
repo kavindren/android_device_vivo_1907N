@@ -102,35 +102,23 @@ public class FaceCaptureService extends Service {
     private static final int CAPTURE_HEIGHT = 480;
     private static final int NV21_SIZE = CAPTURE_WIDTH * CAPTURE_HEIGHT * 3 / 2;
 
-    // The vendor daemon's sendhandle() does NOT use the size we pass through the NativeHandle's
-    // int array at all - confirmed via Ghidra disassembly of the real binary
-    // (vendor.vivo.hardware.biometrics.face@2.0-service): it builds its own local hidl_memory on
-    // the stack with a HARDCODED mSize of 0x713b8 (463800) bytes, then calls
-    // android::hardware::mapMemory() on that, which ends up in AshmemMapper::mapMemory()
-    // (system/libhidl/transport/memory/1.0/default/AshmemMapper.cpp) doing
-    // mmap(0, mem.size(), ..., fd, 0). ashmem's mmap rejects a requested length larger than the
-    // region's real size, so as long as our ashmem region was only NV21_SIZE (460800) bytes, that
-    // mmap failed silently (AshmemMapper logs nothing on MAP_FAILED) - this is the actual cause
-    // of the "mapMemory Fiald!!" the daemon has been logging every session. Sizing our allocation
-    // to at least this hardcoded value unblocks the mmap; see FACE_UNLOCK_STATUS.md.
+    // The vendor daemon's sendhandle() ignores the size in the NativeHandle's int array - it
+    // builds its own hidl_memory with a hardcoded mSize of 0x713b8 (463800) bytes and mmaps
+    // that against our ashmem region, which fails silently if our region is smaller (the
+    // daemon's "mapMemory Fiald!!" log every session). Size our allocation to at least this
+    // value to unblock the mmap; see FACE_UNLOCK_STATUS.md.
     private static final int VENDOR_MAPPED_MEMORY_SIZE = 0x713b8;
 
     // vivo 1907N Face Unlock bring-up (not AOSP): live self-view preview, see
     // Face10.java's scheduleSetPreviewSurface(). Plain string literal, not a shared constant -
-    // Face10.java lives in a completely different app/build module (frameworks/base) that this
-    // app can't depend on, see that file's matching comment on the same key.
+    // Face10.java lives in a different app/build module (frameworks/base) this app can't
+    // depend on; see that file's matching comment on the same key.
     private static final String EXTRA_PREVIEW_SURFACE =
             "com.android.facecapture.extra.PREVIEW_SURFACE";
 
-    // vivo 1907N Face Unlock bring-up (not AOSP): every frame, full rate - was throttled to
-    // every 3rd frame at one point, on the theory that preview rendering's own CPU cost
-    // (JPEG encode+decode+rotate/mirror+Canvas draw, per onImageAvailable() frame) was
-    // contributing to the "Slow dispatch"/button-freeze issue. The real cause of that turned out
-    // to be unrelated - see FACE_UNLOCK_STATUS.md's Фаза 7 (BiometricScheduler taking minutes to
-    // actually call stopFaceCapture(), now fixed by calling it directly and immediately instead
-    // of waiting on that). Rendering still runs on its own lower-priority thread
-    // (mPreviewHandler), so it can't compete with/block the camera-to-HAL pipeline on
-    // mCameraHandler regardless of rate.
+    // vivo 1907N Face Unlock bring-up (not AOSP): every frame, full rate. Rendering runs on its
+    // own lower-priority thread (mPreviewHandler), so it can't compete with/block the
+    // camera-to-HAL pipeline on mCameraHandler regardless of rate - see FACE_UNLOCK_STATUS.md.
     private static final int PREVIEW_FRAME_SKIP = 1;
     private int mPreviewFrameCounter;
 
@@ -212,18 +200,13 @@ public class FaceCaptureService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // Must promote to foreground within 5s of starting or the system kills us - see
-        // Face10.java's startFaceCapture() for why this has to be a foreground service at all
-        // (plain startService() was silently rejected with
-        // BackgroundServiceStartNotAllowedException, confirmed via a real device logcat: the
-        // service never started, no camera ever opened, no frames ever reached the HAL). Done
-        // first, before any of the checks below, so it happens unconditionally and promptly.
+        // Must promote to foreground within 5s of starting or the system kills us - plain
+        // startService() is rejected with BackgroundServiceStartNotAllowedException instead,
+        // see Face10.java's startFaceCapture(). Done first, before any checks below.
         startForeground(NOTIFICATION_ID, buildNotification());
-        // vivo 1907N Face Unlock bring-up: read on every single start, including a re-delivery
-        // to an already-capturing instance - this is how Face10.java gets an updated (or newly
-        // available) preview surface to us without restarting the camera/share-memory session,
-        // see Face10.java's scheduleSetPreviewSurface(). May legitimately be null (no preview
-        // fragment visible, or it hasn't called setPreviewSurface() yet).
+        // vivo 1907N Face Unlock bring-up: read on every start, including a re-delivery to an
+        // already-capturing instance - how Face10.java updates the preview surface without
+        // restarting the camera/shared-memory session. May legitimately be null.
         // getParcelableExtra(String, Class) needs API 33 - this branch targets API 32.
         mPreviewSurface = intent == null ? null
                 : intent.getParcelableExtra(EXTRA_PREVIEW_SURFACE);

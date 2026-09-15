@@ -104,29 +104,18 @@ TARGET_KERNEL_HEADER_ARCH := arm64
 TARGET_KERNEL_SOURCE := kernel/vivo/1907N
 TARGET_KERNEL_CONFIG := pd1913f_defconfig
 
-# NOTE: BoardConfigKernel.mk's own KERNEL_MAKE_FLAGS (used by the vendor/lineage
-# "generated_kernel_includes" Soong genrule, i.e. `make headers_install`) needs a matching
-# HOSTCFLAGS="-fuse-ld=lld" fix for the same reason as TARGET_KERNEL_ADDITIONAL_FLAGS below -
-# appending it here from device/vivo/1907N/BoardConfig.mk did NOT take effect (not yet
-# understood why), so the real fix lives directly in vendor/lineage/config/BoardConfigKernel.mk
-# instead, applied as patches/vendor_lineage.patch (run patches/apply-patches.sh after every
-# fresh repo sync, same as the other 6 out-of-tree patches).
+# BoardConfigKernel.mk's own KERNEL_MAKE_FLAGS needs a matching HOSTCFLAGS="-fuse-ld=lld" fix
+# for the same reason as TARGET_KERNEL_ADDITIONAL_FLAGS below - appending it here didn't take
+# effect, so the real fix lives in vendor/lineage/config/BoardConfigKernel.mk instead, applied
+# as patches/vendor_lineage.patch (run patches/apply-patches.sh after every fresh repo sync).
 include vendor/lineage/config/BoardConfigKernel.mk
 
-# TARGET_KERNEL_CLANG_VERSION: deliberately staying on r383902 (clang 11.0.1), NOT LOS20's own
-# bundled r450784d (clang 14). Tried r450784d first (matching what a "properly ported to
-# LOS20" tree would normally use) - it compiles fine (see the AS-wrapper fixup below, needed
-# to get there), but a real device boot attempt reproducibly rebooted ~170s into every boot,
-# root-caused down to a userspace/vendor-init issue unrelated to the kernel (see
-# los-1907N-los20-port / los-1907N-aee-expdb-diagnostics session memory). As a targeted test,
-# rebuilt this exact 4.14.336 kernel source with r383902 instead (fetched from
-# prebuilts/clang/host/linux-x86's own upstream history at tag android-12.0.0_r9, where it
-# still exists as a subdirectory - see patches/apply-patches.sh) - stock's own kernel is ALSO
-# built with r383902/clang-11.0.1 (confirmed via a live stock uname), so this is a genuinely
-# proven-compatible toolchain for this exact kernel/SoC, not a downgrade of convenience. Same
-# boot failure reproduced identically with r383902 too, conclusively ruling out the compiler/
-# toolchain as the cause - kept on r383902 anyway since it's the safer, stock-matching choice
-# and LOS20's own bundled clang buys nothing here.
+# Staying on r383902 (clang 11.0.1) rather than LOS20's own bundled r450784d (clang 14): both
+# compile fine, but a real device boot with r450784d reproducibly rebooted ~170s in, root-caused
+# to a userspace/vendor-init issue unrelated to the kernel (see los-1907N-los20-port /
+# los-1907N-aee-expdb-diagnostics session memory) - the same failure reproduced with r383902
+# too, ruling out the compiler as the cause. Kept on r383902 anyway since it's what stock's own
+# kernel is built with, and LOS20's bundled clang buys nothing here.
 TARGET_KERNEL_CLANG_VERSION := r383902
 KERNEL_LD := LD=ld.lld
 # The two fixups below (HOSTCFLAGS/HOSTLDFLAGS forcing lld, and the aarch64-linux-android-as

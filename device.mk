@@ -238,22 +238,17 @@ PRODUCT_PACKAGES += \
     TetheringWifiRegexOverlay
 
 # Several stock MTK/AOSP prebuilt HAL binaries (vendor/vivo/1907N proprietary) are linked
-# against the old Android-12-era AIDL "ndk_platform" backend naming (android.hardware.<x>-V<n>-
-# ndk_platform.so / android.system.<x>-V<n>-ndk_platform.so) instead of LOS20's current "-ndk"
-# naming. Without these the linker refuses to start the binary at all - confirmed via dmesg+
-# logcat capture (first three via /cache during bring-up, keystore2 via live adb once boot
-# actually worked):
+# against the old Android-12-era AIDL "ndk_platform" backend naming instead of LOS20's current
+# "-ndk" naming; without these the linker refuses to start the binary at all:
 #   vendor.mediatek.hardware.mtkpower@1.0-service   -> android.hardware.power-V2-ndk_platform.so
-#     (PowerManagerService then waits forever for IPower/default, boot never gets past the
-#     animation - this is the one that was actually blocking boot)
+#     (blocks boot: PowerManagerService waits forever for IPower/default)
 #   android.hardware.gnss-service.mediatek          -> android.hardware.gnss-V1-ndk_platform.so
 #   android.hardware.vibrator-service.mediatek      -> android.hardware.vibrator-V2-ndk_platform.so
 #   wpa_supplicant (via libkeystore-engine-wifi-hidl.so) -> android.system.keystore2-V1-ndk_platform.so
-#     (this one silently breaks Wi-Fi: wpa_supplicant never starts at all)
+#     (silently breaks Wi-Fi: wpa_supplicant never starts)
 # These are hardware/lineage/compat's own -ndk_platform shims (patches/hardware_lineage_compat.
 # patch switches them from system_ext_specific to vendor:true - vendor binaries can't see
-# /system_ext in their linker namespace); list them explicitly in PRODUCT_PACKAGES so they're
-# actually installed to /vendor/lib64 (nothing else in the build graph depends on them).
+# /system_ext in their linker namespace); listed explicitly so they're installed to /vendor/lib64.
 PRODUCT_PACKAGES += \
     android.hardware.power-V2-ndk_platform \
     android.hardware.gnss-V1-ndk_platform \
