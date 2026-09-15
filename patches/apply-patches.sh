@@ -11,8 +11,10 @@
 # reverse-applies is retried with `git apply --3way`; anything still failing is reported and
 # makes the script exit non-zero.
 #
-# BASE is keyed by patch NAME (not repo path) - a repo can have more than one patch
-# (frameworks/base currently has two, unrelated to each other).
+# BASE is keyed by patch NAME (not repo path) - a repo can have more than one patch.
+# LOS21 port: dropped frameworks_base_storagemanager_compat, a standalone duplicate of a hunk
+# frameworks_base.patch itself already carries (same inCryptKeeperBounce() insertion) - applying
+# both conflicted with each other.
 set -u
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,13 +24,13 @@ BASE_FILE="$HERE/BASE"
 names=(frameworks_base packages_apps_Settings packages_modules_Connectivity \
        packages_modules_Wifi system_core bootable_recovery vendor_lineage sepolicy_vndr \
        frameworks_base_telephony_permissions hardware_lineage_compat \
-       frameworks_base_storagemanager_compat frameworks_base_usbporthidl_fix \
+       frameworks_base_usbporthidl_fix \
        system_core_refbase_compat boringssl_agpsd_compat \
        packages_services_telephony_ims_services frameworks_av)
 paths=(frameworks/base packages/apps/Settings packages/modules/Connectivity \
        packages/modules/Wifi system/core bootable/recovery vendor/lineage \
        device/mediatek/sepolicy_vndr frameworks/base hardware/lineage/compat \
-       frameworks/base frameworks/base system/core external/boringssl \
+       frameworks/base system/core external/boringssl \
        packages/services/Telephony frameworks/av)
 
 fail=0

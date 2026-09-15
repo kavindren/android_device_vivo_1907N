@@ -1,8 +1,8 @@
 diff --git a/core/java/android/hardware/face/FaceManager.java b/core/java/android/hardware/face/FaceManager.java
-index 7092e43596ec..95d0bff54c32 100644
+index 210ce2b78fca..2c066f063ccd 100644
 --- a/core/java/android/hardware/face/FaceManager.java
 +++ b/core/java/android/hardware/face/FaceManager.java
-@@ -38,6 +38,7 @@ import android.os.Handler;
+@@ -40,6 +40,7 @@ import android.os.Handler;
  import android.os.IBinder;
  import android.os.IRemoteCallback;
  import android.os.Looper;
@@ -10,7 +10,7 @@ index 7092e43596ec..95d0bff54c32 100644
  import android.os.PowerManager;
  import android.os.RemoteException;
  import android.os.Trace;
-@@ -467,6 +468,68 @@ public class FaceManager implements BiometricAuthenticator, BiometricFaceConstan
+@@ -520,6 +521,68 @@ public class FaceManager implements BiometricAuthenticator, BiometricFaceConstan
          }
      }
  
@@ -80,21 +80,24 @@ index 7092e43596ec..95d0bff54c32 100644
       * @hide
       */
 diff --git a/core/java/android/hardware/face/IFaceService.aidl b/core/java/android/hardware/face/IFaceService.aidl
-index 989b001ca8bf..d2457de60368 100644
+index 553d9f76bd01..3ba8a56274f8 100644
 --- a/core/java/android/hardware/face/IFaceService.aidl
 +++ b/core/java/android/hardware/face/IFaceService.aidl
-@@ -23,6 +23,7 @@ import android.hardware.biometrics.ITestSessionCallback;
- import android.hardware.face.IFaceServiceReceiver;
+@@ -27,8 +27,9 @@ import android.hardware.face.IFaceServiceReceiver;
  import android.hardware.face.Face;
- import android.hardware.face.FaceSensorPropertiesInternal;
+ import android.hardware.face.FaceAuthenticateOptions;
+ import android.hardware.face.FaceEnrollOptions;
+-import android.hardware.face.FaceSensorPropertiesInternal;
+ import android.hardware.face.FaceSensorConfigurations;
++import android.hardware.face.FaceSensorPropertiesInternal;
 +import android.os.ParcelFileDescriptor;
  import android.view.Surface;
  
  /**
-@@ -134,4 +135,20 @@ interface IFaceService {
-     // AIDL sensor properties are retrieved directly from the available HALs. If no HIDL HALs exist,
-     // hidlSensors must be non-null and empty. See AuthService.java
-     void registerAuthenticators(in List<FaceSensorPropertiesInternal> hidlSensors);
+@@ -193,4 +194,20 @@ interface IFaceService {
+     // Ensures that the scheduler is not stuck.
+     @EnforcePermission("USE_BIOMETRIC_INTERNAL")
+     oneway void scheduleWatchdog();
 +
 +    // vivo 1907N Face Unlock bring-up: not an AOSP API. Allocates (or returns the existing) shared
 +    // memory region the capture app writes raw camera frame bytes into, and hands its native handle
@@ -147,10 +150,10 @@ index f701ec3ec367..806ec1b97e9b 100644
  
      public FingerprintSensorPropertiesInternal(int sensorId,
 diff --git a/core/java/android/os/storage/StorageManager.java b/core/java/android/os/storage/StorageManager.java
-index d9604b3f0145..fe6f806a44a6 100644
+index d45a17f7194e..849426c51d07 100644
 --- a/core/java/android/os/storage/StorageManager.java
 +++ b/core/java/android/os/storage/StorageManager.java
-@@ -1706,6 +1706,18 @@ public class StorageManager {
+@@ -1733,6 +1733,18 @@ public class StorageManager {
          return RoSystemProperties.CRYPTO_FILE_ENCRYPTED;
      }
  
@@ -167,8 +170,8 @@ index d9604b3f0145..fe6f806a44a6 100644
 +    }
 +
      /** {@hide} */
-     public static boolean isFileEncryptedEmulatedOnly() {
-         return SystemProperties.getBoolean(StorageManager.PROP_EMULATE_FBE, false);
+     public static boolean hasAdoptable() {
+         switch (SystemProperties.get(PROP_ADOPTABLE)) {
 diff --git a/packages/SystemUI/res/drawable-nodpi/udfps_illuminator_vivo.png b/packages/SystemUI/res/drawable-nodpi/udfps_illuminator_vivo.png
 new file mode 100644
 index 0000000000000000000000000000000000000000..c45b9aed54cab947c5b1a65600af75a5e8ece877
@@ -353,19 +356,17 @@ literal 0
 HcmV?d00001
 
 diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsDisplayMode.kt b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsDisplayMode.kt
-index e9de7ccc7b4f..0963f6b61c4a 100644
+index 670a8e6389af..7db89c98c8f3 100644
 --- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsDisplayMode.kt
 +++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsDisplayMode.kt
-@@ -2,6 +2,8 @@ package com.android.systemui.biometrics
+@@ -18,11 +18,38 @@ package com.android.systemui.biometrics
  
  import android.content.Context
  import android.os.RemoteException
 +import android.os.SystemClock
 +import android.os.SystemProperties
  import android.os.Trace
- import android.util.Log
- import com.android.systemui.dagger.SysUISingleton
-@@ -10,6 +12,31 @@ import javax.inject.Inject
+ import com.android.systemui.util.concurrency.Execution
  
  private const val TAG = "UdfpsDisplayMode"
  
@@ -395,9 +396,9 @@ index e9de7ccc7b4f..0963f6b61c4a 100644
 +private const val VIVO_UDFPS_HBM_KEEPALIVE_INTERVAL_MS = 50L
 +
  /**
-  * UdfpsDisplayMode that encapsulates pixel-specific code, such as enabling the high-brightness mode
-  * (HBM) in a display-specific way and freezing the display's refresh rate.
-@@ -26,6 +53,26 @@ constructor(
+  * UdfpsDisplayMode configures the display for optimal UDFPS operation. For example, sets the
+  * display refresh rate that's optimal for UDFPS.
+@@ -38,6 +65,26 @@ constructor(
      // The request is reset to null after it's processed.
      private var currentRequest: Request? = null
  
@@ -423,8 +424,8 @@ index e9de7ccc7b4f..0963f6b61c4a 100644
 +
      override fun enable(onEnabled: Runnable?) {
          execution.isMainThread()
-         Log.v(TAG, "enable")
-@@ -45,6 +92,9 @@ constructor(
+         logger.v(TAG, "enable")
+@@ -57,6 +104,9 @@ constructor(
          val request = Request(context.displayId)
          currentRequest = request
  
@@ -434,9 +435,9 @@ index e9de7ccc7b4f..0963f6b61c4a 100644
          try {
              // This method is a misnomer. It has nothing to do with HBM, its purpose is to set
              // the appropriate display refresh rate.
-@@ -62,6 +112,11 @@ constructor(
+@@ -74,6 +124,11 @@ constructor(
          execution.isMainThread()
-         Log.v(TAG, "disable")
+         logger.v(TAG, "disable")
  
 +        // vivo 1907N: always stop the panel-local HBM boost, even if the refresh-rate request
 +        // below was never (or already) torn down - leaving the sensor lit is worse than a
@@ -445,9 +446,9 @@ index e9de7ccc7b4f..0963f6b61c4a 100644
 +
          val request = currentRequest
          if (request == null) {
-             Log.w(TAG, "disable | already disabled")
+             logger.w(TAG, "disable | already disabled")
 diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
-index 2488132b508b..06da41b1cbe4 100644
+index 2e0e9491dd5b..eca7689f055e 100644
 --- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
 +++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
 @@ -23,6 +23,7 @@ import android.graphics.drawable.Drawable;
@@ -506,28 +507,28 @@ index 2488132b508b..06da41b1cbe4 100644
              // Make sure the surface is never left in a bad state.
              if (canvas != null) {
 diff --git a/services/core/Android.bp b/services/core/Android.bp
-index faf7da35813a..045935dc53da 100644
+index 5106e7695401..d72156cd748c 100644
 --- a/services/core/Android.bp
 +++ b/services/core/Android.bp
-@@ -158,6 +158,10 @@ java_library_static {
-         "android.hardware.tv.cec-V1.1-java",
+@@ -224,6 +224,10 @@ java_library_static {
          "android.hardware.weaver-V1.0-java",
+         "android.hardware.weaver-V2-java",
          "android.hardware.biometrics.face-V1.0-java",
 +        // vivo 1907N Face Unlock/UDFPS bring-up (not AOSP): reverse-engineered vendor extension
 +        // HAL, see device/vivo/1907N/interfaces/biometrics/ and Face10.java/UdfpsHelper.java.
 +        "vendor.vivo.hardware.biometrics.face-V2.0-java",
 +        "vendor.vivo.hardware.biometrics.fingerprint-V3.0-java",
          "android.hardware.biometrics.fingerprint-V2.3-java",
-         "android.hardware.biometrics.fingerprint-V2-java",
          "android.hardware.oemlock-V1.0-java",
+         "android.hardware.oemlock-V1-java",
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java b/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
-index 5491379b39ac..4df4741acb9c 100644
+index 7ee2a7ababb3..fa44c29cca65 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java
-@@ -616,6 +616,50 @@ public class FaceService extends SystemService {
+@@ -664,6 +664,50 @@ public class FaceService extends SystemService {
+             provider.second.scheduleGetFeature(provider.first, token, userId, feature,
                      new ClientMonitorCallbackConverter(receiver), opPackageName);
          }
- 
 +        @Override // Binder call
 +        public android.os.ParcelFileDescriptor getShareMemoryFd(int sensorId, int size,
 +                String opPackageName) {
@@ -572,25 +573,26 @@ index 5491379b39ac..4df4741acb9c 100644
 +            provider.scheduleSetPreviewSurface(sensorId, surface);
 +        }
 +
-         private void addHidlProviders(@NonNull List<FaceSensorPropertiesInternal> hidlSensors) {
-             for (FaceSensorPropertiesInternal hidlSensor : hidlSensors) {
-                 mServiceProviders.add(
+         @NonNull
+         private List<ServiceProvider> getHidlProviders(
+                 @NonNull List<FaceSensorPropertiesInternal> hidlSensors) {
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/ServiceProvider.java b/services/core/java/com/android/server/biometrics/sensors/face/ServiceProvider.java
-index 1e9b72b6f4d5..61393d7af47d 100644
+index 6f76cdae4539..067329f079cd 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/ServiceProvider.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/ServiceProvider.java
-@@ -26,6 +26,7 @@ import android.hardware.face.FaceManager;
+@@ -28,6 +28,8 @@ import android.hardware.face.FaceManager;
  import android.hardware.face.FaceSensorPropertiesInternal;
  import android.hardware.face.IFaceServiceReceiver;
  import android.os.IBinder;
 +import android.os.ParcelFileDescriptor;
- import android.util.proto.ProtoOutputStream;
++import android.util.proto.ProtoOutputStream;
  import android.view.Surface;
  
-@@ -151,4 +152,33 @@ public interface ServiceProvider {
-             @NonNull String opPackageName);
- 
-     void dumpHal(int sensorId, @NonNull FileDescriptor fd, @NonNull String[] args);
+ import com.android.server.biometrics.sensors.BiometricServiceProvider;
+@@ -137,4 +139,33 @@ public interface ServiceProvider extends BiometricServiceProvider<FaceSensorProp
+      * @param sensorId sensor ID of the associated operation
+      */
+     default void scheduleWatchdog(int sensorId) {}
 +
 +    /**
 +     * vivo 1907N Face Unlock bring-up: not an AOSP concept, only meaningful for the HIDL/Face10
@@ -622,7 +624,7 @@ index 1e9b72b6f4d5..61393d7af47d 100644
 +    }
  }
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
-index 73c759f7738c..e7f7aaa339c2 100644
+index 306ddfa1e083..dcf76404252a 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/face/hidl/Face10.java
 @@ -21,7 +21,9 @@ import android.annotation.Nullable;
@@ -635,7 +637,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
  import android.content.pm.UserInfo;
  import android.hardware.biometrics.BiometricConstants;
  import android.hardware.biometrics.BiometricFaceConstants;
-@@ -36,15 +38,19 @@ import android.hardware.face.IFaceServiceReceiver;
+@@ -38,15 +40,19 @@ import android.hardware.face.IFaceServiceReceiver;
  import android.os.Binder;
  import android.os.Build;
  import android.os.Handler;
@@ -655,9 +657,9 @@ index 73c759f7738c..e7f7aaa339c2 100644
  import android.util.Slog;
  import android.util.proto.ProtoOutputStream;
  import android.view.Surface;
-@@ -113,6 +119,13 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -126,6 +132,13 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
      @NonNull private final Context mContext;
-     @NonNull private final BiometricScheduler mScheduler;
+     @NonNull private final BiometricScheduler<IBiometricsFace, AidlSession> mScheduler;
      @NonNull private final Handler mHandler;
 +    // vivo 1907N Face Unlock bring-up (not AOSP): scheduleSendCommand()'s daemon.sendCommand() is
 +    // a synchronous HIDL Binder call, made once per camera frame - a real device thread dump
@@ -669,9 +671,9 @@ index 73c759f7738c..e7f7aaa339c2 100644
      @NonNull private final Supplier<IBiometricsFace> mLazyDaemon;
      @NonNull private final LockoutHalImpl mLockoutTracker;
      @NonNull private final UsageStats mUsageStats;
-@@ -127,6 +140,30 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
-     private final List<Long> mGeneratedChallengeCount = new ArrayList<>();
+@@ -143,6 +156,30 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
      private FaceGenerateChallengeClient mGeneratedChallengeCache = null;
+     private AidlSession mSession;
  
 +    // vivo 1907N Face Unlock bring-up (not AOSP): shared-memory region the capture app writes
 +    // camera frames into, and whether its native handle has already been pushed to the HAL via
@@ -700,7 +702,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
      private final UserSwitchObserver mUserSwitchObserver = new SynchronousUserSwitchObserver() {
          @Override
          public void onUserSwitching(int newUserId) {
-@@ -137,7 +174,13 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -153,7 +190,13 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          }
      };
  
@@ -715,7 +717,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
          /**
           * Interface to sends results to the HalResultController's owner.
           */
-@@ -172,8 +215,41 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -189,8 +232,41 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
              mCallback = callback;
          }
  
@@ -757,7 +759,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
              mHandler.post(() -> {
                  final CharSequence name = FaceUtils.getLegacyInstance(mSensorId)
                          .getUniqueName(mContext, userId);
-@@ -213,6 +289,24 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -230,6 +306,24 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          @Override
          public void onAcquired(long deviceId, int userId, int acquiredInfo,
                  int vendorCode) {
@@ -782,7 +784,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
              mHandler.post(() -> {
                  final BaseClientMonitor client = mScheduler.getCurrentClient();
                  if (!(client instanceof AcquisitionClient)) {
-@@ -332,6 +426,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -349,6 +443,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  }
              });
          }
@@ -801,7 +803,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
      }
  
      @VisibleForTesting
-@@ -346,6 +452,9 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -367,6 +473,9 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          mSensorId = sensorProps.sensorId;
          mScheduler = scheduler;
          mHandler = handler;
@@ -811,7 +813,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
          mBiometricContext = biometricContext;
          mUsageStats = new UsageStats(context);
          mAuthenticatorIds = new HashMap<>();
-@@ -417,7 +526,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -469,7 +578,14 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  + mScheduler.getCurrentClient());
  
          try {
@@ -827,7 +829,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
          } catch (java.util.NoSuchElementException e) {
              // Service doesn't exist or cannot be opened.
              Slog.w(TAG, "NoSuchElementException", e);
-@@ -444,6 +560,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -496,6 +612,15 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
  
          Slog.d(TAG, "Face HAL ready, HAL ID: " + halId);
          if (halId != 0) {
@@ -843,7 +845,7 @@ index 73c759f7738c..e7f7aaa339c2 100644
              scheduleLoadAuthenticatorIds();
              scheduleInternalCleanup(ActivityManager.getCurrentUser(), null /* callback */);
              scheduleGetFeature(mSensorId, new Binder(),
-@@ -458,6 +583,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+@@ -510,6 +635,175 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
          return mDaemon;
      }
  
@@ -1019,51 +1021,51 @@ index 73c759f7738c..e7f7aaa339c2 100644
      @Override
      public boolean containsSensor(int sensorId) {
          return mSensorId == sensorId;
-@@ -609,9 +903,18 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
-                     mBiometricContext);
- 
-             mScheduler.scheduleClientMonitor(client, new ClientMonitorCallback() {
-+                @Override
-+                public void onClientStarted(@NonNull BaseClientMonitor clientMonitor) {
+@@ -785,6 +1079,10 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+                 @Override
+                 public void onClientStarted(@NonNull BaseClientMonitor clientMonitor) {
+                     mBiometricStateCallback.onClientStarted(clientMonitor);
 +                    // vivo 1907N Face Unlock bring-up (not AOSP) - see startFaceCapture().
 +                    mSentShareMemoryHandle = false;
 +                    mHalResultController.resetEnrollDedup();
 +                    startFaceCapture();
-+                }
-+
+                 }
+ 
                  @Override
+@@ -796,6 +1094,7 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
                  public void onClientFinished(@NonNull BaseClientMonitor clientMonitor,
                          boolean success) {
+                     mBiometricStateCallback.onClientFinished(clientMonitor, success);
 +                    stopFaceCapture();
                      if (success) {
                          // Update authenticatorIds
                          scheduleUpdateActiveUserWithoutHandler(client.getTargetUserId());
-@@ -656,7 +959,24 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
-                     createLogger(BiometricsProtoEnums.ACTION_AUTHENTICATE, statsClient),
-                     mBiometricContext, isStrongBiometric, mLockoutTracker,
-                     mUsageStats, allowBackgroundAuthentication, isKeyguardBypassEnabled);
--            mScheduler.scheduleClientMonitor(client);
-+            mScheduler.scheduleClientMonitor(client, new ClientMonitorCallback() {
-+                @Override
-+                public void onClientStarted(@NonNull BaseClientMonitor clientMonitor) {
-+                    // vivo 1907N Face Unlock bring-up (not AOSP) - see startFaceCapture(). Also
-+                    // resets mEnrollFinished/onAcquired's throttle state (see onAcquired()) so a
-+                    // stale mEnrollFinished=true left over from a prior enrollment can't silence
-+                    // this authentication's own onAcquired hints.
-+                    mSentShareMemoryHandle = false;
-+                    mHalResultController.resetEnrollDedup();
-+                    startFaceCapture();
-+                }
+@@ -872,7 +1171,24 @@ public class Face10 implements IHwBinder.DeathRecipient, ServiceProvider {
+                 isStrongBiometric, mLockoutTracker, mUsageStats,
+                 allowBackgroundAuthentication, Utils.getCurrentStrength(mSensorId),
+                 mAuthenticationStateListeners);
+-        mScheduler.scheduleClientMonitor(client);
++        mScheduler.scheduleClientMonitor(client, new ClientMonitorCallback() {
++            @Override
++            public void onClientStarted(@NonNull BaseClientMonitor clientMonitor) {
++                // vivo 1907N Face Unlock bring-up (not AOSP) - see startFaceCapture(). Also
++                // resets mEnrollFinished/onAcquired's throttle state (see onAcquired()) so a
++                // stale mEnrollFinished=true left over from a prior enrollment can't silence
++                // this authentication's own onAcquired hints.
++                mSentShareMemoryHandle = false;
++                mHalResultController.resetEnrollDedup();
++                startFaceCapture();
++            }
 +
-+                @Override
-+                public void onClientFinished(@NonNull BaseClientMonitor clientMonitor,
-+                        boolean success) {
-+                    stopFaceCapture();
-+                }
-+            });
-         });
++            @Override
++            public void onClientFinished(@NonNull BaseClientMonitor clientMonitor,
++                    boolean success) {
++                stopFaceCapture();
++            }
++        });
      }
  
+     @Override
 diff --git a/services/core/java/com/android/server/biometrics/sensors/face/hidl/FaceGenerateChallengeClient.java b/services/core/java/com/android/server/biometrics/sensors/face/hidl/FaceGenerateChallengeClient.java
 index 97838a70cbd1..e62d3cfdc145 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/face/hidl/FaceGenerateChallengeClient.java
@@ -1226,42 +1228,43 @@ index 29661d46f328..0c459d82fe27 100644
              int acquireInfo, int vendorCode) {
          return FingerprintManager.getAcquiredString(context, acquireInfo, vendorCode) != null;
 diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
-index 0d620fd3a9e4..36be3335b649 100644
+index b6311afb5ea1..6869d4b88c38 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
-@@ -243,6 +243,6 @@ class FingerprintAuthenticationClient extends AuthenticationClient<IBiometricsFi
+@@ -310,6 +310,6 @@ class FingerprintAuthenticationClient
  
      @Override
-     public void onUiReady() {
+     public void onUdfpsUiEvent(@FingerprintManager.UdfpsUiEvent int event) {
 -        // Unsupported in HIDL.
 +        UdfpsHelper.onUiReady();
      }
  }
 diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintDetectClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintDetectClient.java
-index c2929d0f15b2..6eb1987d12a8 100644
+index 50e48fe91c56..64fc5bc39f17 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintDetectClient.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintDetectClient.java
-@@ -124,7 +124,7 @@ class FingerprintDetectClient extends AcquisitionClient<IBiometricsFingerprint>
+@@ -137,7 +137,7 @@ class FingerprintDetectClient extends AcquisitionClient<IBiometricsFingerprint>
  
      @Override
-     public void onUiReady() {
+     public void onUdfpsUiEvent(@FingerprintManager.UdfpsUiEvent int event) {
 -        // Unsupported in HIDL.
 +        UdfpsHelper.onUiReady();
      }
  
      @Override
 diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintEnrollClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintEnrollClient.java
-index 5d9af5322c2e..21f47b76433f 100644
+index 1cfb69bfd2b3..7edfb69c831a 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintEnrollClient.java
 +++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintEnrollClient.java
-@@ -182,6 +182,6 @@ public class FingerprintEnrollClient extends EnrollClient<IBiometricsFingerprint
- 
-     @Override
-     public void onUiReady() {
--        // Unsupported in HIDL.
-+        UdfpsHelper.onUiReady();
-     }
- }
+@@ -230,7 +230,7 @@ public class FingerprintEnrollClient extends EnrollClient<IBiometricsFingerprint
+                     getListener().onUdfpsOverlayShown();
+                     break;
+                 case FingerprintManager.UDFPS_UI_READY:
+-                    // Unsupported in HIDL.
++                    UdfpsHelper.onUiReady();
+                     break;
+                 default:
+                     Slog.w(TAG, "No matching event for onUdfpsUiEvent");
 diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintGenerateChallengeClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintGenerateChallengeClient.java
 index 3bb7135a3e06..119e44a5a651 100644
 --- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintGenerateChallengeClient.java
@@ -1288,10 +1291,10 @@ index 3bb7135a3e06..119e44a5a651 100644
              } catch (RemoteException e) {
                  Slog.e(TAG, "Remote exception", e);
 diff --git a/services/core/java/com/android/server/power/Notifier.java b/services/core/java/com/android/server/power/Notifier.java
-index 44f2786ba4cf..bd6aa0ab6b9e 100644
+index d423e901ccc0..95b45fd24b53 100644
 --- a/services/core/java/com/android/server/power/Notifier.java
 +++ b/services/core/java/com/android/server/power/Notifier.java
-@@ -922,7 +922,10 @@ public class Notifier {
+@@ -1042,7 +1042,10 @@ public class Notifier {
      }
  
      private void showChargingStopped(@UserIdInt int userId, boolean wireless) {
@@ -1303,53 +1306,3 @@ index 44f2786ba4cf..bd6aa0ab6b9e 100644
          mSuspendBlocker.release();
      }
  
-diff --git a/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java b/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
-index 23d913cba733..0290f1508212 100644
---- a/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
-+++ b/services/usb/java/com/android/server/usb/hal/port/UsbPortHidl.java
-@@ -161,7 +161,17 @@ public final class UsbPortHidl implements UsbPortHal {
- 
-     static boolean isServicePresent(IndentingPrintWriter pw) {
-         try {
--            IUsb.getService(true);
-+            // getService(true) (retry=true) blocks/retries forever if the HAL is declared but
-+            // never actually registers - this device has no android.hardware.usb@1.0-service at
-+            // all, so hwservicemanager just keeps lazy-HAL-retrying it every second, and this
-+            // "presence check" never returns. That permanently hangs the calling thread
-+            // (system_server's "android.display" HandlerThread, via UsbService$Lifecycle.
-+            // onBootPhase()'s CompletableFuture.join() -> UsbPortManager construction), which is
-+            // exactly what Android's own Watchdog then kills every boot (see
-+            // los-1907N-los20-port session memory). connectToProxy() below already correctly
-+            // uses the non-retrying getService() for the real connection; this presence check
-+            // must too.
-+            IUsb.getService();
-         } catch (NoSuchElementException e) {
-             logAndPrintException(pw, "connectToProxy: usb hidl hal service not found.", e);
-             return false;
-diff --git a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
-index d69247743840..87e1a0a58bbc 100644
---- a/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
-+++ b/telephony/common/com/android/internal/telephony/TelephonyPermissions.java
-@@ -193,6 +193,22 @@ public final class TelephonyPermissions {
-         return false;
-     }
- 
-+    /**
-+     * Check whether the given subscription is associated with the given user.
-+     *
-+     * LineageOS's telephony/common (this file) doesn't implement per-user subscription
-+     * association (a multi-user/enterprise AOSP feature), but packages/services/Telephony's
-+     * lineage-20.0/21.0 branches already call this expecting it to exist. Since this device
-+     * class doesn't restrict subscriptions by user, always allow - equivalent to the
-+     * pre-this-check behavior.
-+     *
-+     * @return {@code true} - always, on a build with no per-user subscription restriction.
-+     */
-+    public static boolean checkSubscriptionAssociatedWithUser(Context context, int subId,
-+            UserHandle callingUserHandle) {
-+        return true;
-+    }
-+
-     /**
-      * Check whether the app with the given pid/uid can read phone state, or has carrier
-      * privileges on any active subscription.

@@ -1,10 +1,10 @@
 diff --git a/service/java/com/android/server/wifi/SoftApManager.java b/service/java/com/android/server/wifi/SoftApManager.java
-index a15ebae421..9513948351 100644
+index 9e9f8126bb..a2a50df1f1 100644
 --- a/service/java/com/android/server/wifi/SoftApManager.java
 +++ b/service/java/com/android/server/wifi/SoftApManager.java
-@@ -691,6 +691,16 @@ public class SoftApManager implements ActiveModeManager {
+@@ -813,6 +813,16 @@ public class SoftApManager implements ActiveModeManager {
              // Absence of country code is not fatal for 2Ghz & Any band options.
-             return SUCCESS;
+             return true;
          }
 +        if (!ApConfigUtil.isSoftApDynamicCountryCodeSupported(mContext)
 +                || !mCurrentSoftApCapability.areFeaturesSupported(

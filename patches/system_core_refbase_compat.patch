@@ -1,8 +1,8 @@
-diff --git a/libutils/RefBase.cpp b/libutils/RefBase.cpp
-index 4ddac3d2e..86488a8e1 100644
---- a/libutils/RefBase.cpp
-+++ b/libutils/RefBase.cpp
-@@ -445,8 +445,24 @@ void RefBase::incStrongRequireStrong(const void* id) const {
+diff --git a/libutils/binder/RefBase.cpp b/libutils/binder/RefBase.cpp
+index 2d2e40b7e..1769842d1 100644
+--- a/libutils/binder/RefBase.cpp
++++ b/libutils/binder/RefBase.cpp
+@@ -477,8 +477,24 @@ void RefBase::incStrongRequireStrong(const void* id) const {
      refs->addStrongRef(id);
      const int32_t c = refs->mStrong.fetch_add(1, std::memory_order_relaxed);
  
