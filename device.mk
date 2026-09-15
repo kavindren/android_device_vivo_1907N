@@ -171,9 +171,6 @@ PRODUCT_COPY_FILES += \
     vendor/vivo/1907N/proprietary/system/etc/permissions/com.mediatek.wfo.legacy.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/com.mediatek.wfo.legacy.xml
 
 PRODUCT_PACKAGES += \
-    VivoCarrierConfig
-
-PRODUCT_PACKAGES += \
     ImsService \
     libimsma \
     libimsma_adapt \
