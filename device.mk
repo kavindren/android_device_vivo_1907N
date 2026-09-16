@@ -10,37 +10,21 @@ PRODUCT_TARGET_VNDK_VERSION := 32
 
 PRODUCT_SHIPPING_API_LEVEL := 28
 
-# manifest.xml's target-level="3" reflects this device's real original Treble launch level
-# (Android 9), but the HAL set it declares has grown far past what FCM level 3 permits over
-# 19.1->20->21. LOS20's checkvintf tolerated the mismatch; LOS21's assemble_vintf hard-fails the
-# build over it ("HALs in device manifest are not declared in FCM <= level 3"). The HALs
-# themselves are real and working - this is a paperwork mismatch, not a functional one - so
-# disable enforcement rather than chase down the FCM level each individual HAL was introduced at.
-#
-# NOTE: plain PRODUCT_ENFORCE_VINTF_MANIFEST := false does NOT work here - build/make/core/
-# config.mk unconditionally re-derives that variable from PRODUCT_FULL_TREBLE (true, since our
-# PRODUCT_SHIPPING_API_LEVEL >= 26) unless the *_OVERRIDE variable below is set, then marks the
-# plain variable .KATI_READONLY. This is the actual, correct escape hatch.
-PRODUCT_ENFORCE_VINTF_MANIFEST_OVERRIDE := false
-
-# The override above forces PRODUCT_FULL_TREBLE itself false too (config.mk downgrades the
-# whole aggregate if any one of its members is false), which in turn sets ro.treble.enabled=false
-# in build.prop (main.mk: ADDITIONAL_SYSTEM_PROPERTIES += ro.treble.enabled=${PRODUCT_FULL_TREBLE}).
-# system/linkerconfig only reads that ONE runtime property (modules/environment.cc,
-# IsTreblelizedDevice()) to decide whether to generate a properly namespace-separated vendor/
-# system linker config or fall back to its single-merged-namespace "legacy" config - it doesn't
-# care about the build-time PRODUCT_TREBLE_LINKER_NAMESPACES value (which is still true; only
-# PRODUCT_ENFORCE_VINTF_MANIFEST was overridden). The resulting legacy/merged namespace let
-# mismatched AOSP-source-built copies of the keymaster4-family libraries sitting in
-# /system/lib64 interfere with our correct vendor blobs at /vendor/lib64 (same library names,
-# different builds) - "cannot locate symbol ... AndroidKeymasterC1..." persisted even after the
-# vendor-side blob-vs-Soong-module collision was fully fixed and verified byte-identical both
-# on the build host and on the flashed device via adb. Forcing the property back to true here
-# restores proper Treble linker namespace isolation without touching VINTF/FCM enforcement at
-# all - they're two independent consumers of PRODUCT_FULL_TREBLE that happen to share one
-# aggregate variable upstream.
-PRODUCT_PROPERTY_OVERRIDES += \
-    ro.treble.enabled=true
+# PRODUCT_ENFORCE_VINTF_MANIFEST/PRODUCT_FULL_TREBLE are DELIBERATELY left at their natural
+# default (true, since PRODUCT_SHIPPING_API_LEVEL >= 26) - see manifest.xml/compatibility_matrix
+# for how the actual FCM version mismatch that used to make us disable this is fixed at the
+# source instead. LOS20's device.mk never touched this at all (confirmed via `git show
+# refs/tags/los-20:device.mk`) and booted with no equivalent of the whole cascade this session
+# spent a full day chasing once enforcement got disabled here: PRODUCT_FULL_TREBLE forces
+# ro.treble.enabled=false (main.mk), which makes system/linkerconfig fall back to a single
+# merged vendor/system linker namespace instead of properly isolated ones
+# (modules/environment.cc, IsTreblelizedDevice()) - that let a mismatched AOSP-source-built
+# copy of libkeymaster4support.so interfere with our correct vendor blob, and reintroducing
+# proper isolation then broke ~11 other vendor binaries that (like most pre-Treble/VNDK-lite
+# MTK devices) directly depend on non-LLNDK system libraries the old merged namespace was
+# silently tolerating. Disabling enforcement was fixing a build-time symptom (assemble_vintf
+# rejecting our manifest's FCM level) at the cost of a much bigger set of runtime regressions -
+# the correct fix is making the FCM matrix itself accurately describe our real HAL set instead.
 
 # frameworks/native/opengl/libs/EGL/Loader.cpp picks the GLES driver by trying
 # persist.graphics.egl, then ro.hardware.egl, then (only if neither is set) ro.board.platform as
@@ -70,6 +54,16 @@ PRODUCT_VENDOR_LINKER_CONFIG_FRAGMENTS += \
 # doesn't exist anywhere yet.
 PRODUCT_PACKAGES += \
     libcurl
+
+# Installs framework_matrix_extension.xml (Android.bp) to system_ext/etc/vintf/ - our own
+# vendor-namespace HAL declarations, needed for assemble_vintf's checkUnusedHals to stop
+# flagging them as "in the device manifest but not specified in framework compatibility
+# matrix" (INCOMPATIBLE) now that PRODUCT_ENFORCE_VINTF_MANIFEST is genuinely enforced again.
+# See the XML file's own header comment and device git history for the full investigation -
+# this is NOT the same mechanism as (and doesn't replace) DEVICE_MATRIX_FILE/
+# compatibility_matrix.xml, which serves a different, unrelated check.
+PRODUCT_PACKAGES += \
+    device_vivo_1907N_framework_matrix_extension.xml
 
 PRODUCT_SET_DEBUGFS_RESTRICTIONS := false
 

@@ -1,0 +1,461 @@
+<!--
+    Framework compatibility matrix EXTENSION (version= is the mandatory XML schema metaversion,
+    NOT the FCM level - the FCM level is a separate, here deliberately omitted, "level="
+    attribute; its absence is what distinguishes this as an extension rather than a leveled
+    framework matrix, per
+    system/libvintf/VintfObject.cpp's hasFrameworkCompatibilityMatrixExtensions()/
+    getAllFrameworkMatrixLevels(), which scans system_ext/etc/vintf/ and product/etc/vintf/ for
+    ADDITIONAL type="framework" matrix files and merges them into the combined framework matrix
+    used by assemble_vintf's checkUnusedHals check - completely separately from, and NOT the
+    same mechanism as, device/vivo/1907N/compatibility_matrix.xml (type="device", installed via
+    DEVICE_MATRIX_FILE/BoardConfig.mk, used for an entirely different check: what the device
+    manifest requires FROM the framework, not what HALs the framework matrix must recognize as
+    declared). Declares this device's own vendor.*/vendor.mediatek.*/vendor.vivo.*/vendor.nxp.*/
+    vendor.trustonic.*/vendor.factory.* namespace HALs plus a handful of legitimate
+    android.hardware.* extensions (configstore@1.1, radio@1.6 variants), all flagged by
+    checkUnusedHals as "in the device manifest but not specified in framework compatibility
+    matrix" once PRODUCT_ENFORCE_VINTF_MANIFEST was restored to true. See device git history for
+    the full investigation (including two earlier, ultimately-incorrect attempts using
+    DEVICE_MATRIX_FILE and a plain prebuilt_etc to vendor/etc/vintf/, neither of which this
+    specific check even reads).
+-->
+<compatibility-matrix version="8.0" type="framework">
+    <hal format="hidl" optional="true">
+        <name>android.hardware.configstore</name>
+        <version>1.1</version>
+        <interface>
+            <name>ISurfaceFlingerConfigs</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>android.hardware.radio</name>
+        <version>1.6</version>
+        <interface>
+            <name>IRadio</name>
+            <instance>em1</instance>
+            <instance>em2</instance>
+            <instance>imsAospSlot1</instance>
+            <instance>imsAospSlot2</instance>
+            <instance>se1</instance>
+            <instance>se2</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.factory.hardware.vivoem</name>
+        <version>1.0</version>
+        <interface>
+            <name>IVivoEm</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.aee</name>
+        <version>1.1</version>
+        <interface>
+            <name>IAee</name>
+            <instance>AEE</instance>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.apmonitor</name>
+        <version>2.0</version>
+        <interface>
+            <name>IApmService</name>
+            <instance>apm_hidl_service</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.atci</name>
+        <version>1.0</version>
+        <interface>
+            <name>IAtcid</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.bluetooth.audio</name>
+        <version>2.2</version>
+        <interface>
+            <name>IBluetoothAudioProvidersFactory</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.camera.atms</name>
+        <version>1.0</version>
+        <interface>
+            <name>IATMs</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.camera.bgservice</name>
+        <version>1.1</version>
+        <interface>
+            <name>IBGService</name>
+            <instance>internal/0</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.camera.isphal</name>
+        <version>1.0</version>
+        <interface>
+            <name>IISPModule</name>
+            <instance>internal/0</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.composer_ext</name>
+        <version>1.0</version>
+        <interface>
+            <name>IComposerExt</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.dmc</name>
+        <version>1.2</version>
+        <interface>
+            <name>IDmcService</name>
+            <instance>dmc_hidl_service</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.keymaster_attestation</name>
+        <version>1.1</version>
+        <interface>
+            <name>IKeymasterDevice</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.lbs</name>
+        <version>1.0</version>
+        <interface>
+            <name>ILbs</name>
+            <instance>AgpsDebugInterface</instance>
+            <instance>AgpsInterface</instance>
+            <instance>mtk_agps2framework</instance>
+            <instance>mtk_agpsd2debugService</instance>
+            <instance>mtk_debugService2agpsd</instance>
+            <instance>mtk_debugService2mnld</instance>
+            <instance>mtk_framework2agps</instance>
+            <instance>mtk_lbs_log_v2s</instance>
+            <instance>mtk_lppe_socket_agps</instance>
+            <instance>mtk_lppe_socket_bt</instance>
+            <instance>mtk_lppe_socket_ipaddr</instance>
+            <instance>mtk_lppe_socket_lbs</instance>
+            <instance>mtk_lppe_socket_network</instance>
+            <instance>mtk_lppe_socket_sensor</instance>
+            <instance>mtk_lppe_socket_wlan</instance>
+            <instance>mtk_meta2mnld</instance>
+            <instance>mtk_mnld2debugService</instance>
+            <instance>mtk_mnld2mtklogger</instance>
+            <instance>mtk_mnld2nlputils</instance>
+            <instance>mtk_mtklogger2mnld</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.log</name>
+        <version>1.0</version>
+        <interface>
+            <name>ILog</name>
+            <instance>ATMWiFiHidlServer</instance>
+            <instance>ConnsysFWHidlServer</instance>
+            <instance>LoggerHidlServer</instance>
+            <instance>MobileLogHidlServer</instance>
+            <instance>ModemLogHidlServer</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.mdmonitor</name>
+        <version>1.0</version>
+        <interface>
+            <name>IMDMonitorService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.mmagent</name>
+        <version>1.1</version>
+        <interface>
+            <name>IMMAgent</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.mms</name>
+        <version>1.6</version>
+        <interface>
+            <name>IMms</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.mtkpower</name>
+        <version>1.2</version>
+        <interface>
+            <name>IMtkPerf</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>IMtkPower</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.mtkradioex</name>
+        <version>3.0</version>
+        <interface>
+            <name>IMtkRadioEx</name>
+            <instance>imsSlot1</instance>
+            <instance>imsSlot2</instance>
+            <instance>mtkAssist1</instance>
+            <instance>mtkAssist2</instance>
+            <instance>mtkCap1</instance>
+            <instance>mtkCap2</instance>
+            <instance>mtkEm1</instance>
+            <instance>mtkEm2</instance>
+            <instance>mtkRcs1</instance>
+            <instance>mtkRcs2</instance>
+            <instance>mtkRsu1</instance>
+            <instance>mtkRsu2</instance>
+            <instance>mtkSe1</instance>
+            <instance>mtkSe2</instance>
+            <instance>mtkSlot1</instance>
+            <instance>mtkSlot2</instance>
+            <instance>mtkSmartRatSwitch1</instance>
+            <instance>mtkSmartRatSwitch2</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.netdagent</name>
+        <version>1.0</version>
+        <interface>
+            <name>INetdagent</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.nvram</name>
+        <version>1.1</version>
+        <interface>
+            <name>INvram</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.pq</name>
+        <version>2.13</version>
+        <interface>
+            <name>IPictureQuality</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.mediatek.hardware.videotelephony</name>
+        <version>1.0</version>
+        <interface>
+            <name>IVideoTelephony</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.nxp.nxpnfc</name>
+        <version>2.0</version>
+        <interface>
+            <name>INxpNfc</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.nxp.nxpnfclegacy</name>
+        <version>1.0</version>
+        <interface>
+            <name>INxpNfcLegacy</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.trustonic.tee.tui</name>
+        <version>1.0</version>
+        <interface>
+            <name>ITui</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.trustonic.tee</name>
+        <version>1.1</version>
+        <interface>
+            <name>ITee</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.bbkts</name>
+        <version>1.0</version>
+        <interface>
+            <name>IBbkts</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.biometrics.analysis</name>
+        <version>1.1</version>
+        <interface>
+            <name>IAnalysis</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.biometrics.face</name>
+        <version>2.0</version>
+        <interface>
+            <name>IBiometricsFace</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.biometrics.fingerprint</name>
+        <version>3.0</version>
+        <interface>
+            <name>IBiometricsFingerprintExt</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.vivo.hardware.bspservice</name>
+        <interface>
+            <name>IBSPService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.camera3rd.provider</name>
+        <version>1.0</version>
+        <interface>
+            <name>ICamera3rdProvider</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.capacity_key</name>
+        <version>1.0</version>
+        <interface>
+            <name>ICapacityKey</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.configstore</name>
+        <version>1.0</version>
+        <interface>
+            <name>IVivoConfigStore</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.dualleds</name>
+        <version>1.0</version>
+        <interface>
+            <name>IDualleds</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.eid</name>
+        <version>1.0</version>
+        <interface>
+            <name>IEidDevice</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.lcmctl</name>
+        <version>1.0</version>
+        <interface>
+            <name>ILcmCtl</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.omnipotentservice</name>
+        <version>1.0</version>
+        <interface>
+            <name>IOmnipotentService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.sectee</name>
+        <version>1.0</version>
+        <interface>
+            <name>ISecTee</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.sensorfactory</name>
+        <version>1.0</version>
+        <interface>
+            <name>ISensorFactory</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.vcode</name>
+        <version>1.0</version>
+        <interface>
+            <name>IEventTransfer</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>IVcode</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.vcustom</name>
+        <version>1.0</version>
+        <interface>
+            <name>ICustom</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.vdtf</name>
+        <version>1.0</version>
+        <interface>
+            <name>IVdtf</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.vgnss</name>
+        <version>1.0</version>
+        <interface>
+            <name>IVgnss</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.vperf</name>
+        <version>1.0</version>
+        <interface>
+            <name>IVPerf</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.vivo.hardware.wifi.hostapd</name>
+        <version>2.0</version>
+        <interface>
+            <name>IVivoHostapd</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+
+</compatibility-matrix>

@@ -1,0 +1,13 @@
+// device/vivo/1907N: install framework_matrix_extension.xml to system_ext/etc/vintf/ - a
+// framework compatibility matrix EXTENSION (see the file's own header comment for the full
+// mechanism). PRODUCT_COPY_FILES is explicitly blocked for this exact path by build/make/core/
+// Makefile's check-product-copy-files ("VINTF metadata found in PRODUCT_COPY_FILES ... use
+// vintf_compatibility_matrix / vintf_fragments instead!"), so a plain Soong prebuilt_etc module
+// is the correct, currently-functional mechanism.
+prebuilt_etc {
+	name: "device_vivo_1907N_framework_matrix_extension.xml",
+	filename: "framework_matrix_extension.xml",
+	src: "framework_matrix_extension.xml",
+	sub_dir: "vintf",
+	system_ext_specific: true,
+}
