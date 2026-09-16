@@ -23,6 +23,25 @@ PRODUCT_SHIPPING_API_LEVEL := 28
 # plain variable .KATI_READONLY. This is the actual, correct escape hatch.
 PRODUCT_ENFORCE_VINTF_MANIFEST_OVERRIDE := false
 
+# The override above forces PRODUCT_FULL_TREBLE itself false too (config.mk downgrades the
+# whole aggregate if any one of its members is false), which in turn sets ro.treble.enabled=false
+# in build.prop (main.mk: ADDITIONAL_SYSTEM_PROPERTIES += ro.treble.enabled=${PRODUCT_FULL_TREBLE}).
+# system/linkerconfig only reads that ONE runtime property (modules/environment.cc,
+# IsTreblelizedDevice()) to decide whether to generate a properly namespace-separated vendor/
+# system linker config or fall back to its single-merged-namespace "legacy" config - it doesn't
+# care about the build-time PRODUCT_TREBLE_LINKER_NAMESPACES value (which is still true; only
+# PRODUCT_ENFORCE_VINTF_MANIFEST was overridden). The resulting legacy/merged namespace let
+# mismatched AOSP-source-built copies of the keymaster4-family libraries sitting in
+# /system/lib64 interfere with our correct vendor blobs at /vendor/lib64 (same library names,
+# different builds) - "cannot locate symbol ... AndroidKeymasterC1..." persisted even after the
+# vendor-side blob-vs-Soong-module collision was fully fixed and verified byte-identical both
+# on the build host and on the flashed device via adb. Forcing the property back to true here
+# restores proper Treble linker namespace isolation without touching VINTF/FCM enforcement at
+# all - they're two independent consumers of PRODUCT_FULL_TREBLE that happen to share one
+# aggregate variable upstream.
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.treble.enabled=true
+
 PRODUCT_SET_DEBUGFS_RESTRICTIONS := false
 
 # Pre-authorize kavindren's own adb key (userdebug/eng only, honored by build/make/core/

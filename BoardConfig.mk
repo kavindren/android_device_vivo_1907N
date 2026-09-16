@@ -6,6 +6,15 @@ BUILD_BROKEN_DUP_RULES := true
 BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 BUILD_BROKEN_PREBUILT_ELF_FILES := true
 
+# Needed for device.mk's PRODUCT_PROPERTY_OVERRIDES += ro.treble.enabled=true to actually win.
+# main.mk folds PRODUCT_PROPERTY_OVERRIDES into ADDITIONAL_SYSTEM_PROPERTIES *before* its own
+# hardcoded `ADDITIONAL_SYSTEM_PROPERTIES += ro.treble.enabled=${PRODUCT_FULL_TREBLE}` line, so
+# without this flag build/make/tools/post_process_props.py treats the two differing hard
+# assignments for the same key as a fatal "duplicate sysprop assignments" build error. With it,
+# duplicates within one Make variable resolve to whichever occurs FIRST (uniq-pairs-by-first-
+# component) instead of erroring - which is ours, since device.mk's addition is folded in first.
+BUILD_BROKEN_DUP_SYSPROP := true
+
 BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := $(DEVICE_PATH)/bluetooth
 
 TARGET_ARCH := arm64
