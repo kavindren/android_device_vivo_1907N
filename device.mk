@@ -42,6 +42,19 @@ PRODUCT_ENFORCE_VINTF_MANIFEST_OVERRIDE := false
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.treble.enabled=true
 
+# frameworks/native/opengl/libs/EGL/Loader.cpp picks the GLES driver by trying
+# persist.graphics.egl, then ro.hardware.egl, then (only if neither is set) ro.board.platform as
+# a filename suffix - libGLES_${prop}.so - and hard-aborts (SIGABRT, "couldn't find an OpenGL ES
+# implementation") on the FIRST non-empty property it finds if the resulting file doesn't exist,
+# without trying the others. Neither of the first two properties was ever set here, so it fell
+# through to ro.board.platform=mt6768 and looked for libGLES_mt6768.so - which doesn't exist,
+# since our real stock blob is named libGLES_mali.so (vendor/lib64/egl/, confirmed present and
+# correctly installed). This crash-looped surfaceflinger forever (visible as a black screen with
+# no boot animation at all, since surfaceflinger IS the compositor that would show it). Setting
+# ro.hardware.egl=mali directly makes it try (and find) libGLES_mali.so first.
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.hardware.egl=mali
+
 PRODUCT_SET_DEBUGFS_RESTRICTIONS := false
 
 # Pre-authorize kavindren's own adb key (userdebug/eng only, honored by build/make/core/
