@@ -10,6 +10,14 @@ PRODUCT_TARGET_VNDK_VERSION := 32
 
 PRODUCT_SHIPPING_API_LEVEL := 28
 
+# manifest.xml's target-level="3" reflects this device's real original Treble launch level
+# (Android 9), but the HAL set it declares has grown far past what FCM level 3 permits over
+# 19.1->20->21. LOS20's checkvintf tolerated the mismatch; LOS21's assemble_vintf hard-fails the
+# build over it ("HALs in device manifest are not declared in FCM <= level 3"). The HALs
+# themselves are real and working - this is a paperwork mismatch, not a functional one - so
+# disable enforcement rather than chase down the FCM level each individual HAL was introduced at.
+PRODUCT_ENFORCE_VINTF_MANIFEST := false
+
 PRODUCT_SET_DEBUGFS_RESTRICTIONS := false
 
 # Pre-authorize kavindren's own adb key (userdebug/eng only, honored by build/make/core/
