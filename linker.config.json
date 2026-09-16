@@ -17,11 +17,26 @@
     // PRODUCT_PACKAGES += libcurl builds it fresh from external/curl, but only the system
     // variant actually gets installed (no vendor-specific package name was requested), so it
     // still needs this same cross-namespace grant for mnld (a /vendor/bin binary) to reach it.
+    // libgatekeeper.so/libcamera_metadata.so added after a second real-boot log pass surfaced
+    // android.hardware.gatekeeper@1.0-service ("Unable to open GateKeeper HAL",
+    // HIDL_FETCH_IGatekeeper abort) and the camera HAL hitting the exact same class of issue.
+    //
+    // NOTE: all of these ARE vndk-enabled (vendor_available: true, vndk.enabled: true) and
+    // should normally get automatic cross-namespace access via linkerconfig's own
+    // vndk/vndk_in_system namespace links - but this device's BOARD_VNDK_VERSION=current build
+    // produces an empty vndkcorevariant.libraries.txt / VNDK_USING_CORE_VARIANT_LIBRARIES
+    // (confirmed on a real build), so that automatic path never actually fires. This explicit
+    // requireLibs/provideLibs pair (system/core/rootdir/etc/linker.config.json carries the
+    // matching provideLibs side, via patches/system_core.patch) is a direct, working
+    // substitute, not a real fix for the underlying empty-VNDK-list issue - see device git
+    // history for the full investigation.
     "libsysutils.so",
     "libpower.so",
     "libjpeg.so",
     "libnetutils.so",
     "libexpat.so",
-    "libcurl.so"
+    "libcurl.so",
+    "libgatekeeper.so",
+    "libcamera_metadata.so"
   ]
 }

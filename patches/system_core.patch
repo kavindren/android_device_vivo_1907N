@@ -1,3 +1,35 @@
+diff --git a/rootdir/etc/linker.config.json b/rootdir/etc/linker.config.json
+index d72ac6681..901aea4a4 100644
+--- a/rootdir/etc/linker.config.json
++++ b/rootdir/etc/linker.config.json
+@@ -32,6 +32,26 @@
+   ],
+   "provideLibs": [
+     "libaptX_encoder.so",
+-    "libaptXHD_encoder.so"
++    "libaptXHD_encoder.so",
++
++    // device/vivo/1907N: these stock proprietary vendor blobs were built assuming no strict
++    // vendor/system linker namespace separation and directly depend on these otherwise-non-
++    // public system-side libraries. All of them are vndk-enabled (vendor_available: true,
++    // vndk.enabled: true in their own Android.bp), but this device's BOARD_VNDK_VERSION=current
++    // build produces empty vndkcorevariant.libraries.txt / VNDK_USING_CORE_VARIANT_LIBRARIES
++    // (confirmed on a real build - a separate, deeper issue not chased down here), so the
++    // normal automatic VNDK cross-namespace grant vendordefault.cc relies on
++    // (ns.GetLink("vndk")/ns.GetLink("vndk_in_system")) never actually fires. Declaring them
++    // here as an explicit system-side provideLibs, paired with device/vivo/1907N/
++    // linker.config.json's matching requireLibs on the vendor side, is a direct, working
++    // substitute. See device git history for the full investigation.
++    "libsysutils.so",
++    "libpower.so",
++    "libjpeg.so",
++    "libnetutils.so",
++    "libexpat.so",
++    "libcurl.so",
++    "libgatekeeper.so",
++    "libcamera_metadata.so"
+   ]
+ }
 diff --git a/rootdir/init.usb.configfs.rc b/rootdir/init.usb.configfs.rc
 index 3a33c94d3..6cfddab8e 100644
 --- a/rootdir/init.usb.configfs.rc
