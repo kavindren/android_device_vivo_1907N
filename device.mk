@@ -55,6 +55,22 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.hardware.egl=mali
 
+# Restoring proper Treble linker namespace isolation (ro.treble.enabled=true above) also
+# re-exposed a pile of pre-existing cross-partition dependencies in our stock proprietary
+# blobs, which were built assuming no strict vendor/system separation. Real device logcat
+# showed ~300 crash-loop iterations across 11 different vendor binaries, all "library X.so
+# not found" for a handful of distinct non-LLNDK system libraries - see linker.config.json's
+# own comments for the exact binary-to-library mapping.
+PRODUCT_VENDOR_LINKER_CONFIG_FRAGMENTS += \
+    $(LOCAL_PATH)/linker.config.json
+
+# mnld (MTK's GPS/AGPS assist daemon) needs libcurl.so directly, which AOSP no longer ships at
+# all (removed from both system and vendor years ago) - build it fresh from external/curl
+# (vendor_available: true) rather than granting cross-namespace visibility to a library that
+# doesn't exist anywhere yet.
+PRODUCT_PACKAGES += \
+    libcurl
+
 PRODUCT_SET_DEBUGFS_RESTRICTIONS := false
 
 # Pre-authorize kavindren's own adb key (userdebug/eng only, honored by build/make/core/

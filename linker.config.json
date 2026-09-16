@@ -1,0 +1,27 @@
+{
+  "requireLibs": [
+    // These stock proprietary blobs under /vendor were built assuming no strict vendor/system
+    // linker namespace separation (as most pre-Treble/VNDK-lite MTK devices were) and directly
+    // depend on these non-LLNDK system-side libraries. Restoring proper namespace isolation
+    // (ro.treble.enabled=true, needed to fix an unrelated keymaster ABI collision - see
+    // device git history) re-exposed these pre-existing cross-partition dependencies, which
+    // the old merged/legacy namespace had been silently tolerating. Confirmed via real device
+    // logcat: each entry below is "library X.so not found" for a specific vendor binary/blob
+    // (atcid_vendor/nvram_daemon/vivo_em_svr -> libbspservice_support.so -> libsysutils.so;
+    // android.hardware.nfc@1.2-service -> hal_libnfc.so -> libpower.so;
+    // android.hardware.sensors@2.0-service-mediatek -> libpower.so directly;
+    // vendor.vivo.hardware.biometrics.face@2.0-service -> libjpeg.so directly;
+    // vendor.vivo.hardware.sectee@1.0-service -> liburee_meta_drmkeyinstall.so -> libnetutils.so;
+    // vts_app -> libexpat.so directly; mnld -> libcurl.so directly). AOSP no longer ships
+    // libcurl at all by default (removed from both system and vendor years ago); device.mk's
+    // PRODUCT_PACKAGES += libcurl builds it fresh from external/curl, but only the system
+    // variant actually gets installed (no vendor-specific package name was requested), so it
+    // still needs this same cross-namespace grant for mnld (a /vendor/bin binary) to reach it.
+    "libsysutils.so",
+    "libpower.so",
+    "libjpeg.so",
+    "libnetutils.so",
+    "libexpat.so",
+    "libcurl.so"
+  ]
+}
