@@ -1,5 +1,5 @@
 diff --git a/service/java/com/android/server/wifi/SoftApManager.java b/service/java/com/android/server/wifi/SoftApManager.java
-index 9e9f8126bb..a2a50df1f1 100644
+index 9e9f8126bb..3f94a75425 100644
 --- a/service/java/com/android/server/wifi/SoftApManager.java
 +++ b/service/java/com/android/server/wifi/SoftApManager.java
 @@ -813,6 +813,16 @@ public class SoftApManager implements ActiveModeManager {
@@ -12,9 +12,9 @@ index 9e9f8126bb..a2a50df1f1 100644
 +            if (band == SoftApConfiguration.BAND_5GHZ) {
 +                Log.e(getTag(), "Failed to set country code, "
 +                        + "required for setting up soft ap in 5GHz");
-+                return ERROR_GENERIC;
++                return false;
 +            }
-+            return SUCCESS;
++            return true;
 +        }
          if (!mWifiNative.setApCountryCode(
                  mApInterfaceName, mCountryCode.toUpperCase(Locale.ROOT))) {
