@@ -102,6 +102,28 @@ TARGET_KERNEL_HEADER_ARCH := arm64
 TARGET_KERNEL_SOURCE := kernel/vivo/1907N
 TARGET_KERNEL_CONFIG := pd1913f_defconfig
 
+# Stock's real vendor/lib/modules/modules.load (extracted blob, tracked via proprietary-files.txt)
+# lists these 10 vivo proprietary .ko's to auto-load at boot. vendor/lineage/build/tasks/
+# kernel.mk's own module-packaging step (which runs AFTER the proprietary-files copy, to install
+# the kernel's own from-source-built modules alongside them) unconditionally rm -f's
+# vendor/lib/modules/modules.load and only rewrites it when this list is non-empty - leaving it
+# empty here silently deleted the legitimate stock blob every build, which build_image then
+# hard-failed on (file_list.txt still expects it, since it's a real installed file per
+# proprietary-files.txt). Setting this list makes kernel.mk regenerate the exact same file
+# instead of erasing it. The kernel's own from-source modules (br_netfilter, kheaders, tcp_htcp,
+# tcp_westwood) are deliberately left out - they're loaded on-demand, not needed at boot.
+BOARD_VENDOR_KERNEL_MODULES_LOAD := \
+    bt_drv_connac1x.ko \
+    wmt_drv.ko \
+    connfem.ko \
+    fmradio_drv_mt6631.ko \
+    gps_drv.ko \
+    wmt_chrdev_wifi.ko \
+    wlan_drv_gen4m.ko \
+    fpsgo.ko \
+    met.ko \
+    udc_lib.ko
+
 # BoardConfigKernel.mk's own KERNEL_MAKE_FLAGS needs a matching HOSTCFLAGS="-fuse-ld=lld" fix
 # for the same reason as TARGET_KERNEL_ADDITIONAL_FLAGS below - appending it here didn't take
 # effect, so the real fix lives in vendor/lineage/config/BoardConfigKernel.mk instead, applied
