@@ -16,7 +16,12 @@ PRODUCT_SHIPPING_API_LEVEL := 28
 # build over it ("HALs in device manifest are not declared in FCM <= level 3"). The HALs
 # themselves are real and working - this is a paperwork mismatch, not a functional one - so
 # disable enforcement rather than chase down the FCM level each individual HAL was introduced at.
-PRODUCT_ENFORCE_VINTF_MANIFEST := false
+#
+# NOTE: plain PRODUCT_ENFORCE_VINTF_MANIFEST := false does NOT work here - build/make/core/
+# config.mk unconditionally re-derives that variable from PRODUCT_FULL_TREBLE (true, since our
+# PRODUCT_SHIPPING_API_LEVEL >= 26) unless the *_OVERRIDE variable below is set, then marks the
+# plain variable .KATI_READONLY. This is the actual, correct escape hatch.
+PRODUCT_ENFORCE_VINTF_MANIFEST_OVERRIDE := false
 
 PRODUCT_SET_DEBUGFS_RESTRICTIONS := false
 
