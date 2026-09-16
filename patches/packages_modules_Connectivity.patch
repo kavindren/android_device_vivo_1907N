@@ -1,8 +1,8 @@
 diff --git a/Tethering/src/com/android/networkstack/tethering/Tethering.java b/Tethering/src/com/android/networkstack/tethering/Tethering.java
-index f393f784d..940c07f83 100644
+index c44a0def8f..a26d51d136 100644
 --- a/Tethering/src/com/android/networkstack/tethering/Tethering.java
 +++ b/Tethering/src/com/android/networkstack/tethering/Tethering.java
-@@ -796,14 +796,52 @@ public class Tethering {
+@@ -993,14 +993,52 @@ public class Tethering {
          }
      }
  
@@ -58,3 +58,26 @@ index f393f784d..940c07f83 100644
      private int tether(String iface, int requestedState) {
          if (DBG) Log.d(TAG, "Tethering " + iface);
          TetherState tetherState = mTetherStates.get(iface);
+diff --git a/netbpfload/netbpfload.rc b/netbpfload/netbpfload.rc
+index 14181dc6fc..8d96f5e28d 100644
+--- a/netbpfload/netbpfload.rc
++++ b/netbpfload/netbpfload.rc
+@@ -81,6 +81,17 @@ service bpfloader /system/bin/netbpfload
+     #    'cannot prove return value is 0 or 1' or 'unsupported / unknown operation / helper',
+     #    'invalid bpf_context access', etc.
+     #
+-    reboot_on_failure reboot,bpfloader-failed
++    # device/vivo/1907N: kernel 4.14.336 (kept deliberately - see device git history) predates
++    # BTF support entirely (no CONFIG_DEBUG_INFO_BTF Kconfig option exists in this kernel's
++    # Kconfig tree at all - BTF landed in mainline Linux 4.18+). offload@btf.o's CO-RE map
++    # creation ("tether_downstream6_map") hard-fails with EINVAL on this kernel
++    # (bpf_create_map ret=-22) - a structural kernel-version limit, not something fixable via
++    # defconfig. The plain (non-BTF) test.o/offload.o objects DO load fine, but netbpfload
++    # treats them as legacy/superseded no-ops once a newer bpfloader (ours: 0x29) is present,
++    # so only the @btf variant actually provides the real tethering-offload maps. Per this
++    # file's own documented debug procedure (see the numbered comment above,
++    # step 2) - disabling this turns a full device reboot loop into, at worst, a narrower
++    # tethering-hardware-offload feature loss rather than an unbootable device.
++    #reboot_on_failure reboot,bpfloader-failed
+     # we're not really updatable, but want to be able to load bpf programs shipped in apexes
+     updatable
