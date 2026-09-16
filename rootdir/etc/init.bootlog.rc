@@ -6,14 +6,19 @@
 # init well before /data, and survives a reboot - so write continuously to it instead of
 # relying on adb/logcat catching up before the hang.
 #
-# dmesg -w needs only /proc (available basically immediately, no /data/logd dependency) -
-# start it as early as possible. logcat needs logd, which needs /data mounted, so it starts
-# later (post-fs-data) - still well before zygote/system_server.
+# Both started from post-fs, not post-fs-data: the stock system/etc/init/hw/init.rc's own
+# post-fs-data action block contains a SYNCHRONOUS `exec - system system -- /system/bin/vdc
+# keymaster earlyBootEnded`, which blocks the entire merged post-fs-data trigger queue (across
+# every parsed rc file, not just the main one) whenever keymaster can't register - which is
+# exactly the LOS21 TEE/keymaster crash-loop bring-up bug this diagnostic exists to chase (see
+# los-1907N-los20-port session memory). A start command queued behind that exec, like our own
+# original `on post-fs-data: start logcat_to_cache`, simply never runs, leaving
+# /cache/bootlog/logcat.log missing entirely rather than just incomplete. logd doesn't need
+# /data (only /dev sockets), and is already alive by post-fs (confirmed via logd.auditd
+# messages in dmesg as early as ~5.1s), so logcat works fine started this early too.
 on post-fs
     mkdir /cache/bootlog 0755 root root
     start dmesg_to_cache
-
-on post-fs-data
     start logcat_to_cache
 
 service dmesg_to_cache /system/bin/sh -c "exec dmesg -w >> /cache/bootlog/dmesg.log 2>&1"
