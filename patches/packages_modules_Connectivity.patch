@@ -58,6 +58,24 @@ index c44a0def8f..a26d51d136 100644
      private int tether(String iface, int requestedState) {
          if (DBG) Log.d(TAG, "Tethering " + iface);
          TetherState tetherState = mTetherStates.get(iface);
+diff --git a/netbpfload/netbpfload.mainline.rc b/netbpfload/netbpfload.mainline.rc
+index 0ac5de8b97..44cb2dc901 100644
+--- a/netbpfload/netbpfload.mainline.rc
++++ b/netbpfload/netbpfload.mainline.rc
+@@ -4,5 +4,12 @@ service bpfloader /apex/com.android.tethering/bin/netbpfload
+     user root
+     rlimit memlock 1073741824 1073741824
+     oneshot
+-    reboot_on_failure reboot,bpfloader-failed
++    # device/vivo/1907N: this is the APEX-bundled ("mainline") copy of the bpfloader service
++    # declaration, packaged into com.android.tethering as e.g. netbpfload.33rc - it carries
++    # `override` and gets parsed ~10s after the plain /system/etc/init/netbpfload.rc copy, so
++    # it wins and silently reintroduced reboot_on_failure even after that other file's copy of
++    # the same line was disabled (see netbpfload.rc's own comment / device git history for the
++    # full reasoning: kernel 4.14.336 has no BTF support, offload@btf.o's CO-RE map creation
++    # structurally cannot succeed here).
++    #reboot_on_failure reboot,bpfloader-failed
+     override
 diff --git a/netbpfload/netbpfload.rc b/netbpfload/netbpfload.rc
 index 14181dc6fc..8d96f5e28d 100644
 --- a/netbpfload/netbpfload.rc
