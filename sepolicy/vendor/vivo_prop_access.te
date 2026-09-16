@@ -23,11 +23,11 @@ get_prop(surfaceflinger, vendor_mtk_mdp_debug_log_prop)
 get_prop(surfaceflinger, vendor_mtk_pq_ro_prop)
 
 # --- audio ---
-get_prop(mtk_hal_audio, vendor_mtk_audiohal_prop)
-get_prop(mtk_hal_audio, default_prop)
-get_prop(mtk_hal_audio, vendor_mtk_default_prop)
-get_prop(mtk_hal_audio, vendor_vivo_defend_prop)
-get_prop(mtk_hal_audio, vendor_mtk_wmt_prop)
+get_prop(hal_audio_default, vendor_mtk_audiohal_prop)
+get_prop(hal_audio_default, default_prop)
+get_prop(hal_audio_default, vendor_mtk_default_prop)
+get_prop(hal_audio_default, vendor_vivo_defend_prop)
+get_prop(hal_audio_default, vendor_mtk_wmt_prop)
 get_prop(audioserver, vendor_default_prop)
 
 # --- radio/modem/IMS cluster ---
@@ -103,7 +103,7 @@ set_prop(vendor_init, vendor_vivo_defend_prop)
 
 get_prop(untrusted_app, vendor_camera_mtk_prop)
 get_prop(cameraserver, vendor_camera_mtk_prop)
-get_prop(mtk_hal_audio, vendor_mtk_tel_switch_prop)
+get_prop(hal_audio_default, vendor_mtk_tel_switch_prop)
 get_prop(rild, vendor_mtk_call_drop_prop)
 
 get_prop(atcid_vendor, hwservicemanager_prop)
@@ -155,7 +155,7 @@ set_prop(atcid_vendor, ctl_start_prop)
 set_prop(vendor_init, vivo_fingerprint_front_prop)
 get_prop(vendor_init, vendor_vgc_prop)
 
-get_prop(mtk_hal_audio, vendor_vgc_prop)
+get_prop(hal_audio_default, vendor_vgc_prop)
 get_prop(radio, vendor_vgc_prop)
 get_prop(rild, vendor_vgc_prop)
 

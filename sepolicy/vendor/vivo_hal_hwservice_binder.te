@@ -69,9 +69,9 @@ allow hal_sectee_default hidl_base_hwservice:hwservice_manager add;
 binder_call(hal_sectee_default, hwservicemanager)
 allow hal_sectee_default mobicore_user_device:chr_file { ioctl map open read write };
 
-allow mtk_hal_audio mtk_hal_bluetooth_audio_hwservice:hwservice_manager { add find };
-allow mtk_hal_audio ccci_aud_device:chr_file { ioctl map open read write };
-allow mtk_hal_audio sysfs:file { open read };
+allow hal_audio_default mtk_hal_bluetooth_audio_hwservice:hwservice_manager { add find };
+allow hal_audio_default ccci_aud_device:chr_file { ioctl map open read write };
+allow hal_audio_default sysfs:file { open read };
 
 # --- hal_omnipotentservice_default ---
 allow hal_omnipotentservice_default hal_omnipotentservice_hwservice:hwservice_manager { add find };
