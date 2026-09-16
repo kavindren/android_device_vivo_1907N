@@ -17,7 +17,7 @@ type hal_vivoem_hwservice, hwservice_manager_type;
 type hal_vperf_hwservice, hwservice_manager_type;
 type hal_vivohostapd_hwservice, hwservice_manager_type;
 
-type hal_bspservice_service, service_manager_type, vendor_service;
+type hal_bspservice_service, service_manager_type;
 
 type hal_vivoatcmd_hwservice, hwservice_manager_type;
 
