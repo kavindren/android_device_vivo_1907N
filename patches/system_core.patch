@@ -1,8 +1,8 @@
 diff --git a/rootdir/etc/linker.config.json b/rootdir/etc/linker.config.json
-index d72ac6681..901aea4a4 100644
+index d72ac6681..d55bc703c 100644
 --- a/rootdir/etc/linker.config.json
 +++ b/rootdir/etc/linker.config.json
-@@ -32,6 +32,26 @@
+@@ -32,6 +32,28 @@
    ],
    "provideLibs": [
      "libaptX_encoder.so",
@@ -27,7 +27,9 @@ index d72ac6681..901aea4a4 100644
 +    "libexpat.so",
 +    "libcurl.so",
 +    "libgatekeeper.so",
-+    "libcamera_metadata.so"
++    "libcamera_metadata.so",
++    "libssl.so",
++    "libpng.so"
    ]
  }
 diff --git a/rootdir/init.usb.configfs.rc b/rootdir/init.usb.configfs.rc

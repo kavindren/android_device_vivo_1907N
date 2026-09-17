@@ -30,6 +30,9 @@
     // matching provideLibs side, via patches/system_core.patch) is a direct, working
     // substitute, not a real fix for the underlying empty-VNDK-list issue - see device git
     // history for the full investigation.
+    // libssl.so/libpng.so added after a third real-boot log pass surfaced mnld and
+    // libutinterface_md.so (RIL) needing libssl.so, and two camera provider impl .so's
+    // needing libpng.so via libstereoinfoaccessor_vsdof.so.
     "libsysutils.so",
     "libpower.so",
     "libjpeg.so",
@@ -37,6 +40,8 @@
     "libexpat.so",
     "libcurl.so",
     "libgatekeeper.so",
-    "libcamera_metadata.so"
+    "libcamera_metadata.so",
+    "libssl.so",
+    "libpng.so"
   ]
 }
