@@ -1,0 +1,21 @@
+diff --git a/DnsProxyListener.cpp b/DnsProxyListener.cpp
+index 8064aef7..476601a6 100644
+--- a/DnsProxyListener.cpp
++++ b/DnsProxyListener.cpp
+@@ -691,7 +691,15 @@ IsUidBlockedFn resolveIsUidNetworkingBlockedFn() {
+     const int ret = (*ADnsHelper_init)();
+     if (ret) {
+         LOG(ERROR) << __func__ << ": ADnsHelper_init failed " << strerror(-ret);
+-        abort();
++        // device/vivo/1907N: on this device ADnsHelper_init() fails because
++        // DnsBpfHelper::init() can't set up its BPF maps - kernel 4.14.336 has no BTF support
++        // at all, so the underlying pinned maps never get created by netbpfload (same root
++        // cause as several other BPF-consumer fixes in this port, see device git history).
++        // This used to unconditionally abort(), crash-looping netd (DnsResolver runs in-process
++        // with it) forever. Treated the same as the two sibling failure paths right above
++        // (missing handle/symbol) instead: log and disable the per-UID DNS network-blocking
++        // check feature rather than taking the whole process down with it.
++        return nullptr;
+     }
+ 
+     IsUidBlockedFn f =
