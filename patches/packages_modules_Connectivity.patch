@@ -131,3 +131,91 @@ index 14181dc6fc..8d96f5e28d 100644
 +    #reboot_on_failure reboot,bpfloader-failed
      # we're not really updatable, but want to be able to load bpf programs shipped in apexes
      updatable
+diff --git a/netd/BpfHandler.cpp b/netd/BpfHandler.cpp
+index 2252e07fc9..34fcdec83d 100644
+--- a/netd/BpfHandler.cpp
++++ b/netd/BpfHandler.cpp
+@@ -111,12 +111,33 @@ static Status initPrograms(const char* cg2_path) {
+         ALOGE("Failed to open the cgroup directory: %s", strerror(err));
+         return statusFromErrno(err, "Open the cgroup directory failed");
+     }
+-    RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_ALLOWLIST_PROG_PATH));
+-    RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_DENYLIST_PROG_PATH));
+-    RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_EGRESS_PROG_PATH));
+-    RETURN_IF_NOT_OK(checkProgramAccessible(XT_BPF_INGRESS_PROG_PATH));
+-    RETURN_IF_NOT_OK(attachProgramToCgroup(BPF_EGRESS_PROG_PATH, cg_fd, BPF_CGROUP_INET_EGRESS));
+-    RETURN_IF_NOT_OK(attachProgramToCgroup(BPF_INGRESS_PROG_PATH, cg_fd, BPF_CGROUP_INET_INGRESS));
++    // device/vivo/1907N: kernel 4.14.336 has zero BTF support, so every one of the xt_bpf/
++    // cgroup-bpf programs below (built with modern libbpf/BTF-annotated maps) fails to load -
++    // confirmed via a real boot: netbpfload already tolerates the underlying bpf_create_map
++    // EINVAL (patches/packages_modules_Connectivity.patch, NetBpfLoad.cpp), but netd itself
++    // used to treat ANY of these programs being unpinned as fatal (RETURN_IF_NOT_OK bubbling up
++    // to NetdUpdatable.cpp's libnetd_updatable_init(), which called abort() unconditionally),
++    // crash-looping netd forever and blocking the whole boot. None of this can ever work on
++    // this kernel, so it's made best-effort here instead: log and move on rather than fail
++    // initPrograms()/abort() when a program can't be found or attached. This does mean the
++    // xt_bpf-based per-UID firewall allow/deny lists and cgroup traffic accounting are
++    // unavailable on this device - acceptable, since the alternative is netd never starting
++    // at all.
++    for (const auto& progPath : {XT_BPF_ALLOWLIST_PROG_PATH, XT_BPF_DENYLIST_PROG_PATH,
++                                  XT_BPF_EGRESS_PROG_PATH, XT_BPF_INGRESS_PROG_PATH}) {
++        Status res = checkProgramAccessible(progPath);
++        if (!netdutils::isOk(res)) {
++            ALOGW("BTF-less kernel: %s (continuing without it)", toString(res).c_str());
++        }
++    }
++    for (const auto& [progPath, cgType] :
++         {std::pair{BPF_EGRESS_PROG_PATH, BPF_CGROUP_INET_EGRESS},
++          std::pair{BPF_INGRESS_PROG_PATH, BPF_CGROUP_INET_INGRESS}}) {
++        Status res = attachProgramToCgroup(progPath, cg_fd, cgType);
++        if (!netdutils::isOk(res)) {
++            ALOGW("BTF-less kernel: %s (continuing without it)", toString(res).c_str());
++        }
++    }
+ 
+     // For the devices that support cgroup socket filter, the socket filter
+     // should be loaded successfully by bpfloader. So we attach the filter to
+@@ -124,25 +145,29 @@ static Status initPrograms(const char* cg2_path) {
+     // TODO: delete the if statement once all devices should support cgroup
+     // socket filter (ie. the minimum kernel version required is 4.14).
+     if (bpf::isAtLeastKernelVersion(4, 14, 0)) {
+-        RETURN_IF_NOT_OK(
+-                attachProgramToCgroup(CGROUP_SOCKET_PROG_PATH, cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
++        Status res =
++                attachProgramToCgroup(CGROUP_SOCKET_PROG_PATH, cg_fd, BPF_CGROUP_INET_SOCK_CREATE);
++        if (!netdutils::isOk(res)) {
++            ALOGW("BTF-less kernel: %s (continuing without it)", toString(res).c_str());
++        }
+     }
+ 
+     if (bpf::isAtLeastKernelVersion(4, 19, 0)) {
+-        RETURN_IF_NOT_OK(attachProgramToCgroup(
++        Status res4 = attachProgramToCgroup(
+                 "/sys/fs/bpf/netd_readonly/prog_block_bind4_block_port",
+-                cg_fd, BPF_CGROUP_INET4_BIND));
+-        RETURN_IF_NOT_OK(attachProgramToCgroup(
++                cg_fd, BPF_CGROUP_INET4_BIND);
++        if (!netdutils::isOk(res4)) {
++            ALOGW("BTF-less kernel: %s (continuing without it)", toString(res4).c_str());
++        }
++        Status res6 = attachProgramToCgroup(
+                 "/sys/fs/bpf/netd_readonly/prog_block_bind6_block_port",
+-                cg_fd, BPF_CGROUP_INET6_BIND));
+-
+-        // This should trivially pass, since we just attached up above,
+-        // but BPF_PROG_QUERY is only implemented on 4.19+ kernels.
+-        if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET_EGRESS) <= 0) abort();
+-        if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET_INGRESS) <= 0) abort();
+-        if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET_SOCK_CREATE) <= 0) abort();
+-        if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET4_BIND) <= 0) abort();
+-        if (bpf::queryProgram(cg_fd, BPF_CGROUP_INET6_BIND) <= 0) abort();
++                cg_fd, BPF_CGROUP_INET6_BIND);
++        if (!netdutils::isOk(res6)) {
++            ALOGW("BTF-less kernel: %s (continuing without it)", toString(res6).c_str());
++        }
++        // Originally: "This should trivially pass... but BPF_PROG_QUERY is only implemented on
++        // 4.19+ kernels" followed by an unconditional abort() on failure - dropped, since on
++        // this device none of the above actually attached in the first place.
+     }
+ 
+     return netdutils::status::ok;
