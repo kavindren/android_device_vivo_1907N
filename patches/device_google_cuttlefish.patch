@@ -1,0 +1,33 @@
+diff --git a/apex/com.google.cf.wifi/Android.bp b/apex/com.google.cf.wifi/Android.bp
+index cd6d7a64d..1e625b777 100644
+--- a/apex/com.google.cf.wifi/Android.bp
++++ b/apex/com.google.cf.wifi/Android.bp
+@@ -57,8 +57,23 @@ apex {
+         "wpa_supplicant_overlay.conf.cf",
+         "p2p_supplicant.conf.cf",
+     ],
+-    vintf_fragments: [
+-        ":android.hardware.wifi.supplicant.xml",
+-        ":android.hardware.wifi.hostapd.xml",
+-    ],
++    // device/vivo/1907N: removed - these AIDL vintf_fragments collide at the exact same
++    // install path (vendor/etc/vintf/manifest/android.hardware.wifi.{supplicant,hostapd}.xml)
++    // as our real device's own genuinely-HIDL vivo stock blobs (vendor/vivo/1907N/Android.bp's
++    // prebuilt_etc_xml modules of the same names, sourced from real stock firmware extraction).
++    // This apex is Cuttlefish's own virtual-device WiFi implementation and is otherwise
++    // irrelevant to a real device, but Soong's own directory scanning builds and installs it
++    // regardless of product config (confirmed: no PRODUCT_PACKAGES reference pulls it in, and
++    // excluding it via PRODUCT_PACKAGES := $(filter-out ...) had no effect either) -
++    // BUILD_BROKEN_DUP_RULES was silently letting this wrong AIDL declaration win the
++    // collision, which broke Wi-Fi entirely (SupplicantStaIfaceHal/HostapdHal's own
++    // serviceDeclared() trusts the VINTF manifest and never fell back to the real HIDL service
++    // that's genuinely there). prebuilt_etc_xml (what our real fragments use) doesn't support
++    // Soong's overrides: property, so removing the fragments here - the actual root of the
++    // collision - was the only way to resolve this deterministically rather than relying on
++    // BUILD_BROKEN_DUP_RULES' arbitrary winner-picking. See device git history.
++    // vintf_fragments: [
++    //     ":android.hardware.wifi.supplicant.xml",
++    //     ":android.hardware.wifi.hostapd.xml",
++    // ],
+ }
+\ No newline at end of file
