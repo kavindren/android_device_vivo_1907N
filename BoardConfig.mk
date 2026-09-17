@@ -5,6 +5,18 @@ ALLOW_MISSING_DEPENDENCIES := true
 BUILD_BROKEN_DUP_RULES := true
 BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 BUILD_BROKEN_PREBUILT_ELF_FILES := true
+# libkeymaster4_1support.so/libkeymaster4support.so/libkeymaster_messages.so/
+# libkeymaster_portable.so are genuinely built and installed to system/lib64 by Soong (they're
+# real transitive shared_libs of libkm_compat_service.so), but Make's own FULL_SYSTEMIMAGE_DEPS
+# (used to build file_list.txt, the --input-directory-filter-file allowlist build_image.py packs
+# from) never learns about them: our vivo vendor blob's Android.bp overrides:["libkeymaster4_1support"]
+# etc. intercepts the bare module name at the Make level even when explicitly added to
+# PRODUCT_PACKAGES, so Make thinks the name resolves only to the vendor-partition override and
+# drops the system-side file from file_list.txt - confirmed via a real device (system.img built,
+# file present in the staging dir and in installed-files.txt, but missing from file_list.txt and
+# absent on the actual flashed /system_root). This disables that filter/allowlist so
+# build_image.py packs whatever Soong genuinely put in each partition's staging directory.
+BUILD_BROKEN_INCORRECT_PARTITION_IMAGES := true
 
 BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := $(DEVICE_PATH)/bluetooth
 
