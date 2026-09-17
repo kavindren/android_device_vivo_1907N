@@ -1,8 +1,8 @@
 diff --git a/rootdir/etc/linker.config.json b/rootdir/etc/linker.config.json
-index d72ac6681..d55bc703c 100644
+index d72ac6681..eed7f1fd6 100644
 --- a/rootdir/etc/linker.config.json
 +++ b/rootdir/etc/linker.config.json
-@@ -32,6 +32,28 @@
+@@ -32,6 +32,44 @@
    ],
    "provideLibs": [
      "libaptX_encoder.so",
@@ -20,6 +20,20 @@ index d72ac6681..d55bc703c 100644
 +    // here as an explicit system-side provideLibs, paired with device/vivo/1907N/
 +    // linker.config.json's matching requireLibs on the vendor side, is a direct, working
 +    // substitute. See device git history for the full investigation.
++    //
++    // libziparchive.so: same cross-namespace gap, this time for
++    // vendor.vivo.hardware.bspservice@1.0-service (a vendor blob, requireLibs counterpart in
++    // device/vivo/1907N/linker.config.json).
++    //
++    // libkeymaster4_1support.so: a DIFFERENT case - needed by /system/lib64/libkm_compat_service.so
++    // (loaded by /system/bin/keystore2 itself, both plain system-partition files, confirmed
++    // present with matching SONAME/arch via a real build) yet still "library not found ... in
++    // namespace (default)" on a real boot. vendor_available:true libraries (vndk-tagged or not)
++    // are meant to get a "core variant" system-side copy tracked via vndkcorevariant.libraries.txt
++    // for exactly this kind of same-partition visibility; that list is empty on this device's
++    // build (same root cause noted above), so this is likely hitting the same underlying gap
++    // even though the consumer here is system-side, not vendor-side. Adding it here as a
++    // best-effort fix pending real-device confirmation.
 +    "libsysutils.so",
 +    "libpower.so",
 +    "libjpeg.so",
@@ -29,7 +43,9 @@ index d72ac6681..d55bc703c 100644
 +    "libgatekeeper.so",
 +    "libcamera_metadata.so",
 +    "libssl.so",
-+    "libpng.so"
++    "libpng.so",
++    "libziparchive.so",
++    "libkeymaster4_1support.so"
    ]
  }
 diff --git a/rootdir/init.usb.configfs.rc b/rootdir/init.usb.configfs.rc

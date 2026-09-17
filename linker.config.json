@@ -33,6 +33,9 @@
     // libssl.so/libpng.so added after a third real-boot log pass surfaced mnld and
     // libutinterface_md.so (RIL) needing libssl.so, and two camera provider impl .so's
     // needing libpng.so via libstereoinfoaccessor_vsdof.so.
+    // libziparchive.so added after a fourth real-boot log pass surfaced
+    // vendor.vivo.hardware.bspservice@1.0-service ("CANNOT LINK EXECUTABLE ... library
+    // libziparchive.so not found: needed by main executable") crash-looping every ~5s.
     "libsysutils.so",
     "libpower.so",
     "libjpeg.so",
@@ -42,6 +45,7 @@
     "libgatekeeper.so",
     "libcamera_metadata.so",
     "libssl.so",
-    "libpng.so"
+    "libpng.so",
+    "libziparchive.so"
   ]
 }
