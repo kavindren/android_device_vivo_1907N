@@ -55,6 +55,25 @@ PRODUCT_VENDOR_LINKER_CONFIG_FRAGMENTS += \
 PRODUCT_PACKAGES += \
     libcurl
 
+# keystore2 crash-loops at boot: "library libkeymaster4_1support.so not found: needed by
+# /system/lib64/libkm_compat_service.so in namespace (default)" - confirmed via a real device
+# (mounted /system_root directly, not recovery's own /system ramdisk) that libkeymaster4_1support.so
+# plus its 3 siblings (libkeymaster4support, libkeymaster_messages, libkeymaster_portable) - all
+# 4 of the 6 keymaster4-family libs that have BOTH a vivo vendor-blob override (Android.bp,
+# overrides:/stem: pair) AND a real AOSP-source system-partition variant - are simply MISSING
+# from the actually-flashed system partition, even though `m systemimage` on this tree builds
+# and installs them correctly. The other 2 overridden libs (libkeymaster4/libkeymaster41, which
+# don't have an AOSP system variant at all) and the non-overridden km_compat/keymint AIDL chain
+# are all present and fine. Likely the same class of module-name ambiguity the override was
+# built to solve on the vendor side (see Android.bp history) now dropping the system side during
+# a full `mka bacon` package computation. Forcing these explicitly into PRODUCT_PACKAGES (same
+# pattern as libcurl above) sidesteps it regardless of the exact Make/Soong mechanism.
+PRODUCT_PACKAGES += \
+    libkeymaster4_1support \
+    libkeymaster4support \
+    libkeymaster_messages \
+    libkeymaster_portable
+
 # Installs framework_matrix_extension.xml (Android.bp) to system_ext/etc/vintf/ - our own
 # vendor-namespace HAL declarations, needed for assemble_vintf's checkUnusedHals to stop
 # flagging them as "in the device manifest but not specified in framework compatibility
