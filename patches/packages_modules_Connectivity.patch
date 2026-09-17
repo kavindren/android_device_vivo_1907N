@@ -255,6 +255,35 @@ index 2252e07fc9..75bf1b304e 100644
  
      return netdutils::status::ok;
  }
+diff --git a/service-t/src/com/android/server/NetworkStatsServiceInitializer.java b/service-t/src/com/android/server/NetworkStatsServiceInitializer.java
+index 675e5a1057..c65cc4a11a 100644
+--- a/service-t/src/com/android/server/NetworkStatsServiceInitializer.java
++++ b/service-t/src/com/android/server/NetworkStatsServiceInitializer.java
+@@ -77,6 +77,23 @@ public final class NetworkStatsServiceInitializer extends SystemService {
+     private NetworkStatsService maybeCreateNetworkStatsService(final Context context) {
+         if (!SdkLevel.isAtLeastT()) return null;
+ 
+-        return NetworkStatsService.create(context);
++        try {
++            return NetworkStatsService.create(context);
++        } catch (IllegalStateException e) {
++            // device/vivo/1907N: kernel 4.14.336 has no BTF support at all, so BpfNetMaps
++            // (backing NetworkStatsFactory's BPF-based per-UID accounting) can never open its
++            // pinned maps here - confirmed via a real boot: this used to be an uncaught
++            // "Cannot open netd configuration map" IllegalStateException from
++            // BpfNetMaps.getConfigurationMap(), which crashed the whole zygote/system_server
++            // (an uncaught exception from a system service constructor is fatal by AOSP
++            // design). The rest of this class already handles mStatsService == null
++            // gracefully (see onStart()/onBootPhase()), same as the SdkLevel check above -
++            // this just extends that same "optional service" handling to this failure mode.
++            // Per-app/per-UID network data usage stats are unavailable on this device as a
++            // result, consistent with the other BTF-related tradeoffs in this port (see
++            // device git history).
++            Log.e(TAG, "Failed to create NetworkStatsService, BPF maps unavailable", e);
++            return null;
++        }
+     }
+ }
 diff --git a/service/jni/com_android_server_connectivity_ClatCoordinator.cpp b/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
 index c125bd6479..1496a157da 100644
 --- a/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
