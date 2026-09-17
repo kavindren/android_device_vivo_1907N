@@ -1,21 +1,61 @@
+diff --git a/service/java/com/android/server/wifi/HostapdHalAidlImp.java b/service/java/com/android/server/wifi/HostapdHalAidlImp.java
+index ffca0c3526..66a83ad6a3 100644
+--- a/service/java/com/android/server/wifi/HostapdHalAidlImp.java
++++ b/service/java/com/android/server/wifi/HostapdHalAidlImp.java
+@@ -468,7 +468,15 @@ public class HostapdHalAidlImp implements IHostapdHal {
+         if (!SdkLevel.isAtLeastT()) {
+             return false;
+         }
+-        return ServiceManager.isDeclared(HAL_INSTANCE_NAME);
++        if (!ServiceManager.isDeclared(HAL_INSTANCE_NAME)) {
++            return false;
++        }
++        // device/vivo/1907N: same reasoning as SupplicantStaIfaceHalAidlImpl#serviceDeclared() -
++        // isDeclared() only reflects the VINTF manifest, which can be stale/wrong here due to a
++        // build-time vintf_fragment collision (device git history); verify the service can
++        // actually be obtained before committing to it, since the caller has no fallback once
++        // it does.
++        return ServiceManager.waitForDeclaredService(HAL_INSTANCE_NAME) != null;
+     }
+ 
+     /**
 diff --git a/service/java/com/android/server/wifi/SoftApManager.java b/service/java/com/android/server/wifi/SoftApManager.java
-index 9e9f8126bb..3f94a75425 100644
+index a2a50df1f1..3f94a75425 100644
 --- a/service/java/com/android/server/wifi/SoftApManager.java
 +++ b/service/java/com/android/server/wifi/SoftApManager.java
-@@ -813,6 +813,16 @@ public class SoftApManager implements ActiveModeManager {
-             // Absence of country code is not fatal for 2Ghz & Any band options.
-             return true;
-         }
-+        if (!ApConfigUtil.isSoftApDynamicCountryCodeSupported(mContext)
-+                || !mCurrentSoftApCapability.areFeaturesSupported(
-+                        SoftApCapability.SOFTAP_FEATURE_ACS_OFFLOAD)) {
-+            if (band == SoftApConfiguration.BAND_5GHZ) {
-+                Log.e(getTag(), "Failed to set country code, "
-+                        + "required for setting up soft ap in 5GHz");
+@@ -819,9 +819,9 @@ public class SoftApManager implements ActiveModeManager {
+             if (band == SoftApConfiguration.BAND_5GHZ) {
+                 Log.e(getTag(), "Failed to set country code, "
+                         + "required for setting up soft ap in 5GHz");
+-                return ERROR_GENERIC;
 +                return false;
-+            }
+             }
+-            return SUCCESS;
 +            return true;
-+        }
+         }
          if (!mWifiNative.setApCountryCode(
                  mApInterfaceName, mCountryCode.toUpperCase(Locale.ROOT))) {
-             if (band == SoftApConfiguration.BAND_5GHZ || band == SoftApConfiguration.BAND_6GHZ) {
+diff --git a/service/java/com/android/server/wifi/SupplicantStaIfaceHalAidlImpl.java b/service/java/com/android/server/wifi/SupplicantStaIfaceHalAidlImpl.java
+index 7722e4accb..0eb58c7a6b 100644
+--- a/service/java/com/android/server/wifi/SupplicantStaIfaceHalAidlImpl.java
++++ b/service/java/com/android/server/wifi/SupplicantStaIfaceHalAidlImpl.java
+@@ -410,7 +410,18 @@ public class SupplicantStaIfaceHalAidlImpl implements ISupplicantStaIfaceHal {
+         if (!SdkLevel.isAtLeastT()) {
+             return false;
+         }
+-        return ServiceManager.isDeclared(HAL_INSTANCE_NAME);
++        if (!ServiceManager.isDeclared(HAL_INSTANCE_NAME)) {
++            return false;
++        }
++        // device/vivo/1907N: isDeclared() only reflects the VINTF manifest, not whether the
++        // service can actually be obtained - on this device a build-time vintf_fragment
++        // collision (device git history) can leave a stale/wrong AIDL declaration in place
++        // for a HAL that's genuinely HIDL-only in reality, with no AIDL service ever starting.
++        // The caller (SupplicantStaIfaceHal#createStaIfaceHalMockable()) has no fallback once
++        // it commits to this implementation, so verify real availability here - via the same
++        // waitForDeclaredService() this class already uses elsewhere for its own
++        // initialization - rather than only checking the (possibly stale) declaration.
++        return ServiceManager.waitForDeclaredService(HAL_INSTANCE_NAME) != null;
+     }
+ 
+     /**
