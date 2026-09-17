@@ -219,3 +219,25 @@ index 2252e07fc9..34fcdec83d 100644
      }
  
      return netdutils::status::ok;
+diff --git a/staticlibs/native/bpf_headers/include/bpf/BpfMap.h b/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
+index 1037bebf29..d646381c43 100644
+--- a/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
++++ b/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
+@@ -60,7 +60,16 @@ class BpfMapRO {
+ 
+   protected:
+     void abortOnMismatch(bool writable) const {
+-        if (!mMapFd.ok()) abort();
++        // device/vivo/1907N: kernel 4.14.336 has no BTF support, so BPF maps built with modern
++        // BTF-annotated types (e.g. gpuservice's gpuwork map) never get pinned in the first
++        // place - !mMapFd.ok() is the normal, expected outcome here, not a code bug. Callers
++        // like frameworks/native/services/gpuservice/gpuwork/GpuWork.cpp's getBpfMap() are
++        // already written to handle this gracefully via isValid()/BpfMap's own constructor
++        // failing cleanly - the original unconditional abort() here defeated that entirely,
++        // hard-crashing gpuservice in an infinite loop. The other checks below (fd valid but
++        // flags/key/value size mismatched) are left as real abort()s - those genuinely can't
++        // happen without an actual code bug, per the class's own existing comments elsewhere.
++        if (!mMapFd.ok()) return;
+         if (isAtLeastKernelVersion(4, 14, 0)) {
+             int flags = bpfGetFdMapFlags(mMapFd);
+             if (flags < 0) abort();
