@@ -307,6 +307,132 @@ index c125bd6479..1496a157da 100644
  }
  
  #undef V
+diff --git a/service/src/com/android/server/BpfNetMaps.java b/service/src/com/android/server/BpfNetMaps.java
+index a7fddd08f0..7535cda1e6 100644
+--- a/service/src/com/android/server/BpfNetMaps.java
++++ b/service/src/com/android/server/BpfNetMaps.java
+@@ -184,13 +184,70 @@ public class BpfNetMaps {
+         sIngressDiscardMap = ingressDiscardMap;
+     }
+ 
++    /**
++     * device/vivo/1907N: kernel 4.14.336 has no BTF support at all, so every one of the pinned
++     * BPF maps below (built with modern BTF-annotated types) can never exist here - confirmed
++     * via a real boot: BpfNetMaps used to throw IllegalStateException("Cannot open netd
++     * configuration map", ...) straight out of getConfigurationMap(), which is called from
++     * BpfNetMaps' own constructor (via ensureInitialized()/initBpfMaps()) - an uncaught
++     * exception there is fatal to whichever system service constructed a BpfNetMaps, which
++     * includes ConnectivityServiceInitializer's direct "new ConnectivityService(context)" call
++     * (not optional/nullable like NetworkStatsServiceInitializer's), crash-looping the whole
++     * zygote/system_server forever and eventually triggering RescueParty's own "reboot,
++     * RescueParty" escalation.
++     *
++     * Rather than throw, each of the 6 getters below now falls back to this no-op IBpfMap on
++     * ErrnoException: an always-empty map whose reads report nothing found and whose writes are
++     * silently discarded. Every other method in this large file that uses sConfigurationMap/
++     * sUidOwnerMap/etc. keeps working exactly as if the device simply has no BPF-backed
++     * firewall/accounting rules configured (which is in fact permanently true here) instead of
++     * needing a broader null-safety audit across the whole class. Per-UID firewall rules
++     * (penalty box/happy box/data saver/etc.), cookie tagging and ingress discard are
++     * unavailable on this device as a result, consistent with the other BTF-related tradeoffs
++     * already made in this port (see device git history).
++     */
++    private static final class NoOpBpfMap<K extends Struct, V extends Struct>
++            implements IBpfMap<K, V> {
++        @Override
++        public void updateEntry(K key, V value) {}
++        @Override
++        public void insertEntry(K key, V value) {}
++        @Override
++        public void replaceEntry(K key, V value) {}
++        @Override
++        public boolean insertOrReplaceEntry(K key, V value) {
++            return false;
++        }
++        @Override
++        public boolean deleteEntry(K key) {
++            return false;
++        }
++        @Override
++        public K getNextKey(K key) {
++            return null;
++        }
++        @Override
++        public K getFirstKey() {
++            return null;
++        }
++        @Override
++        public boolean containsKey(K key) {
++            return false;
++        }
++        @Override
++        public V getValue(K key) throws ErrnoException {
++            throw new ErrnoException("NoOpBpfMap.getValue", ENOENT);
++        }
++    }
++
+     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+     private static IBpfMap<S32, U32> getConfigurationMap() {
+         try {
+             return new BpfMap<>(
+                     CONFIGURATION_MAP_PATH, S32.class, U32.class);
+         } catch (ErrnoException e) {
+-            throw new IllegalStateException("Cannot open netd configuration map", e);
++            Log.e(TAG, "Cannot open netd configuration map, continuing without it", e);
++            return new NoOpBpfMap<>();
+         }
+     }
+ 
+@@ -200,7 +257,8 @@ public class BpfNetMaps {
+             return new BpfMap<>(
+                     UID_OWNER_MAP_PATH, S32.class, UidOwnerValue.class);
+         } catch (ErrnoException e) {
+-            throw new IllegalStateException("Cannot open uid owner map", e);
++            Log.e(TAG, "Cannot open uid owner map, continuing without it", e);
++            return new NoOpBpfMap<>();
+         }
+     }
+ 
+@@ -210,7 +268,8 @@ public class BpfNetMaps {
+             return new BpfMap<>(
+                     UID_PERMISSION_MAP_PATH, S32.class, U8.class);
+         } catch (ErrnoException e) {
+-            throw new IllegalStateException("Cannot open uid permission map", e);
++            Log.e(TAG, "Cannot open uid permission map, continuing without it", e);
++            return new NoOpBpfMap<>();
+         }
+     }
+ 
+@@ -220,7 +279,8 @@ public class BpfNetMaps {
+             return new BpfMap<>(COOKIE_TAG_MAP_PATH,
+                     CookieTagMapKey.class, CookieTagMapValue.class);
+         } catch (ErrnoException e) {
+-            throw new IllegalStateException("Cannot open cookie tag map", e);
++            Log.e(TAG, "Cannot open cookie tag map, continuing without it", e);
++            return new NoOpBpfMap<>();
+         }
+     }
+ 
+@@ -230,7 +290,8 @@ public class BpfNetMaps {
+             return new BpfMap<>(
+                     DATA_SAVER_ENABLED_MAP_PATH, S32.class, U8.class);
+         } catch (ErrnoException e) {
+-            throw new IllegalStateException("Cannot open data saver enabled map", e);
++            Log.e(TAG, "Cannot open data saver enabled map, continuing without it", e);
++            return new NoOpBpfMap<>();
+         }
+     }
+ 
+@@ -240,7 +301,8 @@ public class BpfNetMaps {
+             return new BpfMap<>(INGRESS_DISCARD_MAP_PATH,
+                     IngressDiscardKey.class, IngressDiscardValue.class);
+         } catch (ErrnoException e) {
+-            throw new IllegalStateException("Cannot open ingress discard map", e);
++            Log.e(TAG, "Cannot open ingress discard map, continuing without it", e);
++            return new NoOpBpfMap<>();
+         }
+     }
+ 
 diff --git a/staticlibs/native/bpf_headers/include/bpf/BpfMap.h b/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
 index 1037bebf29..d646381c43 100644
 --- a/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
