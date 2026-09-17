@@ -59,27 +59,34 @@ index c44a0def8f..a26d51d136 100644
          if (DBG) Log.d(TAG, "Tethering " + iface);
          TetherState tetherState = mTetherStates.get(iface);
 diff --git a/netbpfload/NetBpfLoad.cpp b/netbpfload/NetBpfLoad.cpp
-index 8af4dd49a7..319677edd9 100644
+index 8af4dd49a7..44a3e6181a 100644
 --- a/netbpfload/NetBpfLoad.cpp
 +++ b/netbpfload/NetBpfLoad.cpp
-@@ -113,7 +113,19 @@ int loadAllElfObjects(const android::bpf::Location& location) {
+@@ -113,7 +113,26 @@ int loadAllElfObjects(const android::bpf::Location& location) {
              bool critical;
              int ret = android::bpf::loadProg(progPath.c_str(), &critical, location);
              if (ret) {
 -                if (critical) retVal = ret;
 +                // device/vivo/1907N: kernel 4.14.336 (kept deliberately - see device git
 +                // history) predates BTF support entirely (no CONFIG_DEBUG_INFO_BTF Kconfig
-+                // option exists in this kernel's Kconfig tree at all), so any @btf.o CO-RE
-+                // object structurally, permanently cannot load here (bpf_create_map ret=-22)
-+                // - not a transient/random failure. Previously this made the whole netbpfload
-+                // process exit(2) before ever exec'ing into /system/bin/bpfloader, which is
-+                // the only thing that sets bpf.progs_loaded - starving netd of that property
-+                // forever, which made system_server's Watchdog kill the entire zygote every
-+                // ~90s in an infinite loop (confirmed via a real boot log: Watchdog blocked in
++                // option exists in this kernel's Kconfig tree at all). Originally only
++                // @btf.o-suffixed (CO-RE relocated) objects were excepted here, but a second
++                // real boot log showed netd_shared/netd.o (no @btf suffix at all) hitting the
++                // exact same bpf_create_map ret=-22 for its own configuration_map - modern
++                // libbpf-style BPF maps carry BTF key/value type annotations by default
++                // regardless of whether the containing object uses CO-RE relocations, so this
++                // isn't limited to @btf.o files. Matching on EINVAL specifically (rather than
++                // the filename) catches this whole class of "map/program needs kernel BTF
++                // metadata that doesn't exist" failure while still treating any OTHER errno
++                // (ENOMEM, EPERM, etc. - a real bug, not a known kernel limitation) as fatal.
++                // Previously this made the whole netbpfload process exit(2) before ever
++                // exec'ing into /system/bin/bpfloader, which is the only thing that sets
++                // bpf.progs_loaded - starving netd of that property forever, which made
++                // system_server's Watchdog kill the entire zygote every ~90s in an infinite
++                // loop (confirmed via a real boot log: Watchdog blocked in
 +                // NetworkManagementService.connectNativeNetdService for 66s, then "KILLING
-+                // SYSTEM PROCESS"). Downgrading this one specific, known-permanent failure
-+                // class to non-fatal is what actually lets boot complete.
-+                if (critical && !EndsWith(s, "@btf.o")) retVal = ret;
++                // SYSTEM PROCESS").
++                if (critical && ret != -EINVAL) retVal = ret;
                  ALOGE("Failed to load object: %s, ret: %s", progPath.c_str(), std::strerror(-ret));
              } else {
                  ALOGI("Loaded object: %s", progPath.c_str());
