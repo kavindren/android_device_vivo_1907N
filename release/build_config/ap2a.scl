@@ -1,0 +1,7 @@
+load("//build/make/core/release_config.scl", "value")
+
+values = [
+    # keep-sorted start numeric=yes
+    value("RELEASE_DEPRECATE_VNDK", False),
+    # keep-sorted end
+]
