@@ -284,6 +284,30 @@ index 675e5a1057..c65cc4a11a 100644
 +        }
      }
  }
+diff --git a/service-t/src/com/android/server/net/NetworkStatsService.java b/service-t/src/com/android/server/net/NetworkStatsService.java
+index f7f133c5a1..7ecbf5ec6a 100644
+--- a/service-t/src/com/android/server/net/NetworkStatsService.java
++++ b/service-t/src/com/android/server/net/NetworkStatsService.java
+@@ -860,7 +860,18 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
+             try {
+                 return new BpfMap<>(IFACE_STATS_MAP_PATH, S32.class, StatsMapValue.class);
+             } catch (ErrnoException e) {
+-                throw new IllegalStateException("Failed to open interface stats map", e);
++                // device/vivo/1907N: kernel 4.14.336 has no BTF support at all, so this pinned
++                // map (like the 5 siblings above) can never exist here - confirmed via a real
++                // boot. Unlike its siblings this used to throw, which crashed the whole
++                // NetworkStatsService.create() call - and since NetworkStatsService not
++                // registering cascades into NetworkPolicyManagerService failing too (it looks
++                // up the "netstats" service during its own construction), which in turn left
++                // ConnectivityService's unconditional getSystemService(NETWORK_POLICY_SERVICE)
++                // call with a null NetworkPolicyManager, crashing zygote/system_server via an
++                // uncaught NPE at ConnectivityService.<init>. Matched to the graceful (Log.wtf +
++                // return null) pattern already used by every other getter in this class instead.
++                Log.wtf(TAG, "Cannot open interface stats map: " + e);
++                return null;
+             }
+         }
+ 
 diff --git a/service/jni/com_android_server_connectivity_ClatCoordinator.cpp b/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
 index c125bd6479..1496a157da 100644
 --- a/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
