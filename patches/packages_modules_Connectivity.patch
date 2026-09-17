@@ -132,7 +132,7 @@ index 14181dc6fc..8d96f5e28d 100644
      # we're not really updatable, but want to be able to load bpf programs shipped in apexes
      updatable
 diff --git a/netd/BpfHandler.cpp b/netd/BpfHandler.cpp
-index 2252e07fc9..34fcdec83d 100644
+index 2252e07fc9..75bf1b304e 100644
 --- a/netd/BpfHandler.cpp
 +++ b/netd/BpfHandler.cpp
 @@ -111,12 +111,33 @@ static Status initPrograms(const char* cg2_path) {
@@ -219,6 +219,42 @@ index 2252e07fc9..34fcdec83d 100644
      }
  
      return netdutils::status::ok;
+@@ -167,13 +192,28 @@ Status BpfHandler::init(const char* cg2_path) {
+ }
+ 
+ Status BpfHandler::initMaps() {
+-    RETURN_IF_NOT_OK(mStatsMapA.init(STATS_MAP_A_PATH));
+-    RETURN_IF_NOT_OK(mStatsMapB.init(STATS_MAP_B_PATH));
+-    RETURN_IF_NOT_OK(mConfigurationMap.init(CONFIGURATION_MAP_PATH));
+-    RETURN_IF_NOT_OK(mUidPermissionMap.init(UID_PERMISSION_MAP_PATH));
+-    // initialized last so mCookieTagMap.isValid() implies everything else is valid too
+-    RETURN_IF_NOT_OK(mCookieTagMap.init(COOKIE_TAG_MAP_PATH));
+-    ALOGI("%s successfully", __func__);
++    // device/vivo/1907N: same BTF-less-kernel story as initPrograms() above - these pinned maps
++    // (built with modern BTF-annotated types) never get created by netbpfload on kernel
++    // 4.14.336, so .init() here always returns a graceful "Pinned map not accessible or does
++    // not exist" Result (BpfMap::init() already handles a missing fd cleanly, see BpfMap.h) -
++    // it's this function's own RETURN_IF_NOT_OK that turns that into a fatal error, which
++    // NetdUpdatable.cpp's libnetd_updatable_init() then turns into an abort(), crash-looping
++    // netd forever. The rest of BpfHandler already expects maps to potentially be invalid at
++    // the point of use (e.g. tagSocket()/hasUpdateDeviceStatsPermission() check isValid()
++    // first), so made this best-effort too: log and move on. Per-app data usage stats/tagging
++    // and the UID permission map are simply unavailable on this device as a result.
++    auto warnIfNotOk = [](const char* name, const Status& status) {
++        if (!netdutils::isOk(status)) {
++            ALOGW("BTF-less kernel: %s: %s (continuing without it)", name,
++                  toString(status).c_str());
++        }
++    };
++    warnIfNotOk("mStatsMapA", mStatsMapA.init(STATS_MAP_A_PATH));
++    warnIfNotOk("mStatsMapB", mStatsMapB.init(STATS_MAP_B_PATH));
++    warnIfNotOk("mConfigurationMap", mConfigurationMap.init(CONFIGURATION_MAP_PATH));
++    warnIfNotOk("mUidPermissionMap", mUidPermissionMap.init(UID_PERMISSION_MAP_PATH));
++    warnIfNotOk("mCookieTagMap", mCookieTagMap.init(COOKIE_TAG_MAP_PATH));
++    ALOGI("%s done (best-effort)", __func__);
+ 
+     return netdutils::status::ok;
+ }
 diff --git a/staticlibs/native/bpf_headers/include/bpf/BpfMap.h b/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
 index 1037bebf29..d646381c43 100644
 --- a/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
