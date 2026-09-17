@@ -255,6 +255,29 @@ index 2252e07fc9..75bf1b304e 100644
  
      return netdutils::status::ok;
  }
+diff --git a/service/jni/com_android_server_connectivity_ClatCoordinator.cpp b/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
+index c125bd6479..1496a157da 100644
+--- a/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
++++ b/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
+@@ -130,7 +130,17 @@ static void verifyClatPerms() {
+ 
+ #undef V2
+ 
+-    if (fatal) abort();
++    // device/vivo/1907N: kernel 4.14.336 has no BTF support at all, so the clatd BPF progs/maps
++    // checked above (built with modern BTF-annotated types) can never exist here - confirmed
++    // via a real boot backtrace through register_com_android_server_connectivity_ClatCoordinator.
++    // Upstream's own comment above says these failures are "99% likely to be build problems",
++    // true on Google's own hardware but not on this permanently BTF-less kernel, so the
++    // originally-unconditional abort() here just crash-looped system_server forever. Each
++    // failure is still logged via ALOGF/ALOGE above; only the process-ending abort() is
++    // dropped. 464xlat/CLAT (IPv6-only network IPv4 access) is unavailable on this device as a
++    // result, same tradeoff as the other BTF-related fixes in this port (see device git
++    // history).
++    if (fatal) ALOGE("verifyClatPerms failed (continuing without CLAT)");
+ }
+ 
+ #undef V
 diff --git a/staticlibs/native/bpf_headers/include/bpf/BpfMap.h b/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
 index 1037bebf29..d646381c43 100644
 --- a/staticlibs/native/bpf_headers/include/bpf/BpfMap.h
