@@ -1,0 +1,40 @@
+diff --git a/libs/ui/GraphicBufferMapper.cpp b/libs/ui/GraphicBufferMapper.cpp
+index b6ab2f5a47..088468f773 100644
+--- a/libs/ui/GraphicBufferMapper.cpp
++++ b/libs/ui/GraphicBufferMapper.cpp
+@@ -188,6 +188,18 @@ status_t GraphicBufferMapper::lock(buffer_handle_t handle, uint32_t usage, const
+     return OK;
+ }
+ 
++status_t GraphicBufferMapper::lock(buffer_handle_t handle, uint32_t usage, const Rect& bounds,
++                                   void** vaddr, int32_t* outBytesPerPixel,
++                                   int32_t* outBytesPerStride) {
++    auto result = lock(handle, static_cast<int64_t>(usage), bounds);
++    if (!result.has_value()) return result.asStatus();
++    auto val = result.value();
++    *vaddr = val.address;
++    if (outBytesPerPixel) *outBytesPerPixel = val.bytesPerPixel;
++    if (outBytesPerStride) *outBytesPerStride = val.bytesPerStride;
++    return OK;
++}
++
+ status_t GraphicBufferMapper::lockYCbCr(buffer_handle_t handle, uint32_t usage, const Rect& bounds,
+                                         android_ycbcr* ycbcr) {
+     auto result = lockYCbCr(handle, static_cast<int64_t>(usage), bounds);
+diff --git a/libs/ui/include/ui/GraphicBufferMapper.h b/libs/ui/include/ui/GraphicBufferMapper.h
+index 9da1447aed..ffd0eef521 100644
+--- a/libs/ui/include/ui/GraphicBufferMapper.h
++++ b/libs/ui/include/ui/GraphicBufferMapper.h
+@@ -96,6 +96,12 @@ public:
+ 
+     status_t lock(buffer_handle_t handle, uint32_t usage, const Rect& bounds, void** vaddr);
+ 
++    // Compat shim for prebuilt vendor blobs (e.g. MediaTek's libcodec2_vndk.so) built
++    // against the old gralloc3-era lock() overload that returned bytesPerPixel/bytesPerStride
++    // directly, which AOSP has since replaced with the LockResult-returning overload above.
++    status_t lock(buffer_handle_t handle, uint32_t usage, const Rect& bounds, void** vaddr,
++                  int32_t* outBytesPerPixel, int32_t* outBytesPerStride = nullptr);
++
+     status_t lockYCbCr(buffer_handle_t handle,
+             uint32_t usage, const Rect& bounds, android_ycbcr *ycbcr);
+ 

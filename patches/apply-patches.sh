@@ -31,13 +31,15 @@ names=(frameworks_base packages_apps_Settings packages_modules_Connectivity \
        frameworks_base_usbporthidl_fix \
        system_core_refbase_compat boringssl_agpsd_compat \
        packages_services_telephony_ims_services frameworks_av system_netd \
-       packages_modules_DnsResolver packages_modules_Bluetooth device_google_cuttlefish)
+       packages_modules_DnsResolver packages_modules_Bluetooth device_google_cuttlefish \
+       frameworks_native)
 paths=(frameworks/base packages/apps/Settings packages/modules/Connectivity \
        packages/modules/Wifi system/core bootable/recovery vendor/lineage \
        device/mediatek/sepolicy_vndr hardware/lineage/compat \
        frameworks/base system/core external/boringssl \
        packages/services/Telephony frameworks/av system/netd \
-       packages/modules/DnsResolver packages/modules/Bluetooth device/google/cuttlefish)
+       packages/modules/DnsResolver packages/modules/Bluetooth device/google/cuttlefish \
+       frameworks/native)
 
 fail=0
 for i in "${!names[@]}"; do
