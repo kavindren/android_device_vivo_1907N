@@ -1,6 +1,6 @@
 diff --git a/assets/carrier_config_mccmnc_25001.xml b/assets/carrier_config_mccmnc_25001.xml
 new file mode 100644
-index 0000000..3b0c579
+index 0000000..061666c
 --- /dev/null
 +++ b/assets/carrier_config_mccmnc_25001.xml
 @@ -0,0 +1,16 @@
@@ -17,6 +17,6 @@ index 0000000..3b0c579
 +<carrier_config_list>
 +    <carrier_config>
 +        <boolean name="carrier_name_override_bool" value="true" />
-+        <string name="carrier_name_string" value="MTS" />
++        <string name="carrier_name_string">MTS</string>
 +    </carrier_config>
 +</carrier_config_list>
