@@ -1,8 +1,8 @@
 diff --git a/src/crypto/hpke/hpke.c b/src/crypto/hpke/hpke.c
-index 827ffaab..fa79c451 100644
+index ff8b17b6..4aa7714a 100644
 --- a/src/crypto/hpke/hpke.c
 +++ b/src/crypto/hpke/hpke.c
-@@ -613,6 +613,19 @@ const EVP_HPKE_AEAD *EVP_HPKE_CTX_aead(const EVP_HPKE_CTX *ctx) {
+@@ -794,6 +794,19 @@ const EVP_HPKE_AEAD *EVP_HPKE_CTX_aead(const EVP_HPKE_CTX *ctx) {
    return ctx->aead;
  }
  
@@ -23,10 +23,10 @@ index 827ffaab..fa79c451 100644
    return ctx->kdf;
  }
 diff --git a/src/crypto/lhash/lhash.c b/src/crypto/lhash/lhash.c
-index 4a95a2e6..28eb35fc 100644
+index fbab430a..4a5068e3 100644
 --- a/src/crypto/lhash/lhash.c
 +++ b/src/crypto/lhash/lhash.c
-@@ -351,3 +351,54 @@ void OPENSSL_lh_doall_arg(_LHASH *lh, void (*func)(void *, void *), void *arg) {
+@@ -348,3 +348,54 @@ void OPENSSL_lh_doall_arg(_LHASH *lh, void (*func)(void *, void *), void *arg) {
    // resizing is done here.
    lh_maybe_resize(lh);
  }
@@ -81,3 +81,27 @@ index 4a95a2e6..28eb35fc 100644
 +                                  void *arg) {
 +  OPENSSL_lh_doall_arg(lh, func, arg);
 +}
+diff --git a/src/crypto/stack/stack.c b/src/crypto/stack/stack.c
+index 97fae1b9..61ee4b47 100644
+--- a/src/crypto/stack/stack.c
++++ b/src/crypto/stack/stack.c
+@@ -388,6 +388,19 @@ err:
+   return NULL;
+ }
+ 
++// vivo 1907N bring-up: plain compat alias for the pre-rename name of the function above. Same
++// lh_*/OPENSSL_lh_* rename story as this repo's other compat shims (EVP_HPKE_get_aead in
++// crypto/hpke/hpke.c, lh_* family in crypto/lhash/lhash.c) - upstream BoringSSL renamed the
++// classic OpenSSL-style stack API to the OPENSSL_sk_* names above and stopped exporting the
++// bare sk_* symbols. The vivo stock /vendor/bin/hw/wpa_supplicant blob (no source available -
++// closed) links directly against the old bare name: "CANNOT LINK EXECUTABLE
++// /vendor/bin/hw/wpa_supplicant: cannot locate symbol sk_dup" - crash-looping supplicant, so no
++// Wi-Fi station mode at all. Same fix philosophy: restore the old exported symbol as a trivial
++// forwarder in the real AOSP source rather than touch the closed vendor binary (impossible).
++OPENSSL_EXPORT OPENSSL_STACK *sk_dup(const OPENSSL_STACK *sk) {
++  return OPENSSL_sk_dup(sk);
++}
++
+ static size_t parent_idx(size_t idx) {
+   assert(idx > 0);
+   return (idx - 1) / 2;
