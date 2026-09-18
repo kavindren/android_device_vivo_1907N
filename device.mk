@@ -217,10 +217,7 @@ PRODUCT_BOOT_JARS += \
     mediatek-telephony-base \
     mediatek-telephony-common \
     mediatek-common \
-    mediatek-framework \
-    mediatek-ims-common \
-    mediatek-ims-base \
-    mediatek-telecom-common
+    mediatek-framework
 
 PRODUCT_PACKAGES += \
     vivo-framework-vgc \
@@ -236,36 +233,24 @@ PRODUCT_PACKAGES += \
     mediatek-telephony-base \
     mediatek-telephony-common \
     mediatek-common \
-    mediatek-framework \
-    mediatek-ims-common \
-    mediatek-ims-base \
-    mediatek-telecom-common
+    mediatek-framework
 
-PRODUCT_COPY_FILES += \
-    vendor/vivo/1907N/proprietary/system/framework/mediatek-ims-extension-plugin.jar:$(TARGET_COPY_OUT_SYSTEM)/framework/mediatek-ims-extension-plugin.jar \
-    vendor/vivo/1907N/proprietary/system/framework/mediatek-ims-legacy.jar:$(TARGET_COPY_OUT_SYSTEM)/framework/mediatek-ims-legacy.jar \
-    vendor/vivo/1907N/proprietary/system/framework/mediatek-wfo-legacy.jar:$(TARGET_COPY_OUT_SYSTEM)/framework/mediatek-wfo-legacy.jar \
-    vendor/vivo/1907N/proprietary/system/etc/permissions/com.mediatek.wfo.legacy.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/com.mediatek.wfo.legacy.xml
-
-PRODUCT_PACKAGES += \
-    ImsService \
-    libimsma \
-    libimsma_adapt \
-    libimsma_rtp \
-    libimsma_socketwrapper
-
-PRODUCT_COPY_FILES += \
-    vendor/vivo/1907N/proprietary/system/etc/permissions/privapp-permissions-mediatek-ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-mediatek-ims.xml
-
-PRODUCT_COPY_FILES += \
-    vendor/vivo/1907N/proprietary/system/lib/libmtk_vt_wrapper.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libmtk_vt_wrapper.so \
-    vendor/vivo/1907N/proprietary/system/lib64/libmtk_vt_wrapper.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libmtk_vt_wrapper.so \
-    vendor/vivo/1907N/proprietary/system/lib/libvcodec_cap.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodec_cap.so \
-    vendor/vivo/1907N/proprietary/system/lib64/libvcodec_cap.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodec_cap.so \
-    vendor/vivo/1907N/proprietary/system/lib/libvcodec_capenc.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libvcodec_capenc.so \
-    vendor/vivo/1907N/proprietary/system/lib64/libvcodec_capenc.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libvcodec_capenc.so \
-    vendor/vivo/1907N/proprietary/system/lib/vendor.mediatek.hardware.videotelephony@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib/vendor.mediatek.hardware.videotelephony@1.0.so \
-    vendor/vivo/1907N/proprietary/system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so.system:$(TARGET_COPY_OUT_SYSTEM)/lib64/vendor.mediatek.hardware.videotelephony@1.0.so
+# device/vivo/1907N: mediatek-ims-common/mediatek-ims-base/mediatek-telecom-common (BOOT_JARS),
+# ImsService/libimsma*, and the VT (Video Telephony)/WFO (WiFi Offload) jars+libs below were all
+# added together in the same effort as the later-reverted MtkTelephonyComponentFactory/MtkRIL
+# wiring (frameworks/opt/telephony, frameworks/base - see "park MtkRIL/MtkTelephonyComponentFactory,
+# revert to plain AOSP" in device git history) - that source-side revert was clean, but these
+# device-tree bootclasspath/package entries were never removed alongside it, leaving MTK's own
+# IMS/telecom framework classes loaded on the boot classpath with nothing wiring them in
+# properly. Suspected (user's own recollection) as the actual cause of a real device symptom:
+# the displayed network name briefly shows the correct SPN ("MTS 5G") right after boot, then
+# gets overwritten with the raw numeric PLMN ("25001") once the first real ServiceState update
+# arrives - confirmed via dumpsys telephony.registry that the RIL's own reported
+# mOperatorAlphaLong/mOperatorAlphaShort literally contain the string "25001" instead of the
+# network name. Removed as a targeted test of that theory, independent of resuming the wider
+# parked IMS effort. Left mediatek-telephony-base/common, mediatek-common/framework and the
+# vivo-* jars alone - those aren't IMS-specific and are more likely load-bearing for basic
+# RIL/hardware integration.
 
 PRODUCT_PACKAGES += \
     android.hardware.lights-service.1907N
