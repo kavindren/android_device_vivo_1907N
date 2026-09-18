@@ -14,6 +14,12 @@
          startService() gets rejected with BackgroundServiceStartNotAllowedException, confirmed
          on-device: the service never even started). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14 split FGS permissions by declared foregroundServiceType - the general
+         FOREGROUND_SERVICE permission above is no longer sufficient on its own for a
+         foregroundServiceType="camera" service; this type-specific one (normal, auto-granted)
+         is required too, or startForeground() throws SecurityException at every enroll/auth
+         attempt (confirmed on-device via logcat). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
 
     <application android:label="FaceCaptureService" android:hasCode="true">
         <!-- Not exported: only system_server (Face10.java), running as a trusted uid in the
