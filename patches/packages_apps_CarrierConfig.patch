@@ -1,9 +1,9 @@
 diff --git a/assets/carrier_config_mccmnc_25001.xml b/assets/carrier_config_mccmnc_25001.xml
 new file mode 100644
-index 0000000..061666c
+index 0000000..43570e4
 --- /dev/null
 +++ b/assets/carrier_config_mccmnc_25001.xml
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,21 @@
 +<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
 +<!-- vivo 1907N: MCC 250 / MNC 01 (MTS, Russia). AOSP ships essentially no built-in carrier
 +     data (only ~22 mccmnc entries total, none for MCC 250) - real carrier configs normally
@@ -13,10 +13,15 @@ index 0000000..061666c
 +     name from the SIM's own EF_SPN/RIL PLMN data either - ServiceStateTracker falls back to
 +     showing the raw PLMN numeric ("25001") instead. carrier_name_override_bool forces
 +     getServiceProviderName() to always return carrier_name_string regardless of what the SIM
-+     or RIL provide, sidestepping that unreliability entirely. -->
++     or RIL provide, sidestepping that unreliability entirely.
++
++     "MTS 5G" and not just "MTS": per the user, MTS actually rebranded the network's own
++     display name to "MTS 5G" - it's not a generation suffix the status bar appends on top
++     (that's separately shown as the connection-type indicator, e.g. "4G+" right next to it,
++     confirmed on a real Pixel). -->
 +<carrier_config_list>
 +    <carrier_config>
 +        <boolean name="carrier_name_override_bool" value="true" />
-+        <string name="carrier_name_string">MTS</string>
++        <string name="carrier_name_string">MTS 5G</string>
 +    </carrier_config>
 +</carrier_config_list>
