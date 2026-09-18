@@ -1,8 +1,57 @@
+diff --git a/services/camera/libcameraservice/CameraService.cpp b/services/camera/libcameraservice/CameraService.cpp
+index 2d55f39b25..26a904ddf7 100644
+--- a/services/camera/libcameraservice/CameraService.cpp
++++ b/services/camera/libcameraservice/CameraService.cpp
+@@ -4337,10 +4337,25 @@ status_t CameraService::BasicClient::startCameraStreamingOps() {
+             __FUNCTION__, mClientPackageName.c_str(), mClientUid);
+ 
+     if (mAppOpsManager != nullptr) {
+-        int32_t mode = mAppOpsManager->startOpNoThrow(AppOpsManager::OP_CAMERA, mClientUid,
+-                toString16(mClientPackageName), /*startIfModeDefault*/ false,
+-                toString16(mClientFeatureId),
+-                toString16("start camera ") + toString16(mCameraIdStr));
++        // vivo 1907N Face Unlock: FaceCaptureService uses the regular front camera (this
++        // hardware has no dedicated face-auth sensor) purely for on-device biometric
++        // matching - it never produces user-visible images. Registering it as an "active"
++        // OP_CAMERA op here would light SystemUI's camera-in-use indicator on every
++        // enroll/auth attempt, which stock's own (closed) face unlock HAL never does since
++        // it doesn't go through Camera2/AppOps at all. checkOp() - the same call
++        // startCameraOps() above already uses for the device-open step - still enforces
++        // the same permission mode and privacy-toggle semantics via handleAppOpMode()
++        // below; it just doesn't register as "active", so it doesn't drive the indicator.
++        int32_t mode;
++        if (mClientPackageName == "com.android.facecapture") {
++            mode = mAppOpsManager->checkOp(AppOpsManager::OP_CAMERA, mClientUid,
++                    toString16(mClientPackageName));
++        } else {
++            mode = mAppOpsManager->startOpNoThrow(AppOpsManager::OP_CAMERA, mClientUid,
++                    toString16(mClientPackageName), /*startIfModeDefault*/ false,
++                    toString16(mClientFeatureId),
++                    toString16("start camera ") + toString16(mCameraIdStr));
++        }
+         status_t res = handleAppOpMode(mode);
+         if (res != OK) {
+             return res;
+@@ -4386,8 +4401,12 @@ status_t CameraService::BasicClient::finishCameraStreamingOps() {
+     }
+ 
+     if (mAppOpsManager != nullptr) {
+-        mAppOpsManager->finishOp(AppOpsManager::OP_CAMERA, mClientUid,
+-                toString16(mClientPackageName), toString16(mClientFeatureId));
++        // See startCameraStreamingOps() above: for this package the op was never
++        // registered as "active" in the first place, so don't finish it either.
++        if (mClientPackageName != "com.android.facecapture") {
++            mAppOpsManager->finishOp(AppOpsManager::OP_CAMERA, mClientUid,
++                    toString16(mClientPackageName), toString16(mClientFeatureId));
++        }
+         mOpsStreaming = false;
+     }
+ 
 diff --git a/services/camera/libcameraservice/device3/Camera3OutputStream.cpp b/services/camera/libcameraservice/device3/Camera3OutputStream.cpp
-index 26fab414c6..c7dd1d7456 100644
+index 2ce04e8e49..05a18b6b54 100644
 --- a/services/camera/libcameraservice/device3/Camera3OutputStream.cpp
 +++ b/services/camera/libcameraservice/device3/Camera3OutputStream.cpp
-@@ -577,7 +577,7 @@ status_t Camera3OutputStream::configureQueueLocked() {
+@@ -518,7 +518,7 @@ status_t Camera3OutputStream::configureQueueLocked() {
          return res;
      }
  
