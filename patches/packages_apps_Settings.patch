@@ -371,6 +371,24 @@ index 6862bc921d7..f50e41a729d 100644
 -        }
      }
  }
+diff --git a/src/com/android/settings/biometrics/face/FaceEnrollEnrolling.java b/src/com/android/settings/biometrics/face/FaceEnrollEnrolling.java
+index da3689a6b95..1534bb676d7 100644
+--- a/src/com/android/settings/biometrics/face/FaceEnrollEnrolling.java
++++ b/src/com/android/settings/biometrics/face/FaceEnrollEnrolling.java
+@@ -142,7 +142,12 @@ public class FaceEnrollEnrolling extends BiometricsEnrollEnrolling {
+ 
+     @Override
+     protected void startEnrollmentInternal() {
+-        super.startEnrollment();
++        // NOT super.startEnrollment(): that's the public entry point, which calls back into
++        // this (overridden) startEnrollmentInternal() via virtual dispatch - infinite
++        // recursion / StackOverflowError. c9aaa73b5108 split startEnrollment() into a public
++        // wrapper (split-screen check) + protected startEnrollmentInternal() (actual sidecar
++        // setup) and renamed this override accordingly, but left this call unupdated.
++        super.startEnrollmentInternal();
+         mPreviewFragment = (FaceEnrollPreviewFragment) getSupportFragmentManager()
+                 .findFragmentByTag(TAG_FACE_PREVIEW);
+         if (mPreviewFragment == null) {
 diff --git a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java b/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
 index 853ca7c40cc..bb92f82fa77 100644
 --- a/src/com/android/settings/biometrics/face/FaceEnrollPreviewFragment.java
