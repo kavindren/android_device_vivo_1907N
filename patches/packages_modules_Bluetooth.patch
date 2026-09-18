@@ -33,3 +33,28 @@ index 6facfef4c3..1d05db1f9e 100644
      auto complete_view = ReadDefaultErroneousDataReportingCompleteView::Create(view);
      // Check to see that the opcode was correct.
      // ASSERT(complete_view.IsValid()) is not used here to avoid process abort.
+diff --git a/system/main/shim/hci_layer.cc b/system/main/shim/hci_layer.cc
+index e14e106efa..7486ec9cbf 100644
+--- a/system/main/shim/hci_layer.cc
++++ b/system/main/shim/hci_layer.cc
+@@ -175,8 +175,18 @@ static void vendor_specific_event_callback(
+ void OnTransmitPacketCommandComplete(command_complete_cb complete_callback,
+                                      void* context,
+                                      bluetooth::hci::CommandCompleteView view) {
+-  LOG_DEBUG("Received cmd complete for %s",
+-            bluetooth::hci::OpCodeText(view.GetCommandOpCode()).c_str());
++  // handle_command_response() in this file's GD-side counterpart synthesizes an empty,
++  // not-yet-validated CommandCompleteView as a fallback when a command that expected
++  // COMMAND_COMPLETE instead gets COMMAND_STATUS. GetCommandOpCode() asserts
++  // was_validated_ internally (set by IsValid()), so it must never be called before
++  // that check - this generic bridge runs for every outgoing command, so it's a common
++  // place to hit that abort regardless of which specific command triggered it.
++  if (view.IsValid()) {
++    LOG_DEBUG("Received cmd complete for %s",
++              bluetooth::hci::OpCodeText(view.GetCommandOpCode()).c_str());
++  } else {
++    LOG_WARN("Received invalid cmd complete view");
++  }
+   BT_HDR* response = WrapPacketAndCopy(MSG_HC_TO_STACK_HCI_EVT, &view);
+   complete_callback(response, context);
+ }
