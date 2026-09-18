@@ -1,0 +1,22 @@
+diff --git a/assets/carrier_config_mccmnc_25001.xml b/assets/carrier_config_mccmnc_25001.xml
+new file mode 100644
+index 0000000..3b0c579
+--- /dev/null
++++ b/assets/carrier_config_mccmnc_25001.xml
+@@ -0,0 +1,16 @@
++<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
++<!-- vivo 1907N: MCC 250 / MNC 01 (MTS, Russia). AOSP ships essentially no built-in carrier
++     data (only ~22 mccmnc entries total, none for MCC 250) - real carrier configs normally
++     come from Google's Carrier Config Play Store updates, which this device doesn't have.
++     Plain AOSP telephony (post MtkTelephonyComponentFactory revert, see
++     los-1907N-ims-migration session memory) doesn't reliably resolve this carrier's display
++     name from the SIM's own EF_SPN/RIL PLMN data either - ServiceStateTracker falls back to
++     showing the raw PLMN numeric ("25001") instead. carrier_name_override_bool forces
++     getServiceProviderName() to always return carrier_name_string regardless of what the SIM
++     or RIL provide, sidestepping that unreliability entirely. -->
++<carrier_config_list>
++    <carrier_config>
++        <boolean name="carrier_name_override_bool" value="true" />
++        <string name="carrier_name_string" value="MTS" />
++    </carrier_config>
++</carrier_config_list>
