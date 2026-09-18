@@ -1,5 +1,5 @@
 diff --git a/libs/ui/GraphicBufferMapper.cpp b/libs/ui/GraphicBufferMapper.cpp
-index b6ab2f5a47..088468f773 100644
+index b6ab2f5a47..6b8e0cf92b 100644
 --- a/libs/ui/GraphicBufferMapper.cpp
 +++ b/libs/ui/GraphicBufferMapper.cpp
 @@ -188,6 +188,18 @@ status_t GraphicBufferMapper::lock(buffer_handle_t handle, uint32_t usage, const
@@ -21,6 +21,24 @@ index b6ab2f5a47..088468f773 100644
  status_t GraphicBufferMapper::lockYCbCr(buffer_handle_t handle, uint32_t usage, const Rect& bounds,
                                          android_ycbcr* ycbcr) {
      auto result = lockYCbCr(handle, static_cast<int64_t>(usage), bounds);
+@@ -381,3 +393,17 @@ status_t GraphicBufferMapper::setSmpte2094_10(buffer_handle_t bufferHandle,
+ 
+ // ---------------------------------------------------------------------------
+ }; // namespace android
++
++// Compat shim for prebuilt vendor blobs (e.g. MediaTek's libcodec2_vndk.so) built against
++// the old single-argument GraphicBufferMapper::unlock(buffer_handle_t) overload, from before
++// the outFence parameter above was added. Can't be a real second C++ overload of unlock() -
++// plenty of in-tree callers (C2AllocatorGralloc, camera HALs, ...) call
++// GraphicBufferMapper::get().unlock(handle) relying on the 2-arg version's default argument,
++// and adding a 1-arg overload would make every one of those calls ambiguous. Instead this is
++// a free function whose linker symbol is forced to the old mangled name directly, so it's
++// invisible to our own C++ overload resolution but still satisfies the blob's dynamic linker.
++android::status_t GraphicBufferMapper_unlock_compat(buffer_handle_t handle)
++        asm("_ZN7android19GraphicBufferMapper6unlockEPK13native_handle");
++android::status_t GraphicBufferMapper_unlock_compat(buffer_handle_t handle) {
++    return android::GraphicBufferMapper::get().unlock(handle, nullptr);
++}
 diff --git a/libs/ui/include/ui/GraphicBufferMapper.h b/libs/ui/include/ui/GraphicBufferMapper.h
 index 9da1447aed..ffd0eef521 100644
 --- a/libs/ui/include/ui/GraphicBufferMapper.h
