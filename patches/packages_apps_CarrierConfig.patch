@@ -1,3 +1,21 @@
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index cd03659..4ee195a 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -14,8 +14,12 @@
+     limitations under the License.
+ -->
+ 
++<!-- versionCode is what CarrierConfigLoader keys its on-disk cache of the parsed default config
++     on (/data/user_de/0/com.android.phone/files/carrierconfig-*.xml). Bump it whenever an asset
++     changes, or devices that already cached the old bundle keep using it - Build.FINGERPRINT is
++     spoofed to a constant on this device so it doesn't invalidate the cache either. -->
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+-     android:versionCode="1"
++     android:versionCode="2"
+      android:versionName="1.0.0"
+      package="com.android.carrierconfig">
+ 
 diff --git a/assets/carrier_config_mccmnc_25001.xml b/assets/carrier_config_mccmnc_25001.xml
 new file mode 100644
 index 0000000..43570e4
