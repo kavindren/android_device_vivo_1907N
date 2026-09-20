@@ -23,3 +23,55 @@ index 4c7a3d3ffa..cbd2cca3ae 100644
                  if (userObject == null) return;
                  boolean expectedValue = userObject.first;
                  int retries = userObject.second;
+diff --git a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
+index 8757c9791a..aa2248a800 100644
+--- a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
++++ b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
+@@ -3585,12 +3585,47 @@ public class SubscriptionManagerService extends ISub.Stub {
+                 mSubscriptionManagerServiceCallbacks.forEach(
+                         callback -> callback.invokeFromExecutor(
+                                 () -> callback.onUiccApplicationsEnabledChanged(subId)));
++                mHandler.post(() -> syncSubscriptionWithUiccAppsSetting(subId));
+             }
+         } finally {
+             Binder.restoreCallingIdentity(identity);
+         }
+     }
+ 
++    /**
++     * Bring the subscription's active state in line with its "UICC applications enabled" flag
++     * without waiting for a SIM state change.
++     *
++     * Normally the modem's answer to ENABLE_UICC_APPLICATIONS (apps go away / come back) makes
++     * the SIM state change, which re-runs {@link #updateSubscription}. The MediaTek RIL on this
++     * device acks the request but does nothing, so no such event ever arrives and the toggle in
++     * Settings only took effect on the next boot, when updateSubscription() honours the flag.
++     */
++    private void syncSubscriptionWithUiccAppsSetting(int subId) {
++        SubscriptionInfoInternal subInfo = mSubscriptionDatabaseManager
++                .getSubscriptionInfoInternal(subId);
++        if (subInfo == null || subInfo.isEmbedded()) return;
++
++        int phoneId = SubscriptionManager.INVALID_SIM_SLOT_INDEX;
++        for (int i = 0; i < mSimState.length; i++) {
++            UiccPort port = mUiccController.getUiccPort(i);
++            if (port != null && port.getIccId() != null
++                    && subInfo.getIccId().equals(IccUtils.stripTrailingFs(port.getIccId()))) {
++                phoneId = i;
++                break;
++            }
++        }
++        if (phoneId == SubscriptionManager.INVALID_SIM_SLOT_INDEX) return;
++
++        logl("syncSubscriptionWithUiccAppsSetting: subId=" + subId + ", phoneId=" + phoneId
++                + ", enabled=" + subInfo.areUiccApplicationsEnabled());
++        if (subInfo.areUiccApplicationsEnabled()) {
++            updateSubscription(phoneId);
++        } else {
++            markSubscriptionsInactive(phoneId);
++        }
++    }
++
+     /**
+      * Set the device to device status sharing user preference for a subscription ID. The setting
+      * app uses this method to indicate with whom they wish to share device to device status
