@@ -176,9 +176,6 @@ PRODUCT_PACKAGES += \
     init.vivo-defend.rc
 
 PRODUCT_PACKAGES += \
-    init.bootlog.rc
-
-PRODUCT_PACKAGES += \
     android.hardware.usb.gadget@1.1-service.1907N
 
 PRODUCT_PACKAGES += \
