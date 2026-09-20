@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The stock vendor wpa_supplicant has no SAE ("wpa_cli get_capability key_mgmt" lists
+         WPA-PSK/FT-PSK/OWE/DPP but not SAE), yet the framework still upgrades WPA2/WPA3
+         transition networks to WPA3-SAE: the supplicant got key_mgmt=SAE + PMF required, the AP
+         answered the association with status 31 (robust management frame policy violation) and
+         the network stayed disabled ("phone stopped connecting to Wi-Fi"). Keep such networks on
+         WPA2-PSK. -->
+    <bool name="config_wifiSaeUpgradeEnabled">false</bool>
+</resources>

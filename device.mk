@@ -296,6 +296,9 @@ $(call inherit-product-if-exists, vendor/vivo/1907N/1907N-vendor.mk)
 PRODUCT_PACKAGES += \
     TetheringWifiRegexOverlay
 
+PRODUCT_PACKAGES += \
+    WifiSaeOverlay
+
 # Several stock MTK/AOSP prebuilt HAL binaries (vendor/vivo/1907N proprietary) are linked
 # against the old Android-12-era AIDL "ndk_platform" backend naming instead of LOS20's current
 # "-ndk" naming; without these the linker refuses to start the binary at all:
