@@ -24,10 +24,18 @@ index 4c7a3d3ffa..cbd2cca3ae 100644
                  boolean expectedValue = userObject.first;
                  int retries = userObject.second;
 diff --git a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
-index 8757c9791a..aa2248a800 100644
+index 8757c9791a..0a71ab0275 100644
 --- a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
 +++ b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
-@@ -3585,12 +3585,47 @@ public class SubscriptionManagerService extends ISub.Stub {
+@@ -92,6 +92,7 @@ import com.android.internal.telephony.CarrierResolver;
+ import com.android.internal.telephony.ISetOpportunisticDataCallback;
+ import com.android.internal.telephony.ISub;
+ import com.android.internal.telephony.IccCard;
++import com.android.internal.telephony.IccCardConstants;
+ import com.android.internal.telephony.MccTable;
+ import com.android.internal.telephony.MultiSimSettingController;
+ import com.android.internal.telephony.Phone;
+@@ -3585,12 +3586,57 @@ public class SubscriptionManagerService extends ISub.Stub {
                  mSubscriptionManagerServiceCallbacks.forEach(
                          callback -> callback.invokeFromExecutor(
                                  () -> callback.onUiccApplicationsEnabledChanged(subId)));
@@ -67,6 +75,16 @@ index 8757c9791a..aa2248a800 100644
 +                + ", enabled=" + subInfo.areUiccApplicationsEnabled());
 +        if (subInfo.areUiccApplicationsEnabled()) {
 +            updateSubscription(phoneId);
++            // The SIM never left LOADED, so nothing re-triggers the carrier config load that
++            // MultiSimSettingController waits for ("Carrier config subId N is not loaded")
++            // before restoring the default data subscription; mobile data stayed off until
++            // the user toggled it. Do what a real SIM re-load would.
++            CarrierConfigManager configManager =
++                    mContext.getSystemService(CarrierConfigManager.class);
++            if (configManager != null) {
++                configManager.updateConfigForPhoneId(phoneId,
++                        IccCardConstants.INTENT_VALUE_ICC_LOADED);
++            }
 +        } else {
 +            markSubscriptionsInactive(phoneId);
 +        }
