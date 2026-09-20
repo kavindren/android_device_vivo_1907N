@@ -1,3 +1,108 @@
+diff --git a/media/module/foundation/AHandler.cpp b/media/module/foundation/AHandler.cpp
+index d8b0aaf2a3..7dbbe54f90 100644
+--- a/media/module/foundation/AHandler.cpp
++++ b/media/module/foundation/AHandler.cpp
+@@ -24,10 +24,8 @@
+ namespace android {
+ 
+ void AHandler::deliverMessage(const sp<AMessage> &msg) {
+-    setDeliveryStatus(true, msg->what(), ALooper::GetNowUs());
+     onMessageReceived(msg);
+     mMessageCounter++;
+-    setDeliveryStatus(false, 0, 0);
+ 
+     if (mVerboseStats) {
+         uint32_t what = msg->what();
+@@ -40,19 +38,4 @@ void AHandler::deliverMessage(const sp<AMessage> &msg) {
+     }
+ }
+ 
+-void AHandler::setDeliveryStatus(bool delivering, uint32_t what, int64_t startUs) {
+-    AutoMutex autoLock(mLock);
+-    mDeliveringMessage = delivering;
+-    mCurrentMessageWhat = what;
+-    mCurrentMessageStartTimeUs = startUs;
+-}
+-
+-void AHandler::getDeliveryStatus(bool& delivering, uint32_t& what, int64_t& durationUs) {
+-    AutoMutex autoLock(mLock);
+-    delivering = mDeliveringMessage;
+-    what = mCurrentMessageWhat;
+-    durationUs = mCurrentMessageStartTimeUs == 0 ?
+-            0 : ALooper::GetNowUs() - mCurrentMessageStartTimeUs;
+-}
+-
+ }  // namespace android
+diff --git a/media/module/foundation/ALooperRoster.cpp b/media/module/foundation/ALooperRoster.cpp
+index daa90be83f..133365c9d5 100644
+--- a/media/module/foundation/ALooperRoster.cpp
++++ b/media/module/foundation/ALooperRoster.cpp
+@@ -143,20 +143,9 @@ void ALooperRoster::dump(int fd, const Vector<String16>& args) {
+             s.append(looper->getName());
+             sp<AHandler> handler = info.mHandler.promote();
+             if (handler != NULL) {
+-                bool deliveringMessages;
+-                uint32_t currentMessageWhat;
+-                int64_t currentDeliveryDurationUs;
+-                handler->getDeliveryStatus(deliveringMessages,
+-                                           currentMessageWhat,
+-                                           currentDeliveryDurationUs);
+                 handler->mVerboseStats = verboseStats;
+-                s.appendFormat(": %" PRIu64 " messages processed, delivering "
+-                               "%d, current msg %" PRIu32 ", current msg "
+-                               "durationUs %" PRIu64 "",
+-                               handler->mMessageCounter,
+-                               deliveringMessages,
+-                               currentMessageWhat,
+-                               currentDeliveryDurationUs);
++                s.appendFormat(": %" PRIu32 " messages processed",
++                               handler->mMessageCounter);
+                 if (verboseStats) {
+                     for (size_t j = 0; j < handler->mMessages.size(); j++) {
+                         char fourcc[15];
+diff --git a/media/module/foundation/include/media/stagefright/foundation/AHandler.h b/media/module/foundation/include/media/stagefright/foundation/AHandler.h
+index c9e4f69aa8..9ea42e935b 100644
+--- a/media/module/foundation/include/media/stagefright/foundation/AHandler.h
++++ b/media/module/foundation/include/media/stagefright/foundation/AHandler.h
+@@ -30,10 +30,7 @@ struct AHandler : public RefBase {
+     AHandler()
+         : mID(0),
+           mVerboseStats(false),
+-          mMessageCounter(0),
+-          mDeliveringMessage(false),
+-          mCurrentMessageWhat(0),
+-          mCurrentMessageStartTimeUs(0){
++          mMessageCounter(0) {
+     }
+ 
+     ALooper::handler_id id() const {
+@@ -68,21 +65,16 @@ private:
+         mLooper = looper;
+     }
+ 
++    // Layout must stay identical to the Android 11 AHandler: vendor blobs (libcodec2_mtk_*)
++    // subclass it with their own members placed right after these. The delivery-status
++    // fields (mutex, current message) added later overlapped those members and made
++    // deliverMessage() block forever, hanging every MediaTek Codec2 start().
+     bool mVerboseStats;
+-    uint64_t mMessageCounter;
++    uint32_t mMessageCounter;
+     KeyedVector<uint32_t, uint32_t> mMessages;
+ 
+-    Mutex mLock;
+-    bool mDeliveringMessage;
+-    uint32_t  mCurrentMessageWhat;
+-    int64_t mCurrentMessageStartTimeUs;
+-
+     void deliverMessage(const sp<AMessage> &msg);
+ 
+-    void setDeliveryStatus(bool, uint32_t, int64_t);
+-    void getDeliveryStatus(bool&, uint32_t&, int64_t&);
+-
+-
+     DISALLOW_EVIL_CONSTRUCTORS(AHandler);
+ };
+ 
 diff --git a/services/camera/libcameraservice/CameraService.cpp b/services/camera/libcameraservice/CameraService.cpp
 index 2d55f39b25..26a904ddf7 100644
 --- a/services/camera/libcameraservice/CameraService.cpp
