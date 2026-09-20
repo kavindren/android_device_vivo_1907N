@@ -20,21 +20,26 @@ index ffca0c3526..66a83ad6a3 100644
  
      /**
 diff --git a/service/java/com/android/server/wifi/SoftApManager.java b/service/java/com/android/server/wifi/SoftApManager.java
-index a2a50df1f1..3f94a75425 100644
+index 9e9f8126bb..3f94a75425 100644
 --- a/service/java/com/android/server/wifi/SoftApManager.java
 +++ b/service/java/com/android/server/wifi/SoftApManager.java
-@@ -819,9 +819,9 @@ public class SoftApManager implements ActiveModeManager {
-             if (band == SoftApConfiguration.BAND_5GHZ) {
-                 Log.e(getTag(), "Failed to set country code, "
-                         + "required for setting up soft ap in 5GHz");
--                return ERROR_GENERIC;
-+                return false;
-             }
--            return SUCCESS;
-+            return true;
+@@ -813,6 +813,16 @@ public class SoftApManager implements ActiveModeManager {
+             // Absence of country code is not fatal for 2Ghz & Any band options.
+             return true;
          }
++        if (!ApConfigUtil.isSoftApDynamicCountryCodeSupported(mContext)
++                || !mCurrentSoftApCapability.areFeaturesSupported(
++                        SoftApCapability.SOFTAP_FEATURE_ACS_OFFLOAD)) {
++            if (band == SoftApConfiguration.BAND_5GHZ) {
++                Log.e(getTag(), "Failed to set country code, "
++                        + "required for setting up soft ap in 5GHz");
++                return false;
++            }
++            return true;
++        }
          if (!mWifiNative.setApCountryCode(
                  mApInterfaceName, mCountryCode.toUpperCase(Locale.ROOT))) {
+             if (band == SoftApConfiguration.BAND_5GHZ || band == SoftApConfiguration.BAND_6GHZ) {
 diff --git a/service/java/com/android/server/wifi/SupplicantStaIfaceHalAidlImpl.java b/service/java/com/android/server/wifi/SupplicantStaIfaceHalAidlImpl.java
 index 7722e4accb..0eb58c7a6b 100644
 --- a/service/java/com/android/server/wifi/SupplicantStaIfaceHalAidlImpl.java
