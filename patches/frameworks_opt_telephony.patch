@@ -1,0 +1,25 @@
+diff --git a/src/java/com/android/internal/telephony/GsmCdmaPhone.java b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
+index 4c7a3d3ffa..cbd2cca3ae 100644
+--- a/src/java/com/android/internal/telephony/GsmCdmaPhone.java
++++ b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
+@@ -3642,8 +3642,19 @@ public class GsmCdmaPhone extends Phone {
+ 
+             case EVENT_REAPPLY_UICC_APPS_ENABLEMENT_DONE: {
+                 ar = (AsyncResult) msg.obj;
+-                if (ar == null || ar.exception == null) return;
++                if (ar == null) return;
+                 Pair<Boolean, Integer> userObject = (Pair) ar.userObj;
++                if (ar.exception == null) {
++                    // The MediaTek RIL acks ENABLE_UICC_APPLICATIONS but never sends the
++                    // UICC_APPLICATIONS_ENABLEMENT_CHANGED unsol that would refresh the cached
++                    // state, so it stayed at the boot-time value and a later request for the
++                    // opposite state was skipped as "already applied" (SIM toggle in Settings
++                    // only took effect after a reboot). Record what the modem accepted.
++                    if (userObject != null) {
++                        mUiccApplicationsEnabled = userObject.first;
++                    }
++                    return;
++                }
+                 if (userObject == null) return;
+                 boolean expectedValue = userObject.first;
+                 int retries = userObject.second;
