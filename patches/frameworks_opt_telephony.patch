@@ -1,5 +1,5 @@
 diff --git a/src/java/com/android/internal/telephony/GsmCdmaPhone.java b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
-index 4c7a3d3ffa..cbd2cca3ae 100644
+index 4c7a3d3ffa..3524f12e99 100644
 --- a/src/java/com/android/internal/telephony/GsmCdmaPhone.java
 +++ b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
 @@ -3642,8 +3642,19 @@ public class GsmCdmaPhone extends Phone {
@@ -23,6 +23,23 @@ index 4c7a3d3ffa..cbd2cca3ae 100644
                  if (userObject == null) return;
                  boolean expectedValue = userObject.first;
                  int retries = userObject.second;
+@@ -5194,9 +5205,14 @@ public class GsmCdmaPhone extends Phone {
+         // If for any reason current state is different from configured state, re-apply the
+         // configured state.
+         if (expectedValue != mUiccApplicationsEnabled) {
+-            mCi.enableUiccApplications(expectedValue, Message.obtain(
++            Message done = Message.obtain(
+                     this, EVENT_REAPPLY_UICC_APPS_ENABLEMENT_DONE,
+-                    new Pair<>(expectedValue, retries)));
++                    new Pair<>(expectedValue, retries));
++            // The MediaTek RIL acks ENABLE_UICC_APPLICATIONS without doing anything (the SIM
++            // then only looks disabled: calls and SMS kept working). What it does implement is
++            // real SIM power on/off (AT+ESIMPOWER) behind SET_SIM_CARD_POWER, so use that.
++            mCi.setSimCardPower(expectedValue ? TelephonyManager.CARD_POWER_UP
++                    : TelephonyManager.CARD_POWER_DOWN, done, null);
+         }
+     }
+ 
 diff --git a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java b/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
 index 8757c9791a..0a71ab0275 100644
 --- a/src/java/com/android/internal/telephony/subscription/SubscriptionManagerService.java
