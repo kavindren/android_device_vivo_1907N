@@ -193,6 +193,8 @@ allow vendor_shell vivo-fingerprint-sh_exec:file r_file_perms;
 allow mtk_hal_power proc_perfmgr:file ioctl;
 allow mtk_hal_power cpu_dma_latency_device:chr_file { open write };
 allow mtk_hal_power proc:file read;
+# mtkPowerService looks the vperf HAL up under /proc/<pid> (denied getattr/search, seen live).
+allow mtk_hal_power hal_vperf_default:dir { getattr search };
 
 # --- hal_sensorfactory_default (missed last round) ---
 allow hal_sensorfactory_default hal_sensorfactory_hwservice:hwservice_manager { add find };
