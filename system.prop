@@ -87,3 +87,9 @@ bluetooth.profile.vcp.controller.enabled=true
 # The 19.1 Updater reads "lineage.updater.uri" (Constants.PROP_UPDATER_URI), NOT "ro.updater.uri".
 # Set to your own host before building; see tools/ota/.
 lineage.updater.uri=https://95.165.95.207.sslip.io/api/v1/{device}/{type}/{incr}
+
+# Reported to PackageManager as reqGlEsVersion / used by Google Play's compatibility filter.
+# It was unset (reqGlEsVersion=0x0), so Play treated the device as having no OpenGL ES and hid
+# or refused apps that require it (Firefox not found, Android Auto "not supported"). The
+# Mali-G52 reports OpenGL ES 3.2 -> 0x00030002 = 196610.
+ro.opengles.version=196610
